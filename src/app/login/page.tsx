@@ -254,8 +254,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-nothing-dark border border-nothing-border rounded-3xl p-8 relative z-10 shadow-2xl">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-nothing-red flex items-center justify-center mb-4 shadow-lg shadow-nothing-red/20">
-            <div className="w-4 h-4 rounded-full bg-white animate-pulse" />
+          <div className="w-14 h-14 mb-3 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.svg" alt="Essential Space Logo" className="w-14 h-14" />
           </div>
           <h1 className="font-dot text-2xl tracking-wider uppercase text-white mb-1">
             ESSENTIAL SPACE

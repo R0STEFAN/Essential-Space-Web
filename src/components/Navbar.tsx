@@ -52,7 +52,8 @@ export default function Navbar({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center gap-3">
-          <span className="nothing-dot animate-pulse" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon.svg" alt="Essential Space Icon" className="w-7 h-7" />
           <div className="flex flex-col">
             <span className="font-dot text-sm tracking-wider font-semibold text-white">
               ESSENTIAL SPACE // WEB
