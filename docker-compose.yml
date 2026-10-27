@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  essential-space-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATA_DIR=/app/data
+      - SESSION_SECRET=change-this-to-a-secure-random-64-char-string-in-coolify!
+      - NOTHING_API_URL=https://essential-space.nothingtech.link/essentialSpace
+    volumes:
+      - essential_space_data:/app/data
+
+volumes:
+  essential_space_data:
+    name: essential_space_data
