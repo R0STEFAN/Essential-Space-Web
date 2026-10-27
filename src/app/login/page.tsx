@@ -103,8 +103,7 @@ export default function LoginPage() {
         .then(r => r.json())
         .then(data => {
           if (data.success) {
-            router.push('/');
-            router.refresh();
+            window.location.href = '/';
           } else {
             setError(data.error || 'Token authentication failed');
             setLoading(false);
@@ -163,8 +162,7 @@ export default function LoginPage() {
           });
           const claimData = await claimRes.json();
           if (claimData.success) {
-            router.push('/');
-            router.refresh();
+            window.location.href = '/';
           }
         } else if (data.status === 'EXPIRED') {
           clearInterval(interval);
@@ -205,8 +203,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message);
       setLoading(false);

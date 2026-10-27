@@ -35,7 +35,7 @@ export default function DashboardPage() {
 
       const res = await fetch(`/api/cards?${params.toString()}`);
       if (res.status === 401) {
-        router.push('/login');
+        window.location.href = '/login';
         return;
       }
 
@@ -134,9 +134,11 @@ export default function DashboardPage() {
   };
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-    router.refresh();
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      window.location.href = '/login';
+    }
   };
 
   return (
