@@ -3,6 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
   Key,
   ArrowRight,
   ShieldCheck,
@@ -17,18 +21,30 @@ import {
   Sparkles,
   Terminal,
   Bookmark,
+  ChevronLeft,
 } from 'lucide-react';
 
-type LoginTab = 'connect' | 'qr' | 'token';
+type LoginTab = 'email' | 'qr' | 'bridge';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<LoginTab>('connect');
+  const [activeTab, setActiveTab] = useState<LoginTab>('email');
 
-  // Direct Token / Refresh Token state
+  // Email & Password + 2FA OTP state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isOtpStep, setIsOtpStep] = useState(false);
+  const [otpSessionId, setOtpSessionId] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+
+  // Direct Token state
   const [token, setToken] = useState('');
+  const [showManualToken, setShowManualToken] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
-  const bookmarkletRef = useRef<HTMLAnchorElement | null>(null);
 
   // QR Code state (Desktop polling & Mobile approval)
   const [qrId, setQrId] = useState('');
@@ -46,14 +62,55 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Set bookmarklet href dynamically using raw DOM attribute (avoids React javascript: warning)
+  // Cooldown countdown timer for OTP resend
   useEffect(() => {
-    if (bookmarkletRef.current && typeof window !== 'undefined') {
-      const origin = window.location.origin;
-      const jsCode = `javascript:(function(){var t=localStorage.getItem('nothingAuth_account-app-web_accessToken')||sessionStorage.getItem('nothingAuth_account-app-web_accessToken')||'';var r=localStorage.getItem('nothingAuth_account-app-web_refreshToken')||'';if(!t&&!r){alert('Please sign in on account.nothing.tech first, then click this bookmark!');return;}location.href='${origin}/login?token='+encodeURIComponent(t)+'&refresh='+encodeURIComponent(r);})();`;
-      bookmarkletRef.current.setAttribute('href', jsCode);
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  // Robust clipboard copy with fallback to document.execCommand
+  const copyToClipboard = async (text: string) => {
+    let ok = false;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch {
+      ok = false;
     }
-  }, [activeTab]);
+
+    if (!ok && typeof document !== 'undefined') {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } catch {
+        ok = false;
+      }
+    }
+
+    if (ok) {
+      setCopiedSnippet(true);
+      setTimeout(() => setCopiedSnippet(false), 3000);
+    }
+  };
+
+  const getBridgeSnippet = () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    return `location.href='${origin}/login?token='+encodeURIComponent(localStorage.getItem('nothingAuth_account-app-web_accessToken')||sessionStorage.getItem('nothingAuth_account-app-web_accessToken')||'')+'&refresh='+encodeURIComponent(localStorage.getItem('nothingAuth_account-app-web_refreshToken')||'');`;
+  };
 
   // Check URL params (?qr=... or ?token=...&refresh=...) and saved server session
   useEffect(() => {
@@ -116,7 +173,7 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  // Initialize QR code when switching to 'qr' tab
+  // Generate QR code when switching to 'qr' tab
   const generateNewQr = async () => {
     setQrLoading(true);
     setError(null);
@@ -176,7 +233,130 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [activeTab, qrId, scannedQrId, router]);
 
-  // Submit Direct Token (or Refresh Token)
+  // Step 1: Submit Email & Password
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError('Please enter your Nothing Account email and password');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          qrId: scannedQrId || undefined,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Authentication failed');
+      }
+
+      // Check if 2FA code is needed
+      if (data.otpRequired) {
+        setIsOtpStep(true);
+        setOtpSessionId(data.sessionId);
+        setMaskedEmail(data.maskedEmail || email.trim());
+        if (data.cooldownAt) {
+          const secs = Math.max(0, Math.ceil((Number(data.cooldownAt) - Date.now()) / 1000));
+          setCooldown(secs || 60);
+        } else {
+          setCooldown(60);
+        }
+        return;
+      }
+
+      // Direct success
+      if (scannedQrId) {
+        setQrApprovedSuccess(true);
+        setLoading(false);
+        return;
+      }
+
+      window.location.href = '/';
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Verify 6-digit Code from Email
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setError('Please enter the 6-digit code received on your email');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify_otp',
+          sessionId: otpSessionId,
+          code: otpCode.trim(),
+          qrId: scannedQrId || undefined,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Invalid verification code');
+      }
+
+      if (scannedQrId) {
+        setQrApprovedSuccess(true);
+        setLoading(false);
+        return;
+      }
+
+      window.location.href = '/';
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP code
+  const handleResendOtp = async () => {
+    if (cooldown > 0 || resending) return;
+    setResending(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'resend_otp',
+          sessionId: otpSessionId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to resend code');
+      }
+      setCooldown(60);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // Submit Direct Token
   const handleTokenLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -210,7 +390,7 @@ export default function LoginPage() {
     }
   };
 
-  // Approve QR code on mobile with 1 tap
+  // Approve QR code on mobile with 1 tap (when phone already has active account)
   const handleMobileApproveQr = async () => {
     if (!scannedQrId) return;
     setLoading(true);
@@ -234,16 +414,8 @@ export default function LoginPage() {
     }
   };
 
-  const copyQuickBridgeSnippet = () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-    const snippet = `location.href='${origin}/login?token='+encodeURIComponent(localStorage.getItem('nothingAuth_account-app-web_accessToken')||sessionStorage.getItem('nothingAuth_account-app-web_accessToken')||'')+'&refresh='+encodeURIComponent(localStorage.getItem('nothingAuth_account-app-web_refreshToken')||'');`;
-    navigator.clipboard.writeText(snippet);
-    setCopiedSnippet(true);
-    setTimeout(() => setCopiedSnippet(false), 3000);
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-black text-white">
       {/* Decorative Background Elements */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-nothing-red/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
@@ -273,295 +445,435 @@ export default function LoginPage() {
                   SIGN-IN APPROVED!
                 </h2>
                 <p className="text-xs text-nothing-gray leading-relaxed">
-                  Your desktop browser is now signed into your Nothing Account. You can close this tab or open your dashboard below.
+                  Your desktop browser is now signed into your Nothing Account. You can close this tab or open the dashboard below.
                 </p>
                 <button
-                  onClick={() => router.push('/')}
+                  onClick={() => (window.location.href = '/')}
                   className="w-full bg-white text-black font-dot uppercase tracking-wider py-3 rounded-xl text-xs hover:bg-nothing-red hover:text-white transition-all"
                 >
                   OPEN DASHBOARD ON PHONE
                 </button>
               </div>
-            ) : (
-              <>
-                <div className="p-4 bg-black/50 border border-nothing-border rounded-2xl space-y-3">
-                  <div className="flex items-center gap-2.5 text-nothing-red text-xs font-mono uppercase tracking-wider">
-                    <Smartphone className="w-4 h-4" />
-                    <span>MOBILE SIGN-IN APPROVAL</span>
-                  </div>
-                  <p className="text-xs text-nothing-gray leading-relaxed">
-                    You scanned a QR code to authorize Essential Space Web on another device.
-                  </p>
-
-                  {savedAccount && (
-                    <div className="pt-2 space-y-3">
-                      <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between">
-                        <div className="truncate">
-                          <div className="text-[11px] font-mono text-nothing-gray uppercase">
-                            Active Account:
-                          </div>
-                          <div className="text-sm font-medium text-white truncate">
-                            {savedAccount.email}
-                          </div>
-                        </div>
-                        <ShieldCheck className="w-5 h-5 text-green-400 shrink-0" />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleMobileApproveQr}
-                        disabled={loading}
-                        className="w-full bg-nothing-red text-white font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 text-sm shadow-lg shadow-nothing-red/25"
-                      >
-                        {loading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <span>APPROVE DESKTOP SIGN-IN</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
+            ) : savedAccount ? (
+              <div className="p-4 bg-black/50 border border-nothing-border rounded-2xl space-y-3">
+                <div className="flex items-center gap-2.5 text-nothing-red text-xs font-mono uppercase tracking-wider">
+                  <Smartphone className="w-4 h-4" />
+                  <span>MOBILE SIGN-IN APPROVAL</span>
                 </div>
-              </>
-            )}
-          </div>
-        ) : (
-          /* Mode Switcher Tabs */
-          <div className="grid grid-cols-3 gap-1 p-1 bg-black/60 border border-nothing-border rounded-xl mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('connect');
-                setError(null);
-              }}
-              className={`py-2 px-2 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === 'connect'
-                  ? 'bg-nothing-red text-white shadow'
-                  : 'text-nothing-gray hover:text-white'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>CONNECT</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('qr');
-                setError(null);
-              }}
-              className={`py-2 px-2 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === 'qr'
-                  ? 'bg-nothing-red text-white shadow'
-                  : 'text-nothing-gray hover:text-white'
-              }`}
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>QR CODE</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('token');
-                setError(null);
-              }}
-              className={`py-2 px-2 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-                activeTab === 'token'
-                  ? 'bg-nothing-red text-white shadow'
-                  : 'text-nothing-gray hover:text-white'
-              }`}
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>TOKEN</span>
-            </button>
-          </div>
-        )}
-
-        {/* Error Banner */}
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-nothing-red/10 border border-nothing-red/30 text-nothing-red text-xs font-mono">
-            [ERROR]: {error}
-          </div>
-        )}
-
-        {/* TAB 1: OFFICIAL NOTHING ACCOUNT CONNECT (BYPASSES CLOUDFLARE BOT_CHECK_MISSING) */}
-        {!scannedQrId && activeTab === 'connect' && (
-          <div className="space-y-4">
-            {/* Step 1: Official Sign-In */}
-            <div className="p-4 bg-black/50 border border-nothing-border rounded-2xl space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono uppercase text-nothing-red tracking-wider">
-                  STEP 1 • SIGN IN ON OFFICIAL PORTAL
-                </span>
-                <span className="text-[10px] font-mono text-nothing-gray">Cloudflare + 2FA</span>
-              </div>
-              <p className="text-xs text-nothing-gray leading-relaxed">
-                Sign in with your Email, Password &amp; 2FA code (or Google) on the official Nothing portal:
-              </p>
-              <a
-                href="https://account.nothing.tech/v2/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white hover:text-black text-white font-dot uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-2"
-              >
-                <span>OPEN ACCOUNT.NOTHING.TECH</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-
-            {/* Step 2: 1-Click Sync Bridge */}
-            <div className="p-4 bg-black/50 border border-nothing-border rounded-2xl space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono uppercase text-green-400 tracking-wider">
-                  STEP 2 • SYNC SESSION IN 1 CLICK
-                </span>
-              </div>
-
-              <p className="text-xs text-nothing-gray leading-relaxed">
-                Once signed in on <code className="text-white">account.nothing.tech</code>, transfer your active session here using either method below:
-              </p>
-
-              {/* Option A: Copy 1-Line Console Command */}
-              <div className="space-y-1.5">
-                <div className="text-[10px] font-mono text-nothing-gray uppercase">
-                  Option A — Paste 1 line in Console (F12 → Console) on account.nothing.tech:
-                </div>
-                <button
-                  type="button"
-                  onClick={copyQuickBridgeSnippet}
-                  className="w-full py-3 px-3 rounded-xl bg-nothing-red hover:bg-white hover:text-black text-white font-dot uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-nothing-red/20"
-                >
-                  {copiedSnippet ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>COPIED! PASTE IN NOTHING.TECH CONSOLE (F12)</span>
-                    </>
-                  ) : (
-                    <>
-                      <Terminal className="w-4 h-4" />
-                      <span>COPY 1-CLICK CONSOLE SYNC COMMAND</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Option B: Drag Bookmarklet */}
-              <div className="pt-2 border-t border-nothing-border/50 space-y-1.5">
-                <div className="text-[10px] font-mono text-nothing-gray uppercase">
-                  Option B — Or drag this button to your Bookmarks Bar &amp; click it on account.nothing.tech:
-                </div>
-                <div className="flex justify-center pt-1">
-                  <a
-                    ref={bookmarkletRef}
-                    onClick={e => {
-                      e.preventDefault();
-                      copyQuickBridgeSnippet();
-                    }}
-                    title="Drag me to your Bookmarks Bar, then click me while on account.nothing.tech"
-                    className="w-full py-2.5 px-4 rounded-xl bg-nothing-card hover:bg-nothing-hover border border-dashed border-nothing-gray/50 text-xs font-mono text-white flex items-center justify-center gap-2 cursor-grab active:cursor-grabbing"
-                  >
-                    <Bookmark className="w-3.5 h-3.5 text-nothing-red" />
-                    <span>⚡ Sync Nothing Space (Drag to Bookmarks)</span>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: QR CODE MOBILE HANDOFF */}
-        {!scannedQrId && activeTab === 'qr' && (
-          <div className="space-y-4 text-center">
-            <div className="p-5 bg-black/50 border border-nothing-border rounded-2xl flex flex-col items-center">
-              {qrLoading || !qrMobileUrl ? (
-                <div className="w-52 h-52 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-nothing-red" />
-                </div>
-              ) : (
-                <div className="p-3 bg-white rounded-2xl shadow-lg">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(
-                      qrMobileUrl
-                    )}`}
-                    alt="QR Code Login"
-                    className="w-48 h-48 rounded-lg"
-                  />
-                </div>
-              )}
-
-              <div className="mt-4 space-y-1.5">
-                <div className="flex items-center justify-center gap-2 text-xs font-dot uppercase tracking-wider text-white">
-                  <Smartphone className="w-4 h-4 text-nothing-red" />
-                  <span>SCAN WITH YOUR PHONE CAMERA</span>
-                </div>
-                <p className="text-[11px] text-nothing-gray leading-relaxed max-w-xs">
-                  Point your Nothing Phone camera at this QR code and tap{' '}
-                  <span className="text-white">&quot;Approve Desktop Sign-In&quot;</span>.
+                <p className="text-xs text-nothing-gray leading-relaxed">
+                  You scanned a QR code to authorize Essential Space Web on your desktop computer.
                 </p>
-              </div>
 
+                <div className="pt-2 space-y-3">
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between">
+                    <div className="truncate">
+                      <div className="text-[11px] font-mono text-nothing-gray uppercase">
+                        Account to Authorize:
+                      </div>
+                      <div className="text-sm font-medium text-white truncate">
+                        {savedAccount.email}
+                      </div>
+                    </div>
+                    <ShieldCheck className="w-5 h-5 text-green-400 shrink-0" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleMobileApproveQr}
+                    disabled={loading}
+                    className="w-full bg-nothing-red text-white font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 text-sm shadow-lg shadow-nothing-red/25"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>APPROVE DESKTOP SIGN-IN</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* Regular Login View (or mobile sign-in if no saved account yet) */}
+        {!scannedQrId || (!savedAccount && !qrApprovedSuccess) ? (
+          <>
+            {/* Mode Switcher Tabs */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-black/60 border border-nothing-border rounded-xl mb-6">
               <button
                 type="button"
-                onClick={generateNewQr}
-                className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-mono text-nothing-gray hover:text-white transition-colors"
+                onClick={() => {
+                  setActiveTab('email');
+                  setError(null);
+                }}
+                className={`py-2 px-2 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                  activeTab === 'email'
+                    ? 'bg-nothing-red text-white shadow'
+                    : 'text-nothing-gray hover:text-white'
+                }`}
               >
-                <RefreshCw className="w-3 h-3" />
-                <span>Refresh QR code</span>
+                <Mail className="w-3.5 h-3.5" />
+                <span>EMAIL</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('qr');
+                  setError(null);
+                }}
+                className={`py-2 px-2 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                  activeTab === 'qr'
+                    ? 'bg-nothing-red text-white shadow'
+                    : 'text-nothing-gray hover:text-white'
+                }`}
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>QR CODE</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('bridge');
+                  setError(null);
+                }}
+                className={`py-2 px-2 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                  activeTab === 'bridge'
+                    ? 'bg-nothing-red text-white shadow'
+                    : 'text-nothing-gray hover:text-white'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>SYNC</span>
               </button>
             </div>
-          </div>
-        )}
 
-        {/* TAB 3: DIRECT ACCESS TOKEN / REFRESH TOKEN */}
-        {(scannedQrId && !savedAccount && !qrApprovedSuccess) ||
-        (!scannedQrId && activeTab === 'token') ? (
-          <form onSubmit={handleTokenLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-mono uppercase text-nothing-gray mb-1.5">
-                PASTE ACCESS TOKEN OR REFRESH TOKEN
-              </label>
-              <div className="relative">
-                <Key className="w-4 h-4 text-nothing-gray absolute left-3.5 top-3.5 pointer-events-none" />
-                <textarea
-                  rows={4}
-                  value={token}
-                  onChange={e => setToken(e.target.value)}
-                  placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
-                  required
-                  className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono break-all"
-                />
+            {/* Error Banner */}
+            {error && (
+              <div className="mb-4 p-3 rounded-xl bg-nothing-red/10 border border-nothing-red/30 text-nothing-red text-xs font-mono">
+                [ERROR]: {error}
               </div>
-              <p className="text-[10px] font-mono text-nothing-gray mt-1.5 leading-relaxed">
-                From <code className="text-white">account.nothing.tech</code> DevTools → Application → Local Storage, copy <code className="text-white">nothingAuth_account-app-web_accessToken</code> (or <code className="text-white">nothingAuth_account-app-web_refreshToken</code>).
-              </p>
-            </div>
+            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-nothing-red hover:text-white transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>VERIFYING TOKEN &amp; SYNCING...</span>
-                </>
-              ) : (
-                <>
-                  <span>SYNC WITH TOKEN</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
+            {/* TAB 1: EMAIL & PASSWORD + 2FA VERIFICATION CODE */}
+            {activeTab === 'email' && (
+              <div>
+                {!isOtpStep ? (
+                  /* Step 1: Email and Password Form */
+                  <form onSubmit={handleEmailLogin} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-mono uppercase text-nothing-gray mb-1.5">
+                        NOTHING ACCOUNT EMAIL
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-nothing-gray absolute left-3.5 top-3.5 pointer-events-none" />
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={e => setEmail(e.target.value)}
+                          placeholder="name@example.com"
+                          className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono uppercase text-nothing-gray mb-1.5">
+                        PASSWORD
+                      </label>
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-nothing-gray absolute left-3.5 top-3.5 pointer-events-none" />
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={password}
+                          onChange={e => setPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-10 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3.5 top-3 text-nothing-gray hover:text-white transition-colors"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-white text-black font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-nothing-red hover:text-white transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 mt-2 shadow-lg"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>CONNECTING TO NOTHING...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>SIGN IN WITH NOTHING ACCOUNT</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+
+                    <p className="text-[11px] font-mono text-nothing-gray text-center pt-1 leading-relaxed">
+                      If 2FA is active, Nothing will send a 6-digit verification code to your email.
+                    </p>
+                  </form>
+                ) : (
+                  /* Step 2: 6-Digit Email Verification Code */
+                  <form onSubmit={handleVerifyOtp} className="space-y-4">
+                    <div className="p-4 bg-black/60 border border-nothing-border rounded-2xl text-center space-y-2">
+                      <div className="text-xs font-mono text-nothing-red uppercase tracking-wider">
+                        SECURITY VERIFICATION (2FA)
+                      </div>
+                      <p className="text-xs text-nothing-gray leading-relaxed">
+                        Nothing sent a 6-digit confirmation code to:
+                        <br />
+                        <span className="text-white font-mono font-medium">{maskedEmail}</span>
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono uppercase text-nothing-gray mb-1.5 text-center">
+                        ENTER 6-DIGIT CODE
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        autoFocus
+                        value={otpCode}
+                        onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="000000"
+                        className="w-full bg-black border-2 border-nothing-border focus:border-nothing-red rounded-xl py-3 text-center text-2xl tracking-[0.5em] text-white placeholder:text-nothing-gray/30 focus:outline-none transition-colors font-mono font-bold"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading || otpCode.trim().length !== 6}
+                      className="w-full bg-nothing-red text-white font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-white hover:text-black transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 shadow-lg shadow-nothing-red/20"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>VERIFYING CODE...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>VERIFY &amp; SIGN IN</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+
+                    <div className="flex items-center justify-between pt-1 text-xs font-mono">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsOtpStep(false);
+                          setError(null);
+                        }}
+                        className="text-nothing-gray hover:text-white flex items-center gap-1"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Change Email</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={cooldown > 0 || resending}
+                        className="text-nothing-red hover:underline disabled:text-nothing-gray disabled:no-underline flex items-center gap-1"
+                      >
+                        {resending && <Loader2 className="w-3 h-3 animate-spin" />}
+                        <span>{cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: QR CODE */}
+            {activeTab === 'qr' && (
+              <div className="space-y-4 text-center">
+                <div className="p-5 bg-black/50 border border-nothing-border rounded-2xl flex flex-col items-center">
+                  {qrLoading || !qrMobileUrl ? (
+                    <div className="w-52 h-52 flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 animate-spin text-nothing-red" />
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-white rounded-2xl shadow-lg">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(
+                          qrMobileUrl
+                        )}`}
+                        alt="QR Code Login"
+                        className="w-48 h-48 rounded-lg"
+                      />
+                    </div>
+                  )}
+
+                  <div className="mt-4 space-y-1.5">
+                    <div className="flex items-center justify-center gap-2 text-xs font-dot uppercase tracking-wider text-white">
+                      <Smartphone className="w-4 h-4 text-nothing-red" />
+                      <span>SCAN WITH YOUR PHONE CAMERA</span>
+                    </div>
+                    <p className="text-[11px] text-nothing-gray leading-relaxed max-w-xs">
+                      Scan this QR code with your Nothing Phone camera. If you are already logged in on your phone, tap{' '}
+                      <span className="text-white">&quot;Approve&quot;</span> to log into desktop instantly!
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={generateNewQr}
+                    className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-mono text-nothing-gray hover:text-white transition-colors"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Refresh QR code</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: BROWSER SYNC / TOKEN */}
+            {activeTab === 'bridge' && (
+              <div className="space-y-4">
+                {/* Step 1: Open account.nothing.tech */}
+                <div className="p-4 bg-black/50 border border-nothing-border rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono uppercase text-nothing-red tracking-wider">
+                      STEP 1 • SIGN IN ON OFFICIAL NOTHING SITE
+                    </span>
+                    <span className="text-[10px] font-mono text-nothing-gray">Web Portal</span>
+                  </div>
+                  <p className="text-xs text-nothing-gray leading-relaxed">
+                    Open the official Nothing login in a new tab:
+                  </p>
+                  <a
+                    href="https://account.nothing.tech/v2/login"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white hover:text-black text-white font-dot uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>OPEN ACCOUNT.NOTHING.TECH</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+
+                {/* Step 2: 1-Click Console Snippet */}
+                <div className="p-4 bg-black/50 border border-nothing-border rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono uppercase text-green-400 tracking-wider">
+                      STEP 2 • SYNC SESSION COMMAND
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-nothing-gray leading-relaxed">
+                    On <code className="text-white">account.nothing.tech</code>, press{' '}
+                    <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[11px] font-mono">F12</kbd> → Console, paste this command, and press Enter:
+                  </p>
+
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(getBridgeSnippet())}
+                      className="w-full py-3 px-3 rounded-xl bg-nothing-red hover:bg-white hover:text-black text-white font-dot uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-nothing-red/20 font-medium"
+                    >
+                      {copiedSnippet ? (
+                        <>
+                          <Check className="w-4 h-4 text-green-300" />
+                          <span>COPIED! PASTE IN NOTHING F12 CONSOLE</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          <span>COPY 1-LINE SYNC COMMAND</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Visible code block for manual copy */}
+                    <div className="relative">
+                      <textarea
+                        readOnly
+                        rows={3}
+                        value={getBridgeSnippet()}
+                        onClick={e => (e.target as HTMLTextAreaElement).select()}
+                        className="w-full bg-black/80 border border-nothing-border rounded-xl p-2.5 text-[10px] font-mono text-nothing-gray hover:text-white select-all focus:outline-none focus:border-nothing-red"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bookmarklet option */}
+                  <div className="pt-2 border-t border-nothing-border/50">
+                    <div className="text-[10px] font-mono text-nothing-gray uppercase mb-1.5">
+                      Or drag this to your Bookmarks Bar:
+                    </div>
+                    <a
+                      href={getBridgeSnippet()}
+                      title="Drag to your Bookmarks Bar, then click while on account.nothing.tech"
+                      className="w-full py-2.5 px-4 rounded-xl bg-nothing-card hover:bg-nothing-hover border border-dashed border-nothing-gray/50 text-xs font-mono text-white flex items-center justify-center gap-2 cursor-grab active:cursor-grabbing"
+                    >
+                      <Bookmark className="w-3.5 h-3.5 text-nothing-red" />
+                      <span>⚡ Sync Nothing Space (Drag to Bookmarks)</span>
+                    </a>
+                  </div>
+
+                  {/* Manual token paste toggle */}
+                  <div className="pt-2 border-t border-nothing-border/50">
+                    <button
+                      type="button"
+                      onClick={() => setShowManualToken(!showManualToken)}
+                      className="text-[11px] font-mono text-nothing-gray hover:text-white flex items-center gap-1.5"
+                    >
+                      <Key className="w-3.5 h-3.5" />
+                      <span>{showManualToken ? 'Hide manual token input' : 'Paste token manually'}</span>
+                    </button>
+
+                    {showManualToken && (
+                      <form onSubmit={handleTokenLogin} className="mt-3 space-y-2">
+                        <textarea
+                          rows={3}
+                          value={token}
+                          onChange={e => setToken(e.target.value)}
+                          placeholder="Paste accessToken or refreshToken..."
+                          required
+                          className="w-full bg-black border border-nothing-border rounded-xl p-2.5 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white font-mono break-all"
+                        />
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="w-full py-2.5 rounded-xl bg-white text-black font-dot uppercase tracking-wider text-xs hover:bg-nothing-red hover:text-white transition-colors flex items-center justify-center gap-2"
+                        >
+                          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>SUBMIT TOKEN</span>}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         ) : null}
 
         {/* Footer Info */}
         <div className="mt-6 pt-5 border-t border-nothing-border flex items-start gap-2.5 text-xs text-nothing-gray">
           <ShieldCheck className="w-4 h-4 text-nothing-red shrink-0 mt-0.5" />
           <p className="leading-relaxed text-[11px]">
-            Because <span className="text-white">account.nothing.tech</span> enforces domain-locked Cloudflare Turnstile (<code className="text-white">bot_check_missing</code>), signing in on the official portal and linking via Step 2 keeps your session &amp; <span className="text-white">refreshToken</span> active for 30 days.
+            Your session is securely signed and stored inside your self-hosted instance. It communicates directly with Nothing Cloud to fetch notes, voice audio, and tasks.
           </p>
         </div>
       </div>
