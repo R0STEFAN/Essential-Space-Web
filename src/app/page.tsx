@@ -69,9 +69,11 @@ export default function DashboardPage() {
         const data = await res.json().catch(() => ({}));
 
         if (res.status === 401 || data.authExpired) {
-          await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-          router.push('/login?expired=1');
-          router.refresh();
+          try {
+            await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+          } finally {
+            window.location.href = '/login?expired=1';
+          }
           return;
         }
 

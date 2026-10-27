@@ -30,6 +30,40 @@ export async function authenticateNothingUser(tokenOrCredentials: {
   let token = tokenOrCredentials.token?.trim();
   let refreshToken = tokenOrCredentials.refreshToken?.trim();
 
+  // 1. Sanitize token input (strip quotes, Bearer prefix, handle JSON object or multi-token strings)
+  if (token) {
+    token = token.replace(/^["']|["']$/g, '').trim();
+    if (token.toLowerCase().startsWith('bearer ')) {
+      token = token.slice(7).trim();
+    }
+    // Handle pasted JSON e.g. {"token":"...","refreshToken":"..."}
+    if (token.startsWith('{') && token.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(token);
+        if (parsed.token || parsed.accessToken) token = (parsed.token || parsed.accessToken).trim();
+        if (parsed.refreshToken) refreshToken = parsed.refreshToken.trim();
+      } catch {
+        // ignore parse error
+      }
+    } else if (token.includes('\n') || token.includes(' ')) {
+      // Handle pasted two tokens (e.g. accessToken and refreshToken separated by space or newline)
+      const parts = token.split(/[\s\r\n]+/).map(p => p.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      if (parts.length >= 2) {
+        const jwtPart = parts.find(p => p.startsWith('eyJ'));
+        const nonJwtPart = parts.find(p => !p.startsWith('eyJ'));
+        if (jwtPart) token = jwtPart;
+        if (nonJwtPart && !refreshToken) refreshToken = nonJwtPart;
+      }
+    }
+  }
+
+  if (refreshToken) {
+    refreshToken = refreshToken.replace(/^["']|["']$/g, '').trim();
+    if (refreshToken.toLowerCase().startsWith('bearer ')) {
+      refreshToken = refreshToken.slice(7).trim();
+    }
+  }
+
   if (!token && refreshToken) {
     const refreshed = await refreshNothingAccessToken(refreshToken);
     if (refreshed?.accessToken) {
@@ -77,12 +111,20 @@ export async function authenticateNothingUser(tokenOrCredentials: {
   parseJwtProfile(token);
 
   // Strictly verify token against Nothing Cloud card list endpoint (which validates active session JWT)
-  let res = await fetch(`${NOTHING_BASE}/storage/card/v1/list`, {
-    method: 'POST',
-    headers: getNothingAuthHeaders(token),
-    body: JSON.stringify({ pageNo: 1, pageSize: 1 }),
-    cache: 'no-store',
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${NOTHING_BASE}/storage/card/v1/list`, {
+      method: 'POST',
+      headers: getNothingAuthHeaders(token),
+      body: JSON.stringify({ pageNo: 1, pageSize: 1 }),
+      cache: 'no-store',
+    });
+  } catch (netErr: any) {
+    throw new Error(
+      `Unable to reach Nothing Cloud (${netErr?.message || 'Network error'}). Please check server internet connectivity.`
+    );
+  }
+
   let verifyJson: any = null;
   try {
     verifyJson = await res.clone().json();
@@ -101,22 +143,28 @@ export async function authenticateNothingUser(tokenOrCredentials: {
       refreshToken = refreshed.refreshToken || refreshToken;
       parseJwtProfile(token);
       if (refreshed.idToken) parseJwtProfile(refreshed.idToken);
-      res = await fetch(`${NOTHING_BASE}/storage/card/v1/list`, {
-        method: 'POST',
-        headers: getNothingAuthHeaders(token),
-        body: JSON.stringify({ pageNo: 1, pageSize: 1 }),
-        cache: 'no-store',
-      });
       try {
-        verifyJson = await res.clone().json();
-      } catch {
-        verifyJson = null;
+        res = await fetch(`${NOTHING_BASE}/storage/card/v1/list`, {
+          method: 'POST',
+          headers: getNothingAuthHeaders(token),
+          body: JSON.stringify({ pageNo: 1, pageSize: 1 }),
+          cache: 'no-store',
+        });
+        try {
+          verifyJson = await res.clone().json();
+        } catch {
+          verifyJson = null;
+        }
+      } catch (retryErr: any) {
+        throw new Error(
+          `Unable to reach Nothing Cloud during token refresh: ${retryErr?.message || 'Network error'}`
+        );
       }
     }
   }
 
   if (!res.ok || isAuthInvalid(res, verifyJson)) {
-    const errBody = verifyJson?.errMsg || (await res.text());
+    const errBody = verifyJson?.errMsg || (await res.text().catch(() => ''));
     throw new Error(
       `Access token is expired or invalidated by Nothing Cloud (${errBody || res.status}). Please sign in again on account.nothing.tech.`
     );

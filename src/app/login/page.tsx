@@ -24,7 +24,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 
-type LoginTab = 'email' | 'qr' | 'bridge';
+type LoginTab = 'email' | 'token' | 'qr' | 'bridge';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,7 +43,8 @@ export default function LoginPage() {
 
   // Direct Token state
   const [token, setToken] = useState('');
-  const [showManualToken, setShowManualToken] = useState(false);
+  const [refreshToken, setRefreshToken] = useState('');
+  const [showAdvancedToken, setShowAdvancedToken] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
 
   // QR Code state (Desktop polling & Mobile approval)
@@ -356,9 +357,32 @@ export default function LoginPage() {
     }
   };
 
+  // Paste from clipboard helper
+  const pasteFromClipboard = async (setter: (val: string) => void) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          setter(text.trim());
+          setError(null);
+        }
+      }
+    } catch {
+      // ignore clipboard permission prompt rejection
+    }
+  };
+
   // Submit Direct Token
   const handleTokenLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanToken = token.trim();
+    const cleanRefresh = refreshToken.trim();
+
+    if (!cleanToken && !cleanRefresh) {
+      setError('Please paste your Nothing Account access token or refresh token');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -367,7 +391,8 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          token: token.trim(),
+          token: cleanToken || undefined,
+          refreshToken: cleanRefresh || undefined,
           qrId: scannedQrId || undefined,
         }),
       });
@@ -501,21 +526,36 @@ export default function LoginPage() {
         {!scannedQrId || (!savedAccount && !qrApprovedSuccess) ? (
           <>
             {/* Mode Switcher Tabs */}
-            <div className="grid grid-cols-3 gap-1 p-1 bg-black/60 border border-nothing-border rounded-xl mb-6">
+            <div className="grid grid-cols-4 gap-1 p-1 bg-black/60 border border-nothing-border rounded-xl mb-6">
               <button
                 type="button"
                 onClick={() => {
                   setActiveTab('email');
                   setError(null);
                 }}
-                className={`py-2 px-2 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
                   activeTab === 'email'
                     ? 'bg-nothing-red text-white shadow'
                     : 'text-nothing-gray hover:text-white'
                 }`}
               >
-                <Mail className="w-3.5 h-3.5" />
+                <Mail className="w-3.5 h-3.5 shrink-0" />
                 <span>EMAIL</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('token');
+                  setError(null);
+                }}
+                className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
+                  activeTab === 'token'
+                    ? 'bg-nothing-red text-white shadow'
+                    : 'text-nothing-gray hover:text-white'
+                }`}
+              >
+                <Key className="w-3.5 h-3.5 shrink-0" />
+                <span>TOKEN</span>
               </button>
               <button
                 type="button"
@@ -523,13 +563,13 @@ export default function LoginPage() {
                   setActiveTab('qr');
                   setError(null);
                 }}
-                className={`py-2 px-2 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
                   activeTab === 'qr'
                     ? 'bg-nothing-red text-white shadow'
                     : 'text-nothing-gray hover:text-white'
                 }`}
               >
-                <QrCode className="w-3.5 h-3.5" />
+                <QrCode className="w-3.5 h-3.5 shrink-0" />
                 <span>QR CODE</span>
               </button>
               <button
@@ -538,13 +578,13 @@ export default function LoginPage() {
                   setActiveTab('bridge');
                   setError(null);
                 }}
-                className={`py-2 px-2 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+                className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
                   activeTab === 'bridge'
                     ? 'bg-nothing-red text-white shadow'
                     : 'text-nothing-gray hover:text-white'
                 }`}
               >
-                <Terminal className="w-3.5 h-3.5" />
+                <Terminal className="w-3.5 h-3.5 shrink-0" />
                 <span>SYNC</span>
               </button>
             </div>
@@ -705,7 +745,105 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* TAB 2: QR CODE */}
+            {/* TAB 2: DIRECT TOKEN */}
+            {activeTab === 'token' && (
+              <form onSubmit={handleTokenLogin} className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-mono uppercase text-nothing-gray">
+                      ACCESS TOKEN (OR REFRESH TOKEN)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => pasteFromClipboard(setToken)}
+                      className="text-[10px] font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>PASTE CLIPBOARD</span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Key className="w-4 h-4 text-nothing-gray absolute left-3.5 top-3.5 pointer-events-none" />
+                    <textarea
+                      rows={4}
+                      value={token}
+                      onChange={e => setToken(e.target.value)}
+                      placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9... or OOz1rwIW..."
+                      required
+                      className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono break-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Optional Refresh Token Field */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedToken(!showAdvancedToken)}
+                    className="text-[11px] font-mono text-nothing-gray hover:text-white flex items-center gap-1.5 transition-colors"
+                  >
+                    <span>{showAdvancedToken ? '▾ Hide Refresh Token field' : '▸ + Add Refresh Token (recommended for 30-day session)'}</span>
+                  </button>
+
+                  {showAdvancedToken && (
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[11px] font-mono uppercase text-nothing-gray">
+                          REFRESH TOKEN (OPTIONAL)
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => pasteFromClipboard(setRefreshToken)}
+                          className="text-[10px] font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>PASTE CLIPBOARD</span>
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={refreshToken}
+                        onChange={e => setRefreshToken(e.target.value)}
+                        placeholder="OOz1rwIWlHuIkM6oL_..."
+                        className="w-full bg-black border border-nothing-border rounded-xl py-2 px-3 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3 bg-black/50 border border-nothing-border rounded-xl space-y-1.5 text-[11px] font-mono text-nothing-gray">
+                  <div className="text-white font-medium flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-nothing-red" />
+                    <span>How to get your token from account.nothing.tech:</span>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1 text-[10px] text-nothing-gray/80 pl-1 leading-relaxed">
+                    <li>Sign in at <span className="text-white">account.nothing.tech</span> in your browser.</li>
+                    <li>Press <span className="text-white">F12</span> → <span className="text-white">Application</span> → <span className="text-white">Local Storage</span>.</li>
+                    <li>Copy <code className="text-white">nothingAuth_account-app-web_accessToken</code> (and optionally <code className="text-white">nothingAuth_account-app-web_refreshToken</code>).</li>
+                  </ol>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-white text-black font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-nothing-red hover:text-white transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 mt-2 shadow-lg"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>VERIFYING TOKEN &amp; SYNCING...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>SIGN IN WITH TOKEN</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* TAB 3: QR CODE */}
             {activeTab === 'qr' && (
               <div className="space-y-4 text-center">
                 <div className="p-5 bg-black/50 border border-nothing-border rounded-2xl flex flex-col items-center">
@@ -832,36 +970,19 @@ export default function LoginPage() {
                     </a>
                   </div>
 
-                  {/* Manual token paste toggle */}
-                  <div className="pt-2 border-t border-nothing-border/50">
+                  {/* Direct Token Tab Shortcut */}
+                  <div className="pt-2 border-t border-nothing-border/50 text-center">
                     <button
                       type="button"
-                      onClick={() => setShowManualToken(!showManualToken)}
-                      className="text-[11px] font-mono text-nothing-gray hover:text-white flex items-center gap-1.5"
+                      onClick={() => {
+                        setActiveTab('token');
+                        setError(null);
+                      }}
+                      className="text-[11px] font-mono text-nothing-gray hover:text-white inline-flex items-center gap-1.5 transition-colors py-1"
                     >
-                      <Key className="w-3.5 h-3.5" />
-                      <span>{showManualToken ? 'Hide manual token input' : 'Paste token manually'}</span>
+                      <Key className="w-3.5 h-3.5 text-nothing-red" />
+                      <span>Prefer entering token directly? Switch to the TOKEN tab →</span>
                     </button>
-
-                    {showManualToken && (
-                      <form onSubmit={handleTokenLogin} className="mt-3 space-y-2">
-                        <textarea
-                          rows={3}
-                          value={token}
-                          onChange={e => setToken(e.target.value)}
-                          placeholder="Paste accessToken or refreshToken..."
-                          required
-                          className="w-full bg-black border border-nothing-border rounded-xl p-2.5 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white font-mono break-all"
-                        />
-                        <button
-                          type="submit"
-                          disabled={loading}
-                          className="w-full py-2.5 rounded-xl bg-white text-black font-dot uppercase tracking-wider text-xs hover:bg-nothing-red hover:text-white transition-colors flex items-center justify-center gap-2"
-                        >
-                          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>SUBMIT TOKEN</span>}
-                        </button>
-                      </form>
-                    )}
                   </div>
                 </div>
               </div>

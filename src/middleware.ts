@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const SECRET_KEY =
-  process.env.SESSION_SECRET || 'nothing-essential-space-secret-key-32chars-minimum!';
-const encodedKey = new TextEncoder().encode(SECRET_KEY);
+function getSecretKey(): string {
+  return (
+    process.env.SESSION_SECRET ||
+    'nothing-essential-space-secret-key-32chars-minimum!'
+  );
+}
+
 const COOKIE_NAME = 'nothing_session';
 
 export async function middleware(req: NextRequest) {
@@ -32,6 +36,7 @@ export async function middleware(req: NextRequest) {
 
   if (sessionCookie) {
     try {
+      const encodedKey = new TextEncoder().encode(getSecretKey());
       const { payload } = await jwtVerify(sessionCookie, encodedKey, {
         algorithms: ['HS256'],
       });
@@ -53,9 +58,11 @@ export async function middleware(req: NextRequest) {
       );
     }
 
-    // If requesting any page other than /login, redirect to /login
+    // If requesting any page other than /login, redirect to /login using req.nextUrl to preserve proxy domain/port
     if (pathname !== '/login') {
-      const loginUrl = new URL('/login', req.url);
+      const loginUrl = req.nextUrl.clone();
+      loginUrl.pathname = '/login';
+      loginUrl.search = '';
       return NextResponse.redirect(loginUrl);
     }
 
@@ -63,9 +70,31 @@ export async function middleware(req: NextRequest) {
   }
 
   // 4. User IS authenticated
-  // If visiting /login (and NOT scanning a mobile QR code approval ?qr=...), redirect to dashboard
-  if (pathname === '/login' && !searchParams.has('qr')) {
-    const dashboardUrl = new URL('/', req.url);
+  // If user visits /login with ?expired=1, delete the invalidated cookie and stay on /login
+  if (pathname === '/login' && searchParams.has('expired')) {
+    const res = NextResponse.next();
+    res.cookies.delete(COOKIE_NAME);
+    return res;
+  }
+
+  // If user visits /login WITH query params (?token=..., ?refresh=..., ?qr=..., ?switch=1),
+  // DO NOT force-redirect to dashboard — let the login page process the incoming token or QR handoff
+  if (
+    pathname === '/login' &&
+    (searchParams.has('token') ||
+      searchParams.has('refresh') ||
+      searchParams.has('qr') ||
+      searchParams.has('switch') ||
+      searchParams.has('force'))
+  ) {
+    return NextResponse.next();
+  }
+
+  // If user is authenticated and visits clean /login without parameters, redirect to dashboard
+  if (pathname === '/login') {
+    const dashboardUrl = req.nextUrl.clone();
+    dashboardUrl.pathname = '/';
+    dashboardUrl.search = '';
     return NextResponse.redirect(dashboardUrl);
   }
 
