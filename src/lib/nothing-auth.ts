@@ -42,20 +42,25 @@ async function getOrCreateDeviceIdentity(
   const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }) as string;
 
   const deviceInfoObj = {
-    platform: 'WINDOWS',
+    platform: 'ANDROID',
     identifier: crypto.randomUUID().replace(/-/g, ''),
-    client_type: 'WEB_BROWSER',
+    client_type: 'APP',
+    device_model: 'AIN24',
+    device_brand: 'Nothing',
+    device_manufacturer: 'Nothing',
+    device_architecture: 'arm64-v8a',
+    device_hardware: 'qcom',
+    device_board: 'taro',
+    os_version: '14',
     is_first: true,
-    screen_resolution: '1920x1080',
-    web_gl_renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Direct3D11 vs_5_0 ps_5_0, D3D11)',
-    canvas_fingerprint: '4f8a9c12',
+    screen_resolution: '1080x2412',
     timezone: 'Europe/Kyiv',
     language: 'en',
     is_emulator: false,
     is_jail_broken: false,
     is_hooked: false,
     is_debug_mode: false,
-    network_type: '4g',
+    network_type: 'wifi',
     public_key: publicSpkiBase64,
   };
   const deviceInfoStr = JSON.stringify(deviceInfoObj);
@@ -112,11 +117,35 @@ async function getOrCreateDeviceIdentity(
 
 const SSO_ORIGIN = 'https://account.nothing.tech';
 const API_V2_BASE = 'https://account.nothing.tech/api/v2';
-const CLIENT_ID = 'account-app-web';
-const REDIRECT_URI = 'https://account.nothing.tech/v2/oauth-callback';
+const CLIENT_ID = 'account-app-native';
+const REDIRECT_URI = 'nothing-account-app://oauth2/callback';
 const DEVICE_API_KEY = 'YDU0vfkpb2MBU4kjx1r1WvGMRaMVJ8dj4ByhgPECE6PbdstiVFBectExlaKDrwSk';
-const USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+const USER_AGENT = 'Dart/3.5 (dart:io)';
+
+function buildDeviceHeaders(
+  identity: { privateKeyPem: string; deviceId: string; deviceInfoB64: string },
+  path: string,
+  bodyStr: string,
+  extraHeaders: Record<string, string> = {}
+): Record<string, string> {
+  const ts = String(Date.now());
+  const nonce = crypto.randomUUID();
+  const devSig = signBodyEcdsa(identity.privateKeyPem, ts, bodyStr);
+  const appSig = buildAppSignature(DEVICE_API_KEY, nonce, ts, path, bodyStr);
+
+  return {
+    'Content-Type': 'application/json',
+    'Accept-Language': 'en',
+    'X-Device-Id': identity.deviceId,
+    'X-Device-Info': identity.deviceInfoB64,
+    'X-Request-Timestamp': ts,
+    'X-Nonce': nonce,
+    'X-App-Signature': appSig,
+    'X-Device-Signature': devSig,
+    'User-Agent': USER_AGENT,
+    ...extraHeaders,
+  };
+}
 
 export interface AuthflowSession {
   id: string;
@@ -245,7 +274,7 @@ async function initAuthflowSession(email: string): Promise<AuthflowSession> {
   const identity = await getOrCreateDeviceIdentity(cookies);
   const { deviceId, privateKeyPem, publicSpkiBase64, deviceInfoB64 } = identity;
 
-  // Initialize OAuth2 PKCE Authorize session to obtain x_ref and __Host-oauth_session_id cookie
+  // Initialize OAuth2 PKCE Authorize session to obtain codeVerifier and codeChallenge
   const codeVerifier = base64UrlEncode(crypto.randomBytes(32));
   const codeChallenge = base64UrlEncode(
     crypto.createHash('sha256').update(codeVerifier, 'ascii').digest()
@@ -260,9 +289,6 @@ async function initAuthflowSession(email: string): Promise<AuthflowSession> {
     state: oauthState,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
-    x_page: 'login',
-    lang: 'en',
-    theme: 'dark',
   });
 
   const authRes = await fetch(`${API_V2_BASE}/oauth2/authorize?${authorizeParams.toString()}`, {
@@ -277,40 +303,37 @@ async function initAuthflowSession(email: string): Promise<AuthflowSession> {
   extractSetCookies(authRes, cookies);
   const location = authRes.headers.get('location') || '';
   let xRef = '';
-  let loginFlow = 'oauth-v25';
+  let loginFlow = 'default';
 
   if (location) {
-    const locUrl = new URL(location, SSO_ORIGIN);
-    xRef = locUrl.searchParams.get('x_ref') || '';
-    loginFlow = locUrl.searchParams.get('login_flow') || 'oauth-v25';
+    try {
+      const locUrl = new URL(location, SSO_ORIGIN);
+      xRef = locUrl.searchParams.get('x_ref') || '';
+      loginFlow = locUrl.searchParams.get('login_flow') || 'default';
+    } catch {
+      // ignore
+    }
   }
   if (!xRef && cookies['__Host-oauth_session_id']) {
     xRef = cookies['__Host-oauth_session_id'];
   }
 
-  // 4. Start Authflow (/api/v2/authflow)
-  const afBody = JSON.stringify({ type: 'login', name: loginFlow });
-  const afTs = String(Date.now());
-  const afSig = signBodyEcdsa(privateKeyPem, afTs, afBody);
+  // Start Authflow (/api/v2/authflow)
+  const afPath = '/api/v2/authflow';
+  const afBody = JSON.stringify({ type: 'login', name: loginFlow || 'default' });
+  const afHeaders = buildDeviceHeaders(identity, afPath, afBody, {
+    ...(xRef ? { 'X-OAuth-Session-Id': xRef } : {}),
+    ...(Object.keys(cookies).length ? { Cookie: formatCookieHeader(cookies) } : {}),
+  });
 
   const afRes = await fetch(`${API_V2_BASE}/authflow`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept-Language': 'en',
-      'X-OAuth-Session-Id': xRef,
-      'X-Device-Id': deviceId,
-      'X-Device-Info': deviceInfoB64,
-      'X-Request-Timestamp': afTs,
-      'X-Device-Signature': afSig,
-      Cookie: formatCookieHeader(cookies),
-      'User-Agent': USER_AGENT,
-    },
+    headers: afHeaders,
     body: afBody,
   });
 
   extractSetCookies(afRes, cookies);
-  const afData = await afRes.json();
+  const afData = await afRes.json().catch(() => ({}));
   if (!afRes.ok || !afData.state_token) {
     throw new Error(afData.message || 'Failed to start Nothing Account authentication flow');
   }
@@ -344,22 +367,15 @@ async function postAuthflowInput(
     state_token: session.stateToken,
     input: inputPayload,
   });
-  const ts = String(Date.now());
-  const sig = signBodyEcdsa(session.privateKeyPem, ts, bodyStr);
+  const inputPath = '/api/v2/authflow/state/input';
+  const headers = buildDeviceHeaders(session, inputPath, bodyStr, {
+    ...(session.xRef ? { 'X-OAuth-Session-Id': session.xRef } : {}),
+    ...(Object.keys(session.cookies).length ? { Cookie: formatCookieHeader(session.cookies) } : {}),
+  });
 
   const res = await fetch(`${API_V2_BASE}/authflow/state/input`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept-Language': 'en',
-      'X-OAuth-Session-Id': session.xRef,
-      'X-Device-Id': session.deviceId,
-      'X-Device-Info': session.deviceInfoB64,
-      'X-Request-Timestamp': ts,
-      'X-Device-Signature': sig,
-      Cookie: formatCookieHeader(session.cookies),
-      'User-Agent': USER_AGENT,
-    },
+    headers,
     body: bodyStr,
   });
 
@@ -467,20 +483,15 @@ async function exchangeCodeForUser(
     code_verifier: session.codeVerifier,
   });
   const bodyStr = params.toString();
-  const ts = String(Date.now());
-  const sig = signBodyEcdsa(session.privateKeyPem, ts, bodyStr);
+  const tokenPath = '/api/v2/oauth2/token';
+  const headers = buildDeviceHeaders(session, tokenPath, bodyStr, {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    ...(Object.keys(session.cookies).length ? { Cookie: formatCookieHeader(session.cookies) } : {}),
+  });
 
   const tokenRes = await fetch(`${API_V2_BASE}/oauth2/token`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-Device-Id': session.deviceId,
-      'X-Device-Info': session.deviceInfoB64,
-      'X-Request-Timestamp': ts,
-      'X-Device-Signature': sig,
-      Cookie: formatCookieHeader(session.cookies),
-      'User-Agent': USER_AGENT,
-    },
+    headers,
     body: bodyStr,
   });
 
@@ -537,7 +548,7 @@ function isOtpAction(action: any): boolean {
 
 export async function startNothingEmailLogin(
   email: string,
-  password: string
+  password?: string
 ): Promise<
   | { status: 'SUCCESS'; user: NothingUser }
   | {
@@ -549,53 +560,83 @@ export async function startNothingEmailLogin(
 > {
   const session = await initAuthflowSession(email.trim());
 
-  const { status, data } = await postAuthflowInput(session, {
+  // Step 1: Identify email
+  const identRes = await postAuthflowInput(session, {
     identification: 'email',
     login_id: email.trim(),
-    password,
   });
 
-  if (status === 200 && data?.action) {
-    const action = data.action;
-    if (action.type === 'finished') {
-      const code = await resolveAuthorizationCode(session, action.data);
-      const user = await exchangeCodeForUser(session, code);
-      return { status: 'SUCCESS', user };
+  if (identRes.status === 404) {
+    authSessions.delete(session.id);
+    throw new Error('No Nothing Account found with this email address.');
+  }
+
+  if (identRes.status !== 200 || !identRes.data?.action) {
+    authSessions.delete(session.id);
+    throw new Error(identRes.data?.message || `Identification failed (HTTP ${identRes.status})`);
+  }
+
+  const action = identRes.data.action;
+
+  // If already finished
+  if (action.type === 'finished') {
+    const code = await resolveAuthorizationCode(session, action.data);
+    const user = await exchangeCodeForUser(session, code);
+    return { status: 'SUCCESS', user };
+  }
+
+  // Step 2: Authenticate with password if provided
+  if (password && password.trim()) {
+    const pwdRes = await postAuthflowInput(session, {
+      authentication: 'password',
+      password: password.trim(),
+    });
+
+    if (pwdRes.status === 200 && pwdRes.data?.action) {
+      const pwdAction = pwdRes.data.action;
+      if (pwdAction.type === 'finished') {
+        const code = await resolveAuthorizationCode(session, pwdAction.data);
+        const user = await exchangeCodeForUser(session, code);
+        return { status: 'SUCCESS', user };
+      }
+      if (isOtpAction(pwdAction)) {
+        const actionData = pwdAction.data || {};
+        return {
+          status: 'OTP_REQUIRED',
+          sessionId: session.id,
+          maskedEmail: actionData.masked_destination || email.trim(),
+          cooldownAt: actionData.cooldown_at ? Number(actionData.cooldown_at) : undefined,
+        };
+      }
     }
 
-    if (isOtpAction(action)) {
-      const actionData = action.data || {};
-      return {
-        status: 'OTP_REQUIRED',
-        sessionId: session.id,
-        maskedEmail: actionData.masked_destination || email.trim(),
-        cooldownAt: actionData.cooldown_at ? Number(actionData.cooldown_at) : undefined,
-      };
+    if (pwdRes.status === 401 || pwdRes.status === 400) {
+      authSessions.delete(session.id);
+      throw new Error('Incorrect password for Nothing Account.');
     }
+  }
+
+  // Step 3: Trigger OTP to email (either no password or OTP was selected)
+  const otpTriggerRes = await postAuthflowInput(session, {
+    authentication: 'verify_oob_otp_data',
+    channel: 'email',
+  });
+
+  if (otpTriggerRes.status === 200 && otpTriggerRes.data?.action) {
+    const otpAction = otpTriggerRes.data.action;
+    const actionData = otpAction.data || {};
+    return {
+      status: 'OTP_REQUIRED',
+      sessionId: session.id,
+      maskedEmail: actionData.masked_destination || email.trim(),
+      cooldownAt: actionData.cooldown_at ? Number(actionData.cooldown_at) : undefined,
+    };
   }
 
   authSessions.delete(session.id);
-
-  if (status === 404) {
-    throw new Error('No Nothing Account found with this email address.');
-  }
-  if (status === 401 || status === 400) {
-    throw new Error('Incorrect email or password for Nothing Account.');
-  }
-  if (status === 403 || status === 429) {
-    const cooldownAt = data?.causes?.[0]?.details?.cooldown_at;
-    if (cooldownAt) {
-      const mins = Math.max(1, Math.ceil((Number(cooldownAt) - Date.now()) / 60000));
-      throw new Error(
-        `Too many login attempts (${data?.reason || 'rate_limit'}). Please try again in ${mins} min.`
-      );
-    }
-    throw new Error(
-      `Access temporarily restricted by Nothing (${data?.reason || data?.message || status}).`
-    );
-  }
-
-  throw new Error(data?.message || `Nothing authentication failed (HTTP ${status})`);
+  throw new Error(
+    otpTriggerRes.data?.message || `Could not send verification code (HTTP ${otpTriggerRes.status})`
+  );
 }
 
 export async function verifyNothingEmailOtp(
@@ -747,19 +788,14 @@ export async function refreshNothingAccessToken(
         client_id: CLIENT_ID,
       }).toString();
 
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': USER_AGENT,
-      };
-
-      if (identity) {
-        const ts = String(Date.now());
-        const sig = signBodyEcdsa(identity.privateKeyPem, ts, bodyStr);
-        headers['X-Device-Id'] = identity.deviceId;
-        headers['X-Device-Info'] = identity.deviceInfoB64;
-        headers['X-Request-Timestamp'] = ts;
-        headers['X-Device-Signature'] = sig;
-      }
+      const headers: Record<string, string> = identity
+        ? buildDeviceHeaders(identity, '/api/v2/oauth2/token', bodyStr, {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          })
+        : {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': USER_AGENT,
+          };
 
       const res = await fetch(`${API_V2_BASE}/oauth2/token`, {
         method: 'POST',

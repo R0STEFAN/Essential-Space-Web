@@ -135,8 +135,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 5. Direct Email + Password login via Nothing Authflow v2
-    if (email && password && !token) {
+    // 5. Direct Email + Password or Email OTP login via Nothing Authflow v2
+    if (email && !token) {
       const result = await startNothingEmailLogin(email, password);
       if (result.status === 'OTP_REQUIRED') {
         return NextResponse.json({
