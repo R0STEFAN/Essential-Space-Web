@@ -139,6 +139,7 @@ export async function requestNothingAiAnalysis(params: {
 export async function requestAudioAiAnalysis(params: {
   token: string;
   s3FileKey: string;
+  imageS3FileKey?: string;
   audioDurationMs: number;
   userText?: string;
   language?: string;
@@ -155,13 +156,25 @@ export async function requestAudioAiAnalysis(params: {
     const { aesKeyB64, cipherKey } = generateWriteCipherSession();
     const payload = encryptPayload(payloadContent, aesKeyB64);
 
+    const imgEvents = params.imageS3FileKey
+      ? [
+          {
+            timePoint: '00:00',
+            content: {
+              region: 'europe-west3',
+              gcsKey: params.imageS3FileKey,
+            },
+          },
+        ]
+      : [];
+
     const body = {
       s3Region: 'europe-west3',
       s3FileKey: params.s3FileKey,
       storageType: 'GCS',
       userContent: params.userText || '',
       clickEvents: [],
-      imgEvents: [],
+      imgEvents,
       textEvents: [],
       promptVersion: 2,
       payload,

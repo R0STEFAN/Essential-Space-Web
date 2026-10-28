@@ -12,10 +12,15 @@ import {
   Upload,
   Check,
   Loader2,
-  FolderPlus,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 import type { Collection, Card } from '@/types';
-import { requestNothingAiAnalysis, requestAudioAiAnalysis, createCloudCard } from '@/lib/nothing-cards';
+import {
+  requestNothingAiAnalysis,
+  requestAudioAiAnalysis,
+  createCloudCard,
+} from '@/lib/nothing-cards';
 import { convertToWebP } from '@/lib/image-optimizer';
 import { uploadMediaToGcs } from '@/lib/firebase-upload';
 
@@ -46,6 +51,10 @@ export default function CreateNoteModal({
   const [selectedCollection, setSelectedCollection] = useState(activeCollectionId || '');
   const [useAi, setUseAi] = useState(true);
 
+  // Attachments state
+  const [showImageAttachment, setShowImageAttachment] = useState(false);
+  const [showVoiceAttachment, setShowVoiceAttachment] = useState(false);
+
   // Image upload state
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -69,6 +78,15 @@ export default function CreateNoteModal({
     }
   }, [activeCollectionId]);
 
+  // Adjust visible attachments based on selected primary tab
+  useEffect(() => {
+    if (tab === 'IMAGE') {
+      setShowImageAttachment(true);
+    } else if (tab === 'VOICE') {
+      setShowVoiceAttachment(true);
+    }
+  }, [tab]);
+
   useEffect(() => {
     if (!isOpen) {
       setContent('');
@@ -78,6 +96,8 @@ export default function CreateNoteModal({
       setAudioBlob(null);
       setIsRecording(false);
       setRecordingDuration(0);
+      setShowImageAttachment(false);
+      setShowVoiceAttachment(false);
       setStatusText(null);
       setError(null);
       if (timerRef.current) clearInterval(timerRef.current);
@@ -93,6 +113,15 @@ export default function CreateNoteModal({
       setImageFile(file);
       const url = URL.createObjectURL(file);
       setImagePreview(url);
+      setShowImageAttachment(true);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (tab !== 'IMAGE') {
+      setShowImageAttachment(false);
     }
   };
 
@@ -108,7 +137,9 @@ export default function CreateNoteModal({
       };
 
       recorder.onstop = () => {
-        const fullBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const fullBlob = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || 'audio/webm',
+        });
         setAudioBlob(fullBlob);
         stream.getTracks().forEach(t => t.stop());
       };
@@ -116,6 +147,7 @@ export default function CreateNoteModal({
       recorder.start(100);
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
+      setShowVoiceAttachment(true);
       setRecordingDuration(0);
 
       timerRef.current = setInterval(() => {
@@ -135,6 +167,14 @@ export default function CreateNoteModal({
     }
   };
 
+  const removeAudio = () => {
+    setAudioBlob(null);
+    setRecordingDuration(0);
+    if (tab !== 'VOICE') {
+      setShowVoiceAttachment(false);
+    }
+  };
+
   // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,25 +182,30 @@ export default function CreateNoteModal({
     setIsSubmitting(true);
 
     try {
+      const hasImage = Boolean(imageFile);
+      const hasAudio = Boolean(audioBlob);
+
       if (tab === 'LINK' && !linkUrl.trim()) {
         throw new Error('Please enter a valid URL');
       }
-      if (tab === 'NOTE' && !content.trim()) {
-        throw new Error('Please enter your note text');
+      if (tab === 'NOTE' && !content.trim() && !hasImage && !hasAudio) {
+        throw new Error('Please enter note text or attach media');
       }
-      if (tab === 'IMAGE' && !imageFile) {
+      if (tab === 'IMAGE' && !hasImage) {
         throw new Error('Please select an image to upload');
       }
-      if (tab === 'VOICE' && !audioBlob) {
+      if (tab === 'VOICE' && !hasAudio) {
         throw new Error('Please record a voice memo first');
       }
 
       let aiResult: any = null;
       let finalImageUrl: string | undefined;
+      let imageGcsKey: string | undefined;
       let finalAudioUri: string | undefined;
+      let audioGcsKey: string | undefined;
 
-      // 1. Process Image Upload if present
-      if (tab === 'IMAGE' && imageFile) {
+      // 1. Upload Image to GCS if attached
+      if (hasImage && imageFile) {
         setStatusText('Optimizing image to WebP format...');
         const { blob: webpBlob } = await convertToWebP(imageFile);
 
@@ -173,21 +218,12 @@ export default function CreateNoteModal({
           type: 'image',
         });
         finalImageUrl = upload.downloadUrl;
-
-        if (useAi) {
-          setStatusText('Nothing AI analyzing image & extracting topics...');
-          aiResult = await requestNothingAiAnalysis({
-            token,
-            promptType: 'IMG',
-            userText: content,
-            s3FileKey: upload.gcsKey,
-          });
-        }
+        imageGcsKey = upload.gcsKey;
       }
 
-      // 2. Process Voice Note if present
-      if (tab === 'VOICE' && audioBlob) {
-        setStatusText('Uploading audio to Google Cloud Storage...');
+      // 2. Upload Voice Audio to GCS if recorded
+      if (hasAudio && audioBlob) {
+        setStatusText('Uploading voice memo to Google Cloud Storage...');
         const upload = await uploadMediaToGcs({
           nothingToken: token,
           userId,
@@ -196,26 +232,36 @@ export default function CreateNoteModal({
           type: 'audio',
         });
         finalAudioUri = upload.downloadUrl;
+        audioGcsKey = upload.gcsKey;
+      }
 
-        if (useAi) {
-          setStatusText('Gemini 2.0 Flash transcribing & structuring report...');
+      // 3. Trigger Official Nothing AI Pipeline
+      if (useAi) {
+        if (hasAudio && audioGcsKey) {
+          // Voice Memo OR Voice + Photo Note
+          setStatusText(
+            hasImage
+              ? 'Gemini 2.0 Flash analyzing voice memo and attached photo together...'
+              : 'Gemini 2.0 Flash transcribing & structuring audio report...'
+          );
           aiResult = await requestAudioAiAnalysis({
             token,
-            s3FileKey: upload.gcsKey,
+            s3FileKey: audioGcsKey,
+            imageS3FileKey: imageGcsKey, // Attached image passed directly to Gemini 2.0 Flash!
             audioDurationMs: recordingDuration * 1000,
             userText: content,
           });
-        }
-      }
-
-      // 3. Process Link Note
-      if (tab === 'LINK') {
-        let domain = '';
-        try {
-          domain = new URL(linkUrl).hostname.replace(/^www\./, '');
-        } catch {}
-
-        if (useAi) {
+        } else if (hasImage && imageGcsKey) {
+          // Photo note
+          setStatusText('Nothing AI analyzing image & extracting topics...');
+          aiResult = await requestNothingAiAnalysis({
+            token,
+            promptType: 'IMG',
+            userText: content,
+            s3FileKey: imageGcsKey,
+          });
+        } else if (tab === 'LINK') {
+          // Link note
           setStatusText('Nothing AI summarizing web page & generating tags...');
           aiResult = await requestNothingAiAnalysis({
             token,
@@ -223,26 +269,45 @@ export default function CreateNoteModal({
             url: linkUrl,
             userText: content,
           });
+        } else {
+          // Pure text note
+          setStatusText('Nothing AI extracting insights & action items...');
+          aiResult = await requestNothingAiAnalysis({
+            token,
+            promptType: 'TEXT',
+            userText: content,
+          });
         }
       }
 
-      // 4. Process Pure Text Note
-      if (tab === 'NOTE' && useAi) {
-        setStatusText('Nothing AI extracting insights & action items...');
-        aiResult = await requestNothingAiAnalysis({
-          token,
-          promptType: 'TEXT',
-          userText: content,
-        });
+      // 4. Determine Card Type
+      // In Nothing OS, if audio is present, card type is AUDIO (AudioCard renders both image and audio player!)
+      let finalCardType: Card['type'] = 'TEXT';
+      if (hasAudio) {
+        finalCardType = 'AUDIO';
+      } else if (hasImage) {
+        finalCardType = 'IMAGE';
+      } else if (tab === 'LINK') {
+        finalCardType = 'LINK';
       }
 
-      // 5. Create Card in Nothing Cloud Storage
+      // 5. Create Card in Nothing Cloud Storage & IndexedDB
       setStatusText('Syncing new note to Nothing Cloud...');
       const createRes = await createCloudCard({
         token,
         userId,
-        type: tab === 'LINK' ? 'LINK' : tab === 'IMAGE' ? 'IMAGE' : tab === 'VOICE' ? 'AUDIO' : 'TEXT',
-        title: aiResult?.title || (tab === 'LINK' ? linkUrl : content.slice(0, 40)),
+        type: finalCardType,
+        title:
+          aiResult?.title ||
+          (tab === 'LINK'
+            ? linkUrl
+            : content.trim()
+            ? content.slice(0, 40)
+            : hasAudio && hasImage
+            ? 'Voice + Photo Memo'
+            : hasAudio
+            ? 'Voice Memo'
+            : 'Photo Note'),
         content,
         summary: aiResult?.summary,
         imageUrl: finalImageUrl,
@@ -283,9 +348,13 @@ export default function CreateNoteModal({
     return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const hasImage = Boolean(imageFile);
+  const hasAudio = Boolean(audioBlob);
+  const isVoiceAndPhoto = Boolean(imageFile && audioBlob);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-xl rounded-2xl bg-nothing-card border border-nothing-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-xl rounded-2xl bg-nothing-card border border-nothing-border shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-nothing-border/60">
           <div className="flex items-center gap-2">
@@ -293,6 +362,11 @@ export default function CreateNoteModal({
             <h3 className="font-dot text-sm text-white uppercase tracking-wider font-semibold">
               NEW CAPTURE // NOTHING SPACE
             </h3>
+            {isVoiceAndPhoto && (
+              <span className="px-2 py-0.5 rounded-full bg-nothing-red/20 border border-nothing-red/40 text-[10px] font-mono text-nothing-red">
+                VOICE + PHOTO
+              </span>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -309,7 +383,9 @@ export default function CreateNoteModal({
             type="button"
             onClick={() => setTab('NOTE')}
             className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-              tab === 'NOTE' ? 'bg-white text-black font-semibold shadow-sm' : 'text-nothing-gray hover:text-white'
+              tab === 'NOTE'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-white'
             }`}
           >
             <FileText size={13} />
@@ -319,7 +395,9 @@ export default function CreateNoteModal({
             type="button"
             onClick={() => setTab('LINK')}
             className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-              tab === 'LINK' ? 'bg-white text-black font-semibold shadow-sm' : 'text-nothing-gray hover:text-white'
+              tab === 'LINK'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-white'
             }`}
           >
             <Bookmark size={13} />
@@ -329,7 +407,9 @@ export default function CreateNoteModal({
             type="button"
             onClick={() => setTab('IMAGE')}
             className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-              tab === 'IMAGE' ? 'bg-white text-black font-semibold shadow-sm' : 'text-nothing-gray hover:text-white'
+              tab === 'IMAGE'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-white'
             }`}
           >
             <ImageIcon size={13} />
@@ -339,7 +419,9 @@ export default function CreateNoteModal({
             type="button"
             onClick={() => setTab('VOICE')}
             className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-              tab === 'VOICE' ? 'bg-white text-black font-semibold shadow-sm' : 'text-nothing-gray hover:text-white'
+              tab === 'VOICE'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-white'
             }`}
           >
             <Mic size={13} />
@@ -372,24 +454,38 @@ export default function CreateNoteModal({
             </div>
           )}
 
-          {/* Image upload area (for Image tab) */}
-          {tab === 'IMAGE' && (
-            <div>
-              <label className="block text-[11px] font-mono text-nothing-gray uppercase mb-1.5">
-                Upload Photo / Screenshot
-              </label>
-              <label className="relative flex flex-col items-center justify-center w-full h-40 rounded-xl border border-dashed border-nothing-border hover:border-white/50 cursor-pointer bg-black/40 overflow-hidden group transition-colors">
+          {/* Photo / Screenshot Attachment Section */}
+          {(tab === 'IMAGE' || showImageAttachment) && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-mono text-nothing-gray uppercase flex items-center gap-1">
+                  <ImageIcon size={12} className="text-amber-400" />
+                  <span>Photo / Screenshot Attachment</span>
+                </label>
+                {imageFile && (
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="text-[10px] font-mono text-nothing-red hover:underline flex items-center gap-1"
+                  >
+                    <Trash2 size={10} />
+                    <span>Remove photo</span>
+                  </button>
+                )}
+              </div>
+
+              <label className="relative flex flex-col items-center justify-center w-full h-36 rounded-xl border border-dashed border-nothing-border hover:border-white/50 cursor-pointer bg-black/40 overflow-hidden group transition-colors">
                 {imagePreview ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-mono text-white transition-opacity">
-                      Click to replace
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-mono text-white transition-opacity">
+                      Click to replace photo
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center gap-2 text-nothing-gray">
-                    <Upload size={22} className="text-nothing-red" />
+                  <div className="flex flex-col items-center gap-1.5 text-nothing-gray">
+                    <Upload size={20} className="text-nothing-red" />
                     <span className="text-xs font-mono">Click or drag image here</span>
                     <span className="text-[10px] font-mono text-nothing-gray/60">
                       Auto-compressed to WebP before upload
@@ -406,63 +502,114 @@ export default function CreateNoteModal({
             </div>
           )}
 
-          {/* Voice recorder area (for Voice tab) */}
-          {tab === 'VOICE' && (
-            <div className="p-4 rounded-xl bg-black border border-nothing-border text-center space-y-3">
-              <div className="flex items-center justify-center gap-3">
-                <span className="font-dot text-2xl font-bold tracking-wider text-white">
-                  {formatDuration(recordingDuration)}
-                </span>
-                {isRecording && <span className="w-2.5 h-2.5 rounded-full bg-nothing-red animate-ping" />}
-              </div>
-
-              <div className="flex items-center justify-center gap-2">
-                {!isRecording ? (
+          {/* Voice Memo Recorder Section */}
+          {(tab === 'VOICE' || showVoiceAttachment) && (
+            <div className="p-3.5 rounded-xl bg-black border border-nothing-border space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[11px] font-mono text-nothing-gray uppercase">
+                  <Mic size={12} className="text-nothing-red" />
+                  <span>Voice Memo Recording</span>
+                </div>
+                {audioBlob && !isRecording && (
                   <button
                     type="button"
-                    onClick={startRecording}
-                    className="px-4 py-2 rounded-xl bg-nothing-red hover:bg-nothing-red/80 text-white text-xs font-dot tracking-wider flex items-center gap-1.5 transition-all shadow-lg shadow-nothing-red/20"
+                    onClick={removeAudio}
+                    className="text-[10px] font-mono text-nothing-red hover:underline flex items-center gap-1"
                   >
-                    <Mic size={14} />
-                    <span>{audioBlob ? 'RECORD AGAIN' : 'START RECORDING'}</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={stopRecording}
-                    className="px-4 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-dot tracking-wider font-semibold flex items-center gap-1.5 transition-all"
-                  >
-                    <Square size={14} />
-                    <span>STOP RECORDING</span>
+                    <Trash2 size={10} />
+                    <span>Remove voice</span>
                   </button>
                 )}
               </div>
 
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-dot text-xl font-bold tracking-wider text-white">
+                    {formatDuration(recordingDuration)}
+                  </span>
+                  {isRecording && (
+                    <span className="w-2.5 h-2.5 rounded-full bg-nothing-red animate-ping" />
+                  )}
+                </div>
+
+                <div>
+                  {!isRecording ? (
+                    <button
+                      type="button"
+                      onClick={startRecording}
+                      className="px-3.5 py-1.5 rounded-xl bg-nothing-red hover:bg-nothing-red/80 text-white text-xs font-dot tracking-wider flex items-center gap-1.5 transition-all shadow-md shadow-nothing-red/20"
+                    >
+                      <Mic size={13} />
+                      <span>{audioBlob ? 'RE-RECORD' : 'RECORD VOICE'}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={stopRecording}
+                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-dot tracking-wider font-semibold flex items-center gap-1.5 transition-all"
+                    >
+                      <Square size={13} />
+                      <span>STOP</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {audioBlob && !isRecording && (
                 <p className="text-[10px] font-mono text-emerald-400">
-                  Audio memo ready for Gemini 2.0 Flash transcription
+                  ✓ Voice recording ready ({formatDuration(recordingDuration)})
                 </p>
               )}
             </div>
           )}
+
+          {/* Quick Attachment Toggles (Allows combining Photo + Voice in any mode!) */}
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-[10px] font-mono text-nothing-gray uppercase">Attachments:</span>
+            {!showImageAttachment && tab !== 'IMAGE' && (
+              <button
+                type="button"
+                onClick={() => setShowImageAttachment(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-hover border border-nothing-border text-[11px] font-mono text-nothing-gray hover:text-white hover:border-white/30 transition-colors"
+              >
+                <Plus size={11} />
+                <ImageIcon size={11} className="text-amber-400" />
+                <span>Add Photo</span>
+              </button>
+            )}
+
+            {!showVoiceAttachment && tab !== 'VOICE' && (
+              <button
+                type="button"
+                onClick={() => setShowVoiceAttachment(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-hover border border-nothing-border text-[11px] font-mono text-nothing-gray hover:text-white hover:border-white/30 transition-colors"
+              >
+                <Plus size={11} />
+                <Mic size={11} className="text-nothing-red" />
+                <span>Add Voice Memo</span>
+              </button>
+            )}
+          </div>
 
           {/* Note content / instructions textarea */}
           <div>
             <label className="block text-[11px] font-mono text-nothing-gray uppercase mb-1.5">
               {tab === 'LINK'
                 ? 'Optional notes or context'
-                : tab === 'IMAGE'
-                ? 'Description / Question about image'
-                : tab === 'VOICE'
-                ? 'Optional notes or context'
+                : isVoiceAndPhoto
+                ? 'Note Context (Analyzed with Photo & Voice Memo)'
+                : hasImage
+                ? 'Description / Question about photo'
                 : 'Note Content'}
             </label>
             <textarea
-              rows={4}
+              rows={3}
               value={content}
               onChange={e => setContent(e.target.value)}
               placeholder={
-                tab === 'NOTE'
+                isVoiceAndPhoto
+                  ? 'Add any extra notes or questions about this photo and voice memo...'
+                  : tab === 'NOTE'
                   ? 'Type your thoughts, meeting notes, shopping items, or action checklist...'
                   : 'Add any extra context or instructions for Nothing AI...'
               }
@@ -507,8 +654,8 @@ export default function CreateNoteModal({
           {/* Status text during processing */}
           {statusText && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-nothing-red/10 border border-nothing-red/30 text-xs font-mono text-nothing-red">
-              <Loader2 size={14} className="animate-spin" />
-              <span>{statusText}</span>
+              <Loader2 size={14} className="animate-spin shrink-0" />
+              <span className="truncate">{statusText}</span>
             </div>
           )}
 
