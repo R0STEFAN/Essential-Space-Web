@@ -431,6 +431,15 @@ export async function syncUserData(user: NothingUser): Promise<SyncResult> {
         transcript = transcriptRes.data;
       }
 
+      // Check for user-written text notes in card_resources (raw_type 'TEXT' / 'CLIPPED_TEXT') or card_input_extras
+      const textRes = resources.find(
+        r => r.raw_type === 'TEXT' || r.raw_type === 'CLIPPED_TEXT' || r.raw_type === 'NOTE_TEXT'
+      );
+      const userText = textRes?.data || inner.card_input_extras?.[0]?.content || transcript;
+      if (!transcript && userText) {
+        transcript = userText;
+      }
+
       const rawType = (cardInfo.type || '').toUpperCase();
       let cardType: CardType = 'TEXT';
       if (
@@ -600,7 +609,7 @@ export async function syncUserData(user: NothingUser): Promise<SyncResult> {
         type: cardType,
         title: cardInfo.title || (cardType === 'AUDIO' ? 'Voice Note' : 'Untitled Note'),
         summary: cardInfo.summary || undefined,
-        content: cardInfo.summary || undefined,
+        content: userText || cardInfo.summary || undefined,
         imageUrl: imageUrl || (cardType === 'LINK' ? linkPreview : undefined),
         captureFrom: cardInfo.capture_from || undefined,
         tags,

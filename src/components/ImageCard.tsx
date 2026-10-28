@@ -8,6 +8,8 @@ import {
   Pause,
   Maximize2,
   MapPin,
+  Check,
+  Square,
 } from 'lucide-react';
 import type { Card } from '@/types';
 
@@ -16,11 +18,17 @@ export default function ImageCard({
   activeTag,
   onSelectTag,
   onOpenDetail,
+  isSelectMode,
+  isSelected,
+  onToggleSelect,
 }: {
   card: Card;
   activeTag?: string;
   onSelectTag?: (tag: string) => void;
   onOpenDetail?: (card: Card) => void;
+  isSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (cardId: string) => void;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -47,16 +55,43 @@ export default function ImageCard({
 
   return (
     <div
-      onClick={() => onOpenDetail?.(card)}
-      className="nothing-card p-5 flex flex-col justify-between group cursor-pointer hover:border-nothing-red/50 transition-all"
+      onClick={() => {
+        if (isSelectMode) {
+          onToggleSelect?.(card.cardId);
+        } else {
+          onOpenDetail?.(card);
+        }
+      }}
+      className={`nothing-card p-5 flex flex-col justify-between group cursor-pointer transition-all ${
+        isSelected
+          ? 'ring-2 ring-nothing-red border-nothing-red bg-nothing-red/[0.04]'
+          : 'hover:border-nothing-red/50'
+      }`}
     >
       <div>
         {/* Header */}
         <div className="flex items-center justify-between text-xs text-nothing-gray font-mono mb-3">
           <div className="flex items-center gap-2">
-            <span className="p-1 rounded bg-nothing-red/20 text-nothing-red">
-              <ImageIcon size={14} />
-            </span>
+            {isSelectMode ? (
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  onToggleSelect?.(card.cardId);
+                }}
+                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                  isSelected
+                    ? 'bg-nothing-red border-nothing-red text-white'
+                    : 'border-nothing-gray/60 hover:border-white bg-black/40'
+                }`}
+              >
+                {isSelected && <Check size={11} strokeWidth={3} />}
+              </button>
+            ) : (
+              <span className="p-1 rounded bg-nothing-red/20 text-nothing-red">
+                <ImageIcon size={14} />
+              </span>
+            )}
             <span className="font-dot">
               {card.audio?.audioUri ? 'CAPTURE + VOICE' : 'SCREENSHOT / CAPTURE'}
             </span>
@@ -66,7 +101,22 @@ export default function ImageCard({
               </span>
             )}
           </div>
-          <span className="text-[11px]">{new Date(card.createTime).toLocaleDateString()}</span>
+          <div className="flex items-center gap-1.5">
+            {!isSelectMode && (
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  onToggleSelect?.(card.cardId);
+                }}
+                title="Select note"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-nothing-gray hover:text-white"
+              >
+                <Square size={13} />
+              </button>
+            )}
+            <span className="text-[11px]">{new Date(card.createTime).toLocaleDateString()}</span>
+          </div>
         </div>
 
         {/* Image preview */}
@@ -88,6 +138,13 @@ export default function ImageCard({
           <h3 className="font-medium text-white text-base mb-1.5 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors">
             {card.title}
           </h3>
+        )}
+
+        {/* User Note Text if present and distinct from AI summary */}
+        {card.content && card.summary && card.content !== card.summary && (
+          <p className="text-xs text-white/90 font-mono mb-2 line-clamp-2 bg-white/5 px-2.5 py-1.5 rounded-lg border border-nothing-border/50">
+            {card.content}
+          </p>
         )}
 
         {/* Short AI Summary or Note Content */}

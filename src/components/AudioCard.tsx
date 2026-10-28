@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Play, Pause, Mic, Tag, Sparkles, Maximize2 } from 'lucide-react';
+import { Play, Pause, Mic, Tag, Sparkles, Maximize2, Check, Square } from 'lucide-react';
 import type { Card } from '@/types';
 
 export default function AudioCard({
@@ -9,11 +9,17 @@ export default function AudioCard({
   activeTag,
   onSelectTag,
   onOpenDetail,
+  isSelectMode,
+  isSelected,
+  onToggleSelect,
 }: {
   card: Card;
   activeTag?: string;
   onSelectTag?: (tag: string) => void;
   onOpenDetail?: (card: Card) => void;
+  isSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (cardId: string) => void;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -57,16 +63,43 @@ export default function AudioCard({
 
   return (
     <div
-      onClick={() => onOpenDetail?.(card)}
-      className="nothing-card p-5 flex flex-col justify-between group cursor-pointer hover:border-nothing-red/50 transition-all"
+      onClick={() => {
+        if (isSelectMode) {
+          onToggleSelect?.(card.cardId);
+        } else {
+          onOpenDetail?.(card);
+        }
+      }}
+      className={`nothing-card p-5 flex flex-col justify-between group cursor-pointer transition-all ${
+        isSelected
+          ? 'ring-2 ring-nothing-red border-nothing-red bg-nothing-red/[0.04]'
+          : 'hover:border-nothing-red/50'
+      }`}
     >
       <div>
         {/* Header */}
         <div className="flex items-center justify-between text-xs text-nothing-gray font-mono mb-2.5">
           <div className="flex items-center gap-2">
-            <span className="p-1 rounded bg-nothing-red/20 text-nothing-red">
-              <Mic size={14} />
-            </span>
+            {isSelectMode ? (
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  onToggleSelect?.(card.cardId);
+                }}
+                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                  isSelected
+                    ? 'bg-nothing-red border-nothing-red text-white'
+                    : 'border-nothing-gray/60 hover:border-white bg-black/40'
+                }`}
+              >
+                {isSelected && <Check size={11} strokeWidth={3} />}
+              </button>
+            ) : (
+              <span className="p-1 rounded bg-nothing-red/20 text-nothing-red">
+                <Mic size={14} />
+              </span>
+            )}
             <span className="font-dot">{card.imageUrl ? 'VOICE + PHOTO' : 'VOICE MEMO'}</span>
             {card.collectionName && (
               <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[10px]">
@@ -74,12 +107,27 @@ export default function AudioCard({
               </span>
             )}
           </div>
-          <span className="text-[11px]">
-            {new Date(card.createTime).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {!isSelectMode && (
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  onToggleSelect?.(card.cardId);
+                }}
+                title="Select note"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-nothing-gray hover:text-white"
+              >
+                <Square size={13} />
+              </button>
+            )}
+            <span className="text-[11px]">
+              {new Date(card.createTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          </div>
         </div>
 
         {/* Optional attached image capture */}

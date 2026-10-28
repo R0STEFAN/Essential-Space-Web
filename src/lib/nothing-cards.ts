@@ -408,7 +408,7 @@ export async function createCloudCard(params: {
             preview: params.linkMeta?.preview || params.imageUrl,
           }
         : undefined,
-      audio: params.audio,
+      audio: params.audio || (params.content ? { transcript: params.content, duration: 45, speakerName: 'Speaker' } : undefined),
     };
 
     // Build room database bundle for Nothing Phone CloudSyncWorker compatibility
@@ -440,6 +440,53 @@ export async function createCloudCard(params: {
         remote_gcsKey: params.audioGcsKey,
         remote_region: 'europe-west3',
       });
+    }
+    // Preserves user's written note/text in card_resources (matching Nothing Android Room schema: raw_type 'TEXT')
+    if (params.content && params.content.trim()) {
+      cardResources.push({
+        card_resource_id: generateUuid(),
+        raw_type: 'TEXT',
+        data: params.content.trim(),
+        mime_type: 'text/plain',
+        is_primary: true,
+        create_time: now,
+        update_time: now,
+      });
+    }
+
+    // Compute official Nothing Phone Room database resource_mask bitfield
+    // IMAGE=1, AUDIO=2, RECORDING=4, ATTACHMENT_IMAGE=8, ATTACHMENT_TEXT=16, NOTE_AUDIO=32, NOTE_TEXT=64, TEXT=128, CLIPPED_TEXT=256
+    let resourceMask = 0;
+    for (const r of cardResources) {
+      switch (r.raw_type) {
+        case 'IMAGE':
+          resourceMask |= 1;
+          break;
+        case 'AUDIO':
+          resourceMask |= 2;
+          break;
+        case 'RECORDING':
+          resourceMask |= 4;
+          break;
+        case 'ATTACHMENT_IMAGE':
+          resourceMask |= 8;
+          break;
+        case 'ATTACHMENT_TEXT':
+          resourceMask |= 16;
+          break;
+        case 'NOTE_AUDIO':
+          resourceMask |= 32;
+          break;
+        case 'NOTE_TEXT':
+          resourceMask |= 64;
+          break;
+        case 'TEXT':
+          resourceMask |= 128;
+          break;
+        case 'CLIPPED_TEXT':
+          resourceMask |= 256;
+          break;
+      }
     }
 
     // Prevent Android Room NullPointerException: IMAGE and AUDIO cards MUST have matching resources
@@ -499,7 +546,7 @@ export async function createCloudCard(params: {
         type: newCard.type,
         create_time: now,
         update_time: now,
-        resource_mask: cardResources.length > 0 ? 1 : 0,
+        resource_mask: resourceMask,
         capture_from: 'web.essential.space',
       },
       card_resources: cardResources,
@@ -706,6 +753,203 @@ export async function setCardTrashState(
     return { success: true };
   } catch (err: any) {
     console.error('Error changing card trash state:', err);
+    return { success: false, error: err?.message || 'Network error' };
+  }
+}
+
+/**
+ * Bulk moves cards to trash in Nothing Cloud
+ */
+export async function bulkDeleteCloudCards(
+  token: string,
+  cardIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  if (cardIds.length === 0) return { success: true };
+  try {
+    const now = Date.now();
+    const { aesKeyB64, cipherKey } = generateWriteCipherSession();
+    const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
+
+    const body = {
+      payload,
+      cipherKey,
+      cards: cardIds.map(id => ({
+        cardId: id,
+        clientUpdateTime: now,
+      })),
+    };
+
+    const targetUrl = `${NOTHING_BASE_URL}/storage/card/v1/delete`;
+    const res = await nothingFetch(targetUrl, {
+      method: 'POST',
+      headers: generateNothingAuthHeaders(token),
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.code !== '00000') {
+      const errorMsg = data?.msg || `Failed to bulk delete cards (HTTP ${res.status})`;
+      return { success: false, error: errorMsg };
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error bulk deleting cards:', err);
+    return { success: false, error: err?.message || 'Network error' };
+  }
+}
+
+/**
+ * Bulk restores cards from trash in Nothing Cloud
+ */
+export async function bulkRestoreCloudCards(
+  token: string,
+  cardIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  if (cardIds.length === 0) return { success: true };
+  try {
+    const now = Date.now();
+    const { aesKeyB64, cipherKey } = generateWriteCipherSession();
+    const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
+
+    const body = {
+      payload,
+      cipherKey,
+      cards: cardIds.map(id => ({
+        cardId: id,
+        clientUpdateTime: now,
+      })),
+    };
+
+    const targetUrl = `${NOTHING_BASE_URL}/storage/card/v1/restore`;
+    const res = await nothingFetch(targetUrl, {
+      method: 'POST',
+      headers: generateNothingAuthHeaders(token),
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.code !== '00000') {
+      const errorMsg = data?.msg || `Failed to bulk restore cards (HTTP ${res.status})`;
+      return { success: false, error: errorMsg };
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error bulk restoring cards:', err);
+    return { success: false, error: err?.message || 'Network error' };
+  }
+}
+
+/**
+ * Permanently hard-deletes cards from trash in Nothing Cloud
+ */
+export async function bulkHardDeleteCloudCards(
+  token: string,
+  cardIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  if (cardIds.length === 0) return { success: true };
+  try {
+    const now = Date.now();
+    const { aesKeyB64, cipherKey } = generateWriteCipherSession();
+    const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
+
+    const body = {
+      payload,
+      cipherKey,
+      cards: cardIds.map(id => ({
+        cardId: id,
+        clientUpdateTime: now,
+      })),
+    };
+
+    const targetUrl = `${NOTHING_BASE_URL}/storage/restore/v1/delete`;
+    const res = await nothingFetch(targetUrl, {
+      method: 'POST',
+      headers: generateNothingAuthHeaders(token),
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.code !== '00000') {
+      const errorMsg = data?.msg || `Failed to permanently delete cards (HTTP ${res.status})`;
+      return { success: false, error: errorMsg };
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error hard deleting cards:', err);
+    return { success: false, error: err?.message || 'Network error' };
+  }
+}
+
+/**
+ * Bulk updates collection membership in Nothing Cloud
+ */
+export async function bulkAssignCollectionCloudCards(
+  token: string,
+  cards: Card[],
+  collectionId?: string | null
+): Promise<{ success: boolean; error?: string }> {
+  if (cards.length === 0) return { success: true };
+  try {
+    const now = Date.now();
+    const { aesKeyB64, cipherKey } = generateWriteCipherSession();
+    const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
+    const itemPayload = encryptPayload('0', aesKeyB64);
+
+    const body = {
+      payload,
+      cipherKey,
+      cards: cards.map(c => {
+        const clientRequestResponse = JSON.stringify({
+          cards: {
+            card_id: c.cardId,
+            title: c.title,
+            summary: c.summary || c.content || '',
+            type: c.type,
+            create_time: c.createTime || now,
+            update_time: now,
+            target_state: c.targetState || 0,
+          },
+          card_events: (c.events || []).map(ev => ({
+            type: 2,
+            title: ev.title,
+            content: ev.content || '',
+            check: ev.check === 1,
+            is_potential_reminder: ev.isPotentialReminder ?? true,
+            time: ev.time || now,
+            update_time: now,
+            special_key: ev.eventId,
+            start_time: -1,
+            end_time: -1,
+          })),
+        });
+
+        return {
+          cardId: c.cardId,
+          collectionIds: collectionId ? [collectionId] : [],
+          client_request_response: clientRequestResponse,
+          files: [],
+          clientUpdateTime: now,
+          payload: itemPayload,
+          cipherKey,
+        };
+      }),
+    };
+
+    const targetUrl = `${NOTHING_BASE_URL}/storage/card/v1/update`;
+    const res = await nothingFetch(targetUrl, {
+      method: 'POST',
+      headers: generateNothingAuthHeaders(token),
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.code !== '00000') {
+      const errorMsg = data?.msg || `Failed to update card collections (HTTP ${res.status})`;
+      return { success: false, error: errorMsg };
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error updating card collections:', err);
     return { success: false, error: err?.message || 'Network error' };
   }
 }

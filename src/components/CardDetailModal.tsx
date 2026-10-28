@@ -309,19 +309,34 @@ export default function CardDetailModal({
           </div>
         )}
 
-        {/* Audio Player + Transcript Card (matching Screenshot 3) */}
-        {(card.audio?.audioUri || card.audio?.transcript) && (
+        {/* Audio Player + Transcript / User Note Card (matching Nothing OS screenshot) */}
+        {(card.audio?.audioUri ||
+          card.audio?.transcript ||
+          (card.content && card.summary && card.content !== card.summary)) && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-4">
-            {/* Transcript Section */}
-            {card.audio?.transcript && (
+            {/* Transcript / User Note Section */}
+            {(card.audio?.transcript ||
+              (card.content && card.summary && card.content !== card.summary)) && (
               <div className="rounded-xl bg-[#242424] border border-nothing-border/50 p-3.5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-                     Розшифровка / Full Transcription
+                    {card.audio?.audioUri
+                      ? 'Розшифровка / Full Transcription'
+                      : 'Розшифровка / Full Transcription'}
                   </span>
                   <button
                     type="button"
-                    onClick={copyTranscript}
+                    onClick={() => {
+                      const textToCopy =
+                        card.audio?.transcript ||
+                        (card.content && card.summary && card.content !== card.summary
+                          ? card.content
+                          : '');
+                      if (!textToCopy) return;
+                      navigator.clipboard.writeText(textToCopy);
+                      setCopiedTranscript(true);
+                      setTimeout(() => setCopiedTranscript(false), 2000);
+                    }}
                     className="inline-flex items-center gap-1 text-[11px] font-mono text-nothing-gray hover:text-white px-2 py-0.5 rounded bg-black/40 border border-nothing-border/50 transition-colors"
                   >
                     {copiedTranscript ? (
@@ -338,7 +353,7 @@ export default function CardDetailModal({
                   </button>
                 </div>
                 <p className="text-xs sm:text-sm text-white/95 leading-relaxed whitespace-pre-line">
-                  {card.audio.transcript}
+                  {card.audio?.transcript || card.content}
                 </p>
               </div>
             )}
@@ -457,14 +472,6 @@ export default function CardDetailModal({
             <p className="text-sm text-white/95 leading-relaxed">
               {card.summary || card.content}
             </p>
-            {card.content && card.summary && card.content !== card.summary && (
-              <div className="pt-2 border-t border-nothing-border/40">
-                <span className="text-[11px] font-mono text-nothing-gray uppercase block mb-1">
-                  Оригінальний текст нотатки / Original Note:
-                </span>
-                <p className="text-xs text-white/85 whitespace-pre-wrap">{card.content}</p>
-              </div>
-            )}
             {card.emotionalSummary && card.emotionalSummary !== card.summary && (
               <p className="text-xs text-nothing-gray font-mono pt-1 border-t border-nothing-border/40">
                 Context: {card.emotionalSummary}

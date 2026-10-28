@@ -16,6 +16,9 @@ interface CardGridProps {
   onToggleTodo: (cardId: string, eventId: string) => void;
   activeTag?: string;
   onSelectTag?: (tag: string) => void;
+  isSelectMode?: boolean;
+  selectedCardIds?: Set<string>;
+  onToggleSelect?: (cardId: string) => void;
 }
 
 export default function CardGrid({
@@ -24,6 +27,9 @@ export default function CardGrid({
   onToggleTodo,
   activeTag,
   onSelectTag,
+  isSelectMode,
+  selectedCardIds,
+  onToggleSelect,
 }: CardGridProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const selectedCard = cards.find(c => c.cardId === selectedCardId) || null;
@@ -55,6 +61,7 @@ export default function CardGrid({
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-max">
         {cards.map(card => {
+          const isSelected = selectedCardIds?.has(card.cardId);
           switch (card.type) {
             case 'IMAGE':
               return (
@@ -64,6 +71,9 @@ export default function CardGrid({
                   activeTag={activeTag}
                   onSelectTag={onSelectTag}
                   onOpenDetail={c => setSelectedCardId(c.cardId)}
+                  isSelectMode={isSelectMode}
+                  isSelected={isSelected}
+                  onToggleSelect={onToggleSelect}
                 />
               );
             case 'AUDIO':
@@ -74,10 +84,23 @@ export default function CardGrid({
                   activeTag={activeTag}
                   onSelectTag={onSelectTag}
                   onOpenDetail={c => setSelectedCardId(c.cardId)}
+                  isSelectMode={isSelectMode}
+                  isSelected={isSelected}
+                  onToggleSelect={onToggleSelect}
                 />
               );
             case 'TODO':
-              return <TodoCard key={card.cardId} card={card} onToggleTodo={onToggleTodo} />;
+              return (
+                <TodoCard
+                  key={card.cardId}
+                  card={card}
+                  onToggleTodo={onToggleTodo}
+                  isSelectMode={isSelectMode}
+                  isSelected={isSelected}
+                  onToggleSelect={onToggleSelect}
+                  onOpenDetail={c => setSelectedCardId(c.cardId)}
+                />
+              );
             case 'LINK':
               return (
                 <LinkCard
@@ -86,6 +109,9 @@ export default function CardGrid({
                   activeTag={activeTag}
                   onSelectTag={onSelectTag}
                   onOpenDetail={c => setSelectedCardId(c.cardId)}
+                  isSelectMode={isSelectMode}
+                  isSelected={isSelected}
+                  onToggleSelect={onToggleSelect}
                 />
               );
             case 'TEXT':
@@ -99,6 +125,9 @@ export default function CardGrid({
                   activeTag={activeTag}
                   onSelectTag={onSelectTag}
                   onOpenDetail={c => setSelectedCardId(c.cardId)}
+                  isSelectMode={isSelectMode}
+                  isSelected={isSelected}
+                  onToggleSelect={onToggleSelect}
                 />
               );
           }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, X, KeyRound } from 'lucide-react';
+import { AlertCircle, CheckCircle2, X, KeyRound, CheckSquare } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FilterBar, { type TagCount } from '@/components/FilterBar';
 import CardGrid from '@/components/CardGrid';
@@ -11,6 +11,8 @@ import ForYouTab from '@/components/ForYouTab';
 import CardDetailModal from '@/components/CardDetailModal';
 import CreateNoteModal from '@/components/CreateNoteModal';
 import CollectionModal from '@/components/CollectionModal';
+import BulkActionBar from '@/components/BulkActionBar';
+import SelectCollectionModal from '@/components/SelectCollectionModal';
 import { saveDbCards, saveDbCollections, saveDbAuth, getDbCards, getDbCollections, getDbAuth } from '@/lib/db';
 import type { Card, Collection } from '@/types';
 
@@ -41,6 +43,12 @@ export default function DashboardPage() {
     mode: 'CREATE' | 'EDIT';
     collection?: Collection | null;
   }>({ isOpen: false, mode: 'CREATE' });
+
+  // Multi-select & Bulk actions state
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [isSelectCollectionModalOpen, setIsSelectCollectionModalOpen] = useState(false);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   // Initial Local-First load from IndexedDB
   useEffect(() => {
@@ -196,6 +204,152 @@ export default function DashboardPage() {
     }
   };
 
+  const handleToggleSelect = (cardId: string) => {
+    setSelectedCardIds(prev => {
+      const next = new Set(prev);
+      if (next.has(cardId)) {
+        next.delete(cardId);
+      } else {
+        next.add(cardId);
+      }
+      if (next.size > 0 && !isSelectMode) {
+        setIsSelectMode(true);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedCardIds.size === cards.length) {
+      setSelectedCardIds(new Set());
+    } else {
+      setSelectedCardIds(new Set(cards.map(c => c.cardId)));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedCardIds(new Set());
+    setIsSelectMode(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCardIds.size === 0) return;
+    const ids = Array.from(selectedCardIds);
+    if (isTrash) {
+      if (
+        !window.confirm(
+          `Permanently delete ${ids.length} ${
+            ids.length === 1 ? 'note' : 'notes'
+          }? This action cannot be undone.`
+        )
+      ) {
+        return;
+      }
+    }
+    setIsBulkProcessing(true);
+    try {
+      // Optimistic local update
+      setCards(prev => prev.filter(c => !selectedCardIds.has(c.cardId)));
+      const action = isTrash ? 'PERMANENT_DELETE' : 'DELETE';
+      const res = await fetch('/api/cards/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, cardIds: ids }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncSuccess(
+          isTrash
+            ? `Permanently deleted: ${ids.length}`
+            : `Moved to trash: ${ids.length}`
+        );
+        setTimeout(() => setSyncSuccess(null), 3000);
+      }
+      handleClearSelection();
+      fetchCards();
+    } catch (err) {
+      console.error('Failed bulk delete:', err);
+      fetchCards();
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedCardIds.size === 0) return;
+    const ids = Array.from(selectedCardIds);
+    setIsBulkProcessing(true);
+    try {
+      setCards(prev => prev.filter(c => !selectedCardIds.has(c.cardId)));
+      const res = await fetch('/api/cards/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'RESTORE', cardIds: ids }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncSuccess(`Restored from trash: ${ids.length}`);
+        setTimeout(() => setSyncSuccess(null), 3000);
+      }
+      handleClearSelection();
+      fetchCards();
+    } catch (err) {
+      console.error('Failed bulk restore:', err);
+      fetchCards();
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkAssignCollection = async (
+    collectionId: string | null,
+    collectionName?: string
+  ) => {
+    if (selectedCardIds.size === 0) return;
+    const ids = Array.from(selectedCardIds);
+    setIsBulkProcessing(true);
+    try {
+      setCards(prev =>
+        prev.map(c => {
+          if (selectedCardIds.has(c.cardId)) {
+            return {
+              ...c,
+              collectionId: collectionId || undefined,
+              collectionName: collectionId ? collectionName : undefined,
+            };
+          }
+          return c;
+        })
+      );
+      const res = await fetch('/api/cards/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ASSIGN_COLLECTION',
+          cardIds: ids,
+          collectionId,
+          collectionName,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncSuccess(
+          collectionId
+            ? `Added to "${collectionName}": ${ids.length}`
+            : `Removed from collection: ${ids.length}`
+        );
+        setTimeout(() => setSyncSuccess(null), 3000);
+      }
+      handleClearSelection();
+      fetchCards();
+    } catch (err) {
+      console.error('Failed bulk assign collection:', err);
+      fetchCards();
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -316,11 +470,32 @@ export default function DashboardPage() {
                 <span>{cards.length} items</span>
               </div>
 
-              {cards.length > 0 && (
-                <span className="text-[11px] text-nothing-gray/70 hidden sm:inline">
-                  Sorted by date (latest first)
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isSelectMode) {
+                      handleClearSelection();
+                    } else {
+                      setIsSelectMode(true);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-xl border font-mono text-xs flex items-center gap-1.5 transition-all ${
+                    isSelectMode
+                      ? 'bg-nothing-red text-white border-nothing-red shadow-sm'
+                      : 'bg-[#181818] border-nothing-border text-nothing-light hover:text-white hover:border-nothing-gray/60'
+                  }`}
+                >
+                  <CheckSquare size={13} />
+                  <span>{isSelectMode ? 'Cancel' : 'Select'}</span>
+                </button>
+
+                {cards.length > 0 && (
+                  <span className="text-[11px] text-nothing-gray/70 hidden sm:inline">
+                    Sorted by date (latest first)
+                  </span>
+                )}
+              </div>
             </div>
 
             <CardGrid
@@ -329,18 +504,49 @@ export default function DashboardPage() {
               onToggleTodo={handleToggleTodo}
               activeTag={activeTag}
               onSelectTag={setActiveTag}
+              isSelectMode={isSelectMode}
+              selectedCardIds={selectedCardIds}
+              onToggleSelect={handleToggleSelect}
             />
 
-            {/* Floating Bottom Filter Dock - ONLY visible on Library tab */}
-            <FloatingFilterDock
-              activeType={activeType}
+            {/* Bulk Actions Floating Dock */}
+            <BulkActionBar
+              selectedCount={selectedCardIds.size}
+              totalCount={cards.length}
+              isAllSelected={cards.length > 0 && selectedCardIds.size === cards.length}
               isTrash={isTrash}
-              onSelectType={type => {
-                setActiveType(type);
-                setActiveCollection('');
-              }}
-              onToggleTrash={() => setIsTrash(!isTrash)}
+              onSelectAll={handleSelectAll}
+              onClearSelection={handleClearSelection}
+              onOpenAssignCollection={() => setIsSelectCollectionModalOpen(true)}
+              onDeleteSelected={handleBulkDelete}
+              onRestoreSelected={isTrash ? handleBulkRestore : undefined}
+              isProcessing={isBulkProcessing}
             />
+
+            {/* Modal for selecting collection for bulk action */}
+            <SelectCollectionModal
+              isOpen={isSelectCollectionModalOpen}
+              onClose={() => setIsSelectCollectionModalOpen(false)}
+              collections={collections}
+              selectedCardCount={selectedCardIds.size}
+              onAssign={handleBulkAssignCollection}
+              onOpenCreateCollection={() => {
+                setCollectionModalState({ isOpen: true, mode: 'CREATE' });
+              }}
+            />
+
+            {/* Floating Bottom Filter Dock - ONLY visible on Library tab when not in select mode */}
+            {!isSelectMode && (
+              <FloatingFilterDock
+                activeType={activeType}
+                isTrash={isTrash}
+                onSelectType={type => {
+                  setActiveType(type);
+                  setActiveCollection('');
+                }}
+                onToggleTrash={() => setIsTrash(!isTrash)}
+              />
+            )}
           </div>
         )}
 

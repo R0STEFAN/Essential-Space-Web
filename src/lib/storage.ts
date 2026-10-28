@@ -159,22 +159,59 @@ export async function dismissSuggestion(userId: string, suggestionId: string): P
 export async function assignCardsToCollection(
   userId: string,
   cardIds: string[],
-  collectionId: string,
+  collectionId?: string | null,
   collectionName?: string
-): Promise<void> {
+): Promise<Card[]> {
   const cards = await getUserCards(userId);
-  let changed = false;
+  const updated: Card[] = [];
+  const idSet = new Set(cardIds);
   for (const c of cards) {
-    if (cardIds.includes(c.cardId)) {
-      c.collectionId = collectionId;
-      if (collectionName) c.collectionName = collectionName;
+    if (idSet.has(c.cardId)) {
+      c.collectionId = collectionId || undefined;
+      c.collectionName = collectionId ? collectionName : undefined;
       c.updateTime = Date.now();
-      changed = true;
+      updated.push(c);
     }
   }
-  if (changed) {
+  if (updated.length > 0) {
     await saveUserCards(userId, cards);
   }
+  return updated;
+}
+
+export async function bulkUpdateCardsTargetState(
+  userId: string,
+  cardIds: string[],
+  targetState: number
+): Promise<Card[]> {
+  const cards = await getUserCards(userId);
+  const updated: Card[] = [];
+  const idSet = new Set(cardIds);
+  const now = Date.now();
+  for (const c of cards) {
+    if (idSet.has(c.cardId)) {
+      c.targetState = targetState;
+      c.updateTime = now;
+      updated.push(c);
+    }
+  }
+  if (updated.length > 0) {
+    await saveUserCards(userId, cards);
+  }
+  return updated;
+}
+
+export async function bulkDeleteCardsPermanently(
+  userId: string,
+  cardIds: string[]
+): Promise<string[]> {
+  const cards = await getUserCards(userId);
+  const idSet = new Set(cardIds);
+  const filtered = cards.filter(c => !idSet.has(c.cardId));
+  if (filtered.length !== cards.length) {
+    await saveUserCards(userId, filtered);
+  }
+  return cardIds;
 }
 
 export async function createSmartCollection(
