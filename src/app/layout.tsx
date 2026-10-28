@@ -1,5 +1,24 @@
 import type { Metadata } from 'next';
+import localFont from 'next/font/local';
 import './globals.css';
+
+const ndot55 = localFont({
+  src: '../../public/fonts/Ndot55Caps-Regular.otf',
+  variable: '--font-ndot55',
+  display: 'swap',
+});
+
+const ndot57 = localFont({
+  src: '../../public/fonts/Ndot57Caps-Regular.otf',
+  variable: '--font-ndot57',
+  display: 'swap',
+});
+
+const ndotOriginal = localFont({
+  src: '../../public/fonts/ndot.otf',
+  variable: '--font-ndot-orig',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'ESSENTIAL SPACE // WEB',
@@ -25,7 +44,7 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className="bg-black text-nothing-light min-h-screen selection:bg-nothing-red selection:text-white"
+        className={`${ndot55.variable} ${ndot57.variable} ${ndotOriginal.variable} bg-black text-nothing-light min-h-screen selection:bg-nothing-red selection:text-white`}
       >
         {children}
       </body>

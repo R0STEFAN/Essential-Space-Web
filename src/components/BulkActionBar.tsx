@@ -76,7 +76,7 @@ export default function BulkActionBar({
                   type="button"
                   disabled={isProcessing}
                   onClick={onRestoreSelected}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black transition-all text-xs font-mono flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
                   title="Restore from trash"
                 >
                   {isProcessing ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
@@ -87,7 +87,7 @@ export default function BulkActionBar({
                 type="button"
                 disabled={isProcessing}
                 onClick={onDeleteSelected}
-                className="px-3 py-1.5 rounded-xl bg-red-950/40 hover:bg-nothing-red text-red-300 hover:text-white border border-red-800/40 hover:border-nothing-red transition-all text-xs font-mono flex items-center gap-1.5 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-red-950/40 hover:bg-nothing-red text-red-300 hover:text-white border border-red-800/40 hover:border-nothing-red transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
                 title="Delete permanently"
               >
                 <Trash2 size={13} />
@@ -101,7 +101,7 @@ export default function BulkActionBar({
                 type="button"
                 disabled={isProcessing}
                 onClick={onOpenAssignCollection}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black transition-all text-xs font-mono flex items-center gap-1.5 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
                 title="Add to collection"
               >
                 <FolderPlus size={13} />
@@ -113,7 +113,7 @@ export default function BulkActionBar({
                 type="button"
                 disabled={isProcessing}
                 onClick={onDeleteSelected}
-                className="px-3 py-1.5 rounded-xl bg-nothing-red/20 hover:bg-nothing-red text-nothing-red hover:text-white border border-nothing-red/40 hover:border-nothing-red transition-all text-xs font-mono flex items-center gap-1.5 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-nothing-red/20 hover:bg-nothing-red text-nothing-red hover:text-white border border-nothing-red/40 hover:border-nothing-red transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
                 title="Move to trash"
               >
                 <Trash2 size={13} />

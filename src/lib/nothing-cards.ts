@@ -877,7 +877,7 @@ export async function setCardTrashState(
       ],
     };
 
-    const endpoint = isTrash ? 'storage/card/v1/delete' : 'storage/card/v1/restore';
+    const endpoint = isTrash ? 'storage/card/v1/delete' : 'storage/restore/v1/restore';
     const targetUrl = `${NOTHING_BASE_URL}/${endpoint}`;
     const res = await nothingFetch(targetUrl, {
       method: 'POST',
@@ -968,7 +968,7 @@ export async function bulkRestoreCloudCards(
       })),
     };
 
-    const targetUrl = `${NOTHING_BASE_URL}/storage/card/v1/restore`;
+    const targetUrl = `${NOTHING_BASE_URL}/storage/restore/v1/restore`;
     const res = await nothingFetch(targetUrl, {
       method: 'POST',
       headers: generateNothingAuthHeaders(token),

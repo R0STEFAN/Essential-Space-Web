@@ -467,11 +467,11 @@ export default function CardDetailModal({
           </div>
         )}
 
-        {/* Підсумок / Summary Section */}
+        {/* Summary Section */}
         {(card.summary || card.content || card.emotionalSummary) && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-2">
-            <h3 className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-              {card.summary ? 'Підсумок / Summary' : 'Опис / Description'}
+            <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
+              {card.summary ? 'SUMMARY' : 'DESCRIPTION'}
             </h3>
             <p className="text-sm text-white/95 leading-relaxed">
               {card.summary || card.content}
@@ -484,11 +484,11 @@ export default function CardDetailModal({
           </div>
         )}
 
-        {/* Завдання / Tasks Checklist (card_events) */}
+        {/* Tasks Checklist (card_events) */}
         {card.events && card.events.length > 0 && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
-            <h3 className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-              Завдання / Tasks ({card.events.filter(e => e.check === 1).length}/{card.events.length})
+            <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
+              TASKS ({card.events.filter(e => e.check === 1).length}/{card.events.length})
             </h3>
             <div className="space-y-2">
               {card.events.map(ev => {
@@ -532,11 +532,11 @@ export default function CardDetailModal({
           </div>
         )}
 
-        {/* Ключові моменти / Key Moments (MEETING_KEY_TOPIC_ANALYSIS) */}
+        {/* Key Moments (MEETING_KEY_TOPIC_ANALYSIS) */}
         {card.keyTopics && card.keyTopics.length > 0 && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
-            <h3 className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-              Ключові моменти / Key Moments
+            <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
+              KEY MOMENTS
             </h3>
             <div className="space-y-4">
               {card.keyTopics.map((kt, idx) => (
@@ -559,11 +559,11 @@ export default function CardDetailModal({
           </div>
         )}
 
-        {/* Основні теми / Main Topics (MEETING_MAIN_TOPIC) */}
+        {/* Main Topics (MEETING_MAIN_TOPIC) */}
         {card.mainTopics && card.mainTopics.length > 0 && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-4">
-            <h3 className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-              Основні теми / Main Topics
+            <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
+              MAIN TOPICS
             </h3>
             <div className="space-y-4">
               {card.mainTopics.map((topic, idx) => (
@@ -582,8 +582,8 @@ export default function CardDetailModal({
         {/* Extracted Information / Key Values (INFO_EXTRACT) */}
         {card.infoExtract && card.infoExtract.length > 0 && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-2.5">
-            <h3 className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-              Вилучені дані / Extracted Info
+            <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
+              EXTRACTED INFO
             </h3>
             <div className="space-y-2">
               {card.infoExtract.map((info, idx) => (
@@ -616,8 +616,8 @@ export default function CardDetailModal({
         {/* Bullet Points (BULLET_POINTS) */}
         {card.bulletPoints && card.bulletPoints.length > 0 && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
-            <h3 className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-              {card.bulletPointsTitle || 'Деталі / Key Bullet Points'}
+            <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
+              {card.bulletPointsTitle || 'KEY BULLET POINTS'}
             </h3>
             <div className="space-y-2">
               {card.bulletPoints.map((pt, idx) => (
@@ -636,8 +636,8 @@ export default function CardDetailModal({
         {/* Locations (LOCATION) */}
         {card.locations && card.locations.length > 0 && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-2.5">
-            <h3 className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-              Локація / Location
+            <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
+              LOCATION
             </h3>
             {card.locations.map((loc, idx) => (
               <a
@@ -663,9 +663,9 @@ export default function CardDetailModal({
         {/* Freeform AI Insights (FREEFORM) */}
         {card.freeformInsights && card.freeformInsights.length > 0 && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-mono text-nothing-red uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 font-dot text-xs text-nothing-red uppercase tracking-wider">
               <Sparkles size={13} />
-              <span>Essential AI Insight</span>
+              <span>ESSENTIAL AI INSIGHT</span>
             </div>
             {card.freeformInsights.map((ins, idx) => (
               <div key={idx} className="space-y-2">
@@ -696,8 +696,8 @@ export default function CardDetailModal({
         {/* Tags & Collection Footer */}
         {((card.tags && card.tags.length > 0) || card.collectionName) && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
-            <h3 className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-              Колекції та теги / Collections & Tags
+            <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
+              COLLECTIONS & TAGS
             </h3>
             <div className="flex flex-wrap gap-2">
               {card.collectionName && (

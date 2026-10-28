@@ -268,6 +268,27 @@ export async function syncUserData(user: NothingUser): Promise<SyncResult> {
       pageNo++;
     }
 
+    // 1b. Fetch trash / bin cards from Nothing Cloud restore endpoint
+    try {
+      const restoreRes = await fetch(`${NOTHING_BASE}/storage/restore/v1/list`, {
+        method: 'POST',
+        headers: getNothingAuthHeaders(activeToken),
+        body: JSON.stringify({ pageNo: 1, pageSize: 100 }),
+        cache: 'no-store',
+      });
+      if (restoreRes.ok) {
+        const restoreJson = await restoreRes.json();
+        const trashItems: any[] = Array.isArray(restoreJson?.data)
+          ? restoreJson.data
+          : restoreJson?.data?.page_data || [];
+        for (const item of trashItems) {
+          rawCardItems.push({ ...item, _isTrash: true });
+        }
+      }
+    } catch (restoreErr) {
+      console.warn('Failed to fetch trash cards from Nothing Cloud:', restoreErr);
+    }
+
     // 2. Collect all referenced files across cards (images, audios)
     const filesToSign: Array<{ region: string; gcsKey: string }> = [];
     const seenKeys = new Set<string>();
@@ -625,9 +646,9 @@ export async function syncUserData(user: NothingUser): Promise<SyncResult> {
           speakers.length > 0
             ? speakers.map(s => ({ speakerId: s.speaker_id, description: s.description }))
             : undefined,
-        targetState: 0,
-        createTime: cardInfo.create_time || raw.clientCreateTime || Date.now(),
-        updateTime: cardInfo.update_time || raw.clientUpdateTime || Date.now(),
+        targetState: raw._isTrash ? 1 : (cardInfo.target_state ?? 0),
+        createTime: cardInfo.create_time || raw.clientCreateTime || raw.deleteAt || Date.now(),
+        updateTime: raw.deleteAt || cardInfo.update_time || raw.clientUpdateTime || Date.now(),
         events: events.length > 0 ? events : undefined,
         link:
           cardType === 'LINK' || linkUrl
