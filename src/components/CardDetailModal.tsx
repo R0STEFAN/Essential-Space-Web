@@ -449,13 +449,21 @@ export default function CardDetailModal({
         )}
 
         {/* Підсумок / Summary Section */}
-        {(card.summary || card.emotionalSummary) && (
+        {(card.summary || card.content || card.emotionalSummary) && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-2">
             <h3 className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
-              Підсумок / Summary
+              {card.summary ? 'Підсумок / Summary' : 'Опис / Description'}
             </h3>
-            {card.summary && (
-              <p className="text-sm text-white/95 leading-relaxed">{card.summary}</p>
+            <p className="text-sm text-white/95 leading-relaxed">
+              {card.summary || card.content}
+            </p>
+            {card.content && card.summary && card.content !== card.summary && (
+              <div className="pt-2 border-t border-nothing-border/40">
+                <span className="text-[11px] font-mono text-nothing-gray uppercase block mb-1">
+                  Оригінальний текст нотатки / Original Note:
+                </span>
+                <p className="text-xs text-white/85 whitespace-pre-wrap">{card.content}</p>
+              </div>
             )}
             {card.emotionalSummary && card.emotionalSummary !== card.summary && (
               <p className="text-xs text-nothing-gray font-mono pt-1 border-t border-nothing-border/40">

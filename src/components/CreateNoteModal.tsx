@@ -302,14 +302,14 @@ export default function CreateNoteModal({
           (tab === 'LINK'
             ? linkUrl
             : content.trim()
-            ? content.slice(0, 40)
+            ? content.trim().slice(0, 40)
             : hasAudio && hasImage
             ? 'Voice + Photo Memo'
             : hasAudio
             ? 'Voice Memo'
             : 'Photo Note'),
         content,
-        summary: aiResult?.summary,
+        summary: aiResult?.summary || (content.trim() ? content.trim() : undefined),
         imageUrl: finalImageUrl,
         imageGcsKey,
         collectionId: selectedCollection || undefined,

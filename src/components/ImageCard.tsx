@@ -90,10 +90,10 @@ export default function ImageCard({
           </h3>
         )}
 
-        {/* Short AI Summary */}
-        {card.summary && (
+        {/* Short AI Summary or Note Content */}
+        {(card.summary || card.content) && (
           <p className="text-xs text-nothing-light/85 leading-relaxed font-sans mb-3 line-clamp-2">
-            {card.summary}
+            {card.summary || card.content}
           </p>
         )}
 

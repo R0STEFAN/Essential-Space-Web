@@ -54,9 +54,9 @@ export async function requestNothingAiAnalysis(params: {
     const promptUserContent = `Current Time: ${timeStr}, Output Language: ${lang}, Request: ${params.userText || ''}`;
 
     const body = {
-      aiType: 0,
+      aiType: 1,
       promptType: params.promptType,
-      promptVersion: 2,
+      promptVersion: 1,
       s3Region: 'europe-west3',
       s3FileKey: params.s3FileKey || '',
       storageType: 'GCS',
@@ -84,7 +84,19 @@ export async function requestNothingAiAnalysis(params: {
       return null;
     }
 
-    const d = json.data;
+    let d = json.data;
+    if (typeof d === 'string') {
+      try {
+        d = JSON.parse(d);
+      } catch {
+        // string content
+      }
+    }
+
+    if (!d || d.error) {
+      console.warn('Nothing AI returned error payload:', d);
+      return null;
+    }
 
     // Normalize tags
     const rawTags = d.hashtags || d.tags || [];
@@ -300,7 +312,7 @@ export async function createCloudCard(params: {
       type: params.type,
       title: params.title || (params.type === 'LINK' ? params.linkUrl : 'New Note'),
       content: params.content || '',
-      summary: params.summary,
+      summary: params.summary || params.content || undefined,
       imageUrl: params.imageUrl || params.linkMeta?.preview,
       collectionId: params.collectionId,
       tags: params.tags,
@@ -407,7 +419,7 @@ export async function createCloudCard(params: {
       cards: {
         card_id: cardId,
         title: newCard.title,
-        summary: newCard.summary || '',
+        summary: newCard.summary || newCard.content || '',
         type: newCard.type,
         create_time: now,
         update_time: now,
@@ -441,7 +453,7 @@ export async function createCloudCard(params: {
           cardId: newCard.cardId,
           collectionIds: newCard.collectionId ? [newCard.collectionId] : [],
           categoryId: null,
-          clientRequestResponse,
+          client_request_response: clientRequestResponse,
           files,
           clientCreateTime: now,
           clientUpdateTime: now,
@@ -503,7 +515,7 @@ export async function updateCloudCards(
           cards: {
             card_id: c.cardId,
             title: c.title,
-            summary: c.summary || '',
+            summary: c.summary || c.content || '',
             type: c.type,
             create_time: c.createTime || now,
             update_time: now,
@@ -526,7 +538,7 @@ export async function updateCloudCards(
         return {
           cardId: c.cardId,
           collectionIds: c.collectionId ? [c.collectionId] : [],
-          clientRequestResponse,
+          client_request_response: clientRequestResponse,
           files: [],
           clientUpdateTime: now,
           payload: itemPayload,
