@@ -1,6 +1,7 @@
 'use client';
 
-import { Search, X, Tag } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, X, Tag, ChevronDown, Check } from 'lucide-react';
 import type { Collection } from '@/types';
 
 export interface TagCount {
@@ -29,6 +30,33 @@ export default function FilterBar({
   activeTag = '',
   onSelectTag,
 }: FilterBarProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedCol = collections.find(c => c.collectionId === activeCollection);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Close dropdown on ESC
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="flex flex-col gap-3 mb-6">
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
@@ -52,44 +80,110 @@ export default function FilterBar({
           )}
         </div>
 
-        {/* Collections filter */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+        {/* Collections filter: All Collections button + Wide Dropdown */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* 1. All Collections Button */}
           <button
-            onClick={() => onSelectCollection('')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 ${
+            type="button"
+            onClick={() => {
+              onSelectCollection('');
+              setIsDropdownOpen(false);
+            }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
               activeCollection === ''
-                ? 'bg-nothing-border text-white font-medium border border-nothing-gray/40'
-                : 'bg-nothing-card/80 text-nothing-gray hover:text-white border border-nothing-border/60'
+                ? 'bg-white text-black font-semibold shadow-sm border border-white'
+                : 'bg-nothing-card/90 text-nothing-gray hover:text-white border border-nothing-border hover:border-white/30'
             }`}
           >
             <span>All Collections</span>
           </button>
 
-          {collections.map(col => {
-            const isSelected = activeCollection === col.collectionId;
-            return (
-              <button
-                key={col.collectionId}
-                onClick={() => onSelectCollection(col.collectionId)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 ${
-                  isSelected
-                    ? 'bg-nothing-border text-white font-medium border border-nothing-gray/40'
-                    : 'bg-nothing-card/80 text-nothing-gray hover:text-white border border-nothing-border/60'
-                }`}
-              >
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: col.color || '#D71921' }}
-                />
-                <span>{col.name}</span>
-                {col.cardCount !== undefined && col.cardCount > 0 && (
-                  <span className="text-[10px] text-nothing-gray font-mono">
-                    ({col.cardCount})
-                  </span>
+          {/* 2. Wide Collection Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen(prev => !prev)}
+              className={`w-52 sm:w-64 px-3.5 py-2 rounded-xl text-xs font-mono transition-all flex items-center justify-between gap-2 border select-none ${
+                activeCollection !== ''
+                  ? 'bg-nothing-card border-white/60 text-white font-medium shadow-sm'
+                  : 'bg-nothing-card/90 border-nothing-border text-nothing-gray hover:text-white hover:border-white/30'
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                {selectedCol ? (
+                  <>
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: selectedCol.color || '#D71921' }}
+                    />
+                    <span className="truncate text-white font-medium">{selectedCol.name}</span>
+                    {selectedCol.cardCount !== undefined && selectedCol.cardCount > 0 && (
+                      <span className="text-[10px] text-nothing-gray font-mono flex-shrink-0">
+                        ({selectedCol.cardCount})
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-nothing-gray truncate">Select Collection</span>
                 )}
-              </button>
-            );
-          })}
+              </div>
+              <ChevronDown
+                size={14}
+                className={`text-nothing-gray transition-transform duration-200 flex-shrink-0 ${
+                  isDropdownOpen ? 'rotate-180 text-white' : ''
+                }`}
+              />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-64 sm:w-72 max-h-72 overflow-y-auto rounded-xl bg-nothing-card/95 border border-white/20 shadow-2xl p-1.5 z-50 backdrop-blur-xl scrollbar-thin">
+                {collections.length === 0 ? (
+                  <div className="p-3 text-center text-xs font-mono text-nothing-gray">
+                    No collections found
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    {collections.map(col => {
+                      const isSelected = activeCollection === col.collectionId;
+                      return (
+                        <button
+                          key={col.collectionId}
+                          type="button"
+                          onClick={() => {
+                            onSelectCollection(col.collectionId);
+                            setIsDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 rounded-lg text-xs font-mono transition-all flex items-center justify-between gap-2 text-left ${
+                            isSelected
+                              ? 'bg-white/15 text-white font-medium'
+                              : 'text-nothing-gray hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span
+                              className="w-2 h-2 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: col.color || '#D71921' }}
+                            />
+                            <span className="truncate">{col.name}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {col.cardCount !== undefined && col.cardCount > 0 && (
+                              <span className="text-[10px] text-nothing-gray">
+                                {col.cardCount}
+                              </span>
+                            )}
+                            {isSelected && <Check size={13} className="text-nothing-red flex-shrink-0" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
