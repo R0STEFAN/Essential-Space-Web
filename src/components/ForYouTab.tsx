@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Sparkles,
   CheckSquare,
@@ -10,12 +10,11 @@ import {
   X,
   FolderPlus,
   FolderCheck,
-  ChevronRight,
-  Inbox,
   Mic,
   Bookmark,
   FileText,
   Image as ImageIcon,
+  ListTodo,
 } from 'lucide-react';
 import type { Card, Collection } from '@/types';
 import type { ForYouTask, ForYouRecommendation, ForYouData } from '@/lib/foryou';
@@ -41,6 +40,7 @@ export default function ForYouTab({
   const [foryouData, setForyouData] = useState<ForYouData | null>(null);
   const [loading, setLoading] = useState(true);
   const [taskFilter, setTaskFilter] = useState<'pending' | 'completed' | 'all'>('pending');
+  const [selectedListId, setSelectedListId] = useState<string>('');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const fetchForYou = useCallback(async () => {
@@ -119,11 +119,71 @@ export default function ForYouTab({
   const tasks = foryouData?.tasks || [];
   const recommendations = foryouData?.recommendations || [];
 
+  // Group unique source lists (parent captures)
+  const sourceLists = useMemo(() => {
+    const map = new Map<
+      string,
+      { cardId: string; title: string; type: string; count: number; pendingCount: number }
+    >();
+    for (const t of tasks) {
+      const existing = map.get(t.cardId);
+      if (!existing) {
+        map.set(t.cardId, {
+          cardId: t.cardId,
+          title: t.cardTitle,
+          type: t.cardType,
+          count: 1,
+          pendingCount: t.check === 0 ? 1 : 0,
+        });
+      } else {
+        existing.count++;
+        if (t.check === 0) existing.pendingCount++;
+      }
+    }
+    return Array.from(map.values());
+  }, [tasks]);
+
   const filteredTasks = tasks.filter(t => {
+    if (selectedListId && t.cardId !== selectedListId) return false;
     if (taskFilter === 'pending') return t.check === 0;
     if (taskFilter === 'completed') return t.check === 1;
     return true;
   });
+
+  // Group tasks by their source list
+  const groupedTasks = useMemo(() => {
+    if (selectedListId) {
+      const targetList = sourceLists.find(l => l.cardId === selectedListId);
+      return [
+        {
+          cardId: selectedListId,
+          title: targetList?.title || 'Tasks',
+          type: targetList?.type || 'TODO',
+          tasks: filteredTasks,
+        },
+      ];
+    }
+
+    const groups: Array<{
+      cardId: string;
+      title: string;
+      type: string;
+      tasks: ForYouTask[];
+    }> = [];
+
+    for (const list of sourceLists) {
+      const listTasks = filteredTasks.filter(t => t.cardId === list.cardId);
+      if (listTasks.length > 0) {
+        groups.push({
+          cardId: list.cardId,
+          title: list.title,
+          type: list.type,
+          tasks: listTasks,
+        });
+      }
+    }
+    return groups;
+  }, [filteredTasks, selectedListId, sourceLists]);
 
   const pendingCount = tasks.filter(t => t.check === 0).length;
   const completedCount = tasks.filter(t => t.check === 1).length;
@@ -376,7 +436,55 @@ export default function ForYouTab({
           </div>
         </div>
 
-        {/* Tasks List - 1 Centered Column */}
+        {/* List / Categories Selector (Separation into distinct task lists) */}
+        {sourceLists.length > 1 && (
+          <div className="max-w-4xl mx-auto flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none">
+            <span className="text-[10px] font-mono text-nothing-gray uppercase shrink-0 mr-1 flex items-center gap-1">
+              <ListTodo size={12} className="text-nothing-red" />
+              <span>LISTS:</span>
+            </span>
+
+            <button
+              onClick={() => setSelectedListId('')}
+              className={`px-3 py-1 rounded-full text-xs font-mono transition-all shrink-0 select-none ${
+                selectedListId === ''
+                  ? 'bg-white text-black font-semibold shadow-sm'
+                  : 'bg-nothing-card border border-nothing-border text-nothing-gray hover:text-white hover:border-white/40'
+              }`}
+            >
+              All Lists ({tasks.length})
+            </button>
+
+            {sourceLists.map(list => {
+              const isSelected = selectedListId === list.cardId;
+              return (
+                <button
+                  key={list.cardId}
+                  onClick={() => setSelectedListId(isSelected ? '' : list.cardId)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono transition-all shrink-0 select-none ${
+                    isSelected
+                      ? 'bg-white text-black font-semibold shadow-sm'
+                      : 'bg-nothing-card border border-nothing-border text-nothing-gray hover:text-white hover:border-white/40'
+                  }`}
+                >
+                  {getCardTypeIcon(list.type)}
+                  <span className="truncate max-w-[160px]">{list.title}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                      isSelected
+                        ? 'bg-black text-white'
+                        : 'bg-nothing-border/60 text-nothing-gray'
+                    }`}
+                  >
+                    {list.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Tasks List - 1 Centered Column with grouping by lists */}
         {filteredTasks.length === 0 ? (
           <div className="max-w-4xl mx-auto p-8 rounded-2xl bg-nothing-card/30 border border-dashed border-nothing-border/60 text-center">
             <div className="p-3 rounded-full bg-nothing-border/30 text-nothing-gray mx-auto w-fit mb-2">
@@ -385,82 +493,117 @@ export default function ForYouTab({
             <p className="text-xs font-dot text-white">NO TASKS IN THIS VIEW</p>
             <p className="text-[11px] font-mono text-nothing-gray mt-0.5">
               {taskFilter === 'pending'
-                ? 'All tasks completed! Any to-do list extracted by Nothing AI will show here.'
+                ? 'All tasks in this list completed! New items will appear here.'
                 : 'No tasks match the selected filter.'}
             </p>
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto flex flex-col gap-2.5 w-full">
-            {filteredTasks.map(task => {
-              const isChecked = task.check === 1;
-              const formattedTime = formatTaskTime(task.time);
-              const parentCard = cards.find(c => c.cardId === task.cardId);
+          <div className="max-w-4xl mx-auto flex flex-col gap-6 w-full">
+            {groupedTasks.map(group => {
+              const parentCard = cards.find(c => c.cardId === group.cardId);
 
               return (
-                <div
-                  key={`${task.cardId}_${task.eventId}`}
-                  className={`group px-4 py-2.5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                    isChecked
-                      ? 'bg-nothing-card/40 border-nothing-border/40 opacity-70'
-                      : 'bg-nothing-card border-nothing-border hover:border-white/40'
-                  }`}
-                >
-                  {/* Left part: Checkbox + Title & Content */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <button
-                      onClick={() => handleTaskToggle(task.cardId, task.eventId)}
-                      className={`shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                        isChecked
-                          ? 'bg-nothing-red border-nothing-red text-white'
-                          : 'border-nothing-border bg-black hover:border-white'
-                      }`}
-                    >
-                      {isChecked && <Check size={12} strokeWidth={3} />}
-                    </button>
-
-                    <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5">
-                      <p
-                        className={`text-xs font-mono font-medium truncate ${
-                          isChecked ? 'line-through text-nothing-gray' : 'text-white'
-                        }`}
-                      >
-                        {task.title}
-                      </p>
-
-                      {task.content && task.content !== task.title && (
-                        <span
-                          className={`text-[11px] font-mono truncate ${
-                            isChecked ? 'line-through text-nothing-gray/50' : 'text-nothing-gray'
-                          }`}
-                        >
-                          {task.content}
+                <div key={group.cardId} className="space-y-2.5">
+                  {/* Distinct List Header (only when showing multiple lists) */}
+                  {sourceLists.length > 1 && (
+                    <div className="flex items-center justify-between px-2 pt-1 pb-1 border-b border-nothing-border/40">
+                      <div className="flex items-center gap-2">
+                        {getCardTypeIcon(group.type)}
+                        <span className="font-dot text-xs text-white uppercase tracking-wider font-medium">
+                          {group.title}
                         </span>
+                        <span className="text-[10px] font-mono text-nothing-gray">
+                          ({group.tasks.length} {group.tasks.length === 1 ? 'task' : 'tasks'})
+                        </span>
+                      </div>
+
+                      {parentCard && (
+                        <button
+                          onClick={() => onOpenCardDetail(parentCard)}
+                          className="text-[10px] font-mono text-nothing-gray hover:text-white flex items-center gap-1 transition-colors"
+                        >
+                          <span>Open full note</span>
+                          <ExternalLink size={9} />
+                        </button>
                       )}
                     </div>
-                  </div>
+                  )}
 
-                  {/* Right part: Meta badges (Time + Parent Note pill) */}
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pl-8 sm:pl-0">
-                    {formattedTime && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-red/10 border border-nothing-red/30 text-[10px] font-mono text-nothing-red whitespace-nowrap">
-                        <Clock size={10} />
-                        <span>{formattedTime}</span>
-                      </span>
-                    )}
+                  {/* Tasks in this list */}
+                  <div className="flex flex-col gap-2">
+                    {group.tasks.map(task => {
+                      const isChecked = task.check === 1;
+                      const formattedTime = formatTaskTime(task.time);
 
-                    {parentCard && (
-                      <button
-                        onClick={() => onOpenCardDetail(parentCard)}
-                        title="Open parent note"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap"
-                      >
-                        {getCardTypeIcon(task.cardType)}
-                        <span className="truncate max-w-[120px] sm:max-w-[160px]">
-                          {task.cardTitle}
-                        </span>
-                        <ExternalLink size={9} />
-                      </button>
-                    )}
+                      return (
+                        <div
+                          key={`${task.cardId}_${task.eventId}`}
+                          className={`group px-4 py-2.5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                            isChecked
+                              ? 'bg-nothing-card/40 border-nothing-border/40 opacity-70'
+                              : 'bg-nothing-card border-nothing-border hover:border-white/40'
+                          }`}
+                        >
+                          {/* Left part: Checkbox + Title & Content */}
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <button
+                              onClick={() => handleTaskToggle(task.cardId, task.eventId)}
+                              className={`shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                                isChecked
+                                  ? 'bg-nothing-red border-nothing-red text-white'
+                                  : 'border-nothing-border bg-black hover:border-white'
+                              }`}
+                            >
+                              {isChecked && <Check size={12} strokeWidth={3} />}
+                            </button>
+
+                            <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5">
+                              <p
+                                className={`text-xs font-mono font-medium truncate ${
+                                  isChecked ? 'line-through text-nothing-gray' : 'text-white'
+                                }`}
+                              >
+                                {task.title}
+                              </p>
+
+                              {task.content && task.content !== task.title && (
+                                <span
+                                  className={`text-[11px] font-mono truncate ${
+                                    isChecked ? 'line-through text-nothing-gray/50' : 'text-nothing-gray'
+                                  }`}
+                                >
+                                  {task.content}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Right part: Meta badges (Time + Parent Note pill) */}
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pl-8 sm:pl-0">
+                            {formattedTime && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-red/10 border border-nothing-red/30 text-[10px] font-mono text-nothing-red whitespace-nowrap">
+                                <Clock size={10} />
+                                <span>{formattedTime}</span>
+                              </span>
+                            )}
+
+                            {parentCard && (
+                              <button
+                                onClick={() => onOpenCardDetail(parentCard)}
+                                title="Open parent note"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap"
+                              >
+                                {getCardTypeIcon(task.cardType)}
+                                <span className="truncate max-w-[120px] sm:max-w-[160px]">
+                                  {task.cardTitle}
+                                </span>
+                                <ExternalLink size={9} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
