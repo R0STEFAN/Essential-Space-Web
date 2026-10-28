@@ -114,8 +114,14 @@ export default function DashboardPage() {
         setSyncError(null);
         setSyncSuccess(null);
       }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       try {
-        const res = await fetch('/api/sync', { method: 'POST' });
+        const res = await fetch('/api/sync', { 
+          method: 'POST',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
         const data = await res.json().catch(() => ({}));
 
         if (res.status === 401 || data.authExpired) {
@@ -140,9 +146,14 @@ export default function DashboardPage() {
           );
         }
       } catch (err: any) {
+        clearTimeout(timeoutId);
         console.error('Sync failed:', err);
         if (!silent) {
-          setSyncError(err?.message || 'Network error while syncing with Nothing Cloud');
+          if (err?.name === 'AbortError') {
+            setSyncError('Синхронізація зайняла більше 30 секунд. Відображаються локальні дані.');
+          } else {
+            setSyncError(err?.message || 'Network error while syncing with Nothing Cloud');
+          }
         }
       } finally {
         setIsSyncing(false);
