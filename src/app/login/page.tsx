@@ -11,16 +11,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Loader2,
-  QrCode,
-  Smartphone,
-  RefreshCw,
-  CheckCircle2,
-  ExternalLink,
   Copy,
-  Check,
   Sparkles,
-  Terminal,
-  Bookmark,
   ChevronLeft,
   UserCheck,
 } from 'lucide-react';
@@ -29,7 +21,7 @@ import { saveDbAuth, getDbAuth, clearDbAuth } from '@/lib/db';
 import { syncNothingCloud } from '@/lib/sync-engine';
 import type { NothingUser } from '@/types';
 
-type LoginTab = 'email' | 'token' | 'qr' | 'bridge';
+type LoginTab = 'email' | 'token';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -50,19 +42,11 @@ export default function LoginPage() {
   const [token, setToken] = useState('');
   const [refreshToken, setRefreshToken] = useState('');
   const [showAdvancedToken, setShowAdvancedToken] = useState(false);
-  const [copiedSnippet, setCopiedSnippet] = useState(false);
 
-  // QR Code state (Desktop polling & Mobile approval)
-  const [qrId, setQrId] = useState('');
-  const [qrMobileUrl, setQrMobileUrl] = useState('');
-  const [qrLoading, setQrLoading] = useState(false);
-
-  // Mobile QR Scanner view (?qr=...)
-  const [scannedQrId, setScannedQrId] = useState<string | null>(null);
+  // Saved local session
   const [savedAccount, setSavedAccount] = useState<{ email: string; userName?: string } | null>(
     null
   );
-  const [qrApprovedSuccess, setQrApprovedSuccess] = useState(false);
 
   // Shared UI status
   const [loading, setLoading] = useState(false);
@@ -76,47 +60,6 @@ export default function LoginPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, [cooldown]);
-
-  // Robust clipboard copy with fallback
-  const copyToClipboard = async (text: string) => {
-    let ok = false;
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        ok = true;
-      }
-    } catch {
-      ok = false;
-    }
-
-    if (!ok && typeof document !== 'undefined') {
-      try {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.setAttribute('readonly', '');
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-9999px';
-        textarea.style.top = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        ok = document.execCommand('copy');
-        document.body.removeChild(textarea);
-      } catch {
-        ok = false;
-      }
-    }
-
-    if (ok) {
-      setCopiedSnippet(true);
-      setTimeout(() => setCopiedSnippet(false), 3000);
-    }
-  };
-
-  const getBridgeSnippet = () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-    return `location.href='${origin}/login?token='+encodeURIComponent(localStorage.getItem('nothingAuth_account-app-web_accessToken')||sessionStorage.getItem('nothingAuth_account-app-web_accessToken')||'')+'&refresh='+encodeURIComponent(localStorage.getItem('nothingAuth_account-app-web_refreshToken')||'');`;
-  };
 
   // Pure Client-Side Token Handler (Local-First IndexedDB)
   const handleClientTokenLogin = async (tokenStr: string, refreshStr?: string) => {
@@ -184,7 +127,6 @@ export default function LoginPage() {
     checkSaved();
 
     const params = new URLSearchParams(window.location.search);
-    const qrParam = params.get('qr');
     const urlToken = params.get('token');
     const urlRefresh = params.get('refresh');
 
@@ -193,48 +135,12 @@ export default function LoginPage() {
       window.history.replaceState({}, '', '/login');
     }
 
-    if (qrParam) {
-      setScannedQrId(qrParam);
-    }
-
     if (urlToken) {
       window.history.replaceState({}, '', '/login');
       handleClientTokenLogin(urlToken, urlRefresh || undefined);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Generate QR code when switching to 'qr' tab
-  const generateNewQr = async () => {
-    setQrLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/auth/qr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create' }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setQrId(data.qrId);
-        setQrMobileUrl(data.mobileUrl);
-      }
-    } catch {
-      // In static Cloudflare mode, fallback QR demo
-      const fakeId = `qr_${Date.now()}`;
-      setQrId(fakeId);
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://essential-space.pages.dev';
-      setQrMobileUrl(`${origin}/login?qr=${fakeId}`);
-    } finally {
-      setQrLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'qr' && !qrId && !scannedQrId) {
-      generateNewQr();
-    }
-  }, [activeTab, qrId, scannedQrId]);
 
   // Step 1: Submit Email and Password
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -253,13 +159,12 @@ export default function LoginPage() {
         body: JSON.stringify({
           email: email.trim(),
           password,
-          qrId: scannedQrId || undefined,
         }),
       });
 
       if (res.status === 404) {
         throw new Error(
-          'Cloudflare Pages runs in pure client-side mode to protect your password. Nothing Cloud restricts server logins from datacenter IPs. Please use the TOKEN or SYNC tab to connect your Nothing Account!'
+          'Cloudflare Pages runs in pure client-side mode to protect your password. Nothing Cloud restricts server logins from datacenter IPs. Please use the TOKEN tab to connect your Nothing Account!'
         );
       }
 
@@ -267,7 +172,7 @@ export default function LoginPage() {
       if (!res.ok || !data.success) {
         throw new Error(
           data.error ||
-            'Nothing Cloud authentication failed. Please sign in via the TOKEN or SYNC tab.'
+            'Nothing Cloud authentication failed. Please sign in via the TOKEN tab.'
         );
       }
 
@@ -285,7 +190,7 @@ export default function LoginPage() {
         window.location.href = '/';
       }
     } catch (err: any) {
-      setError(err?.message || 'Authentication failed. Please use the TOKEN or SYNC tab.');
+      setError(err?.message || 'Authentication failed. Please use the TOKEN tab.');
     } finally {
       setLoading(false);
     }
@@ -309,7 +214,6 @@ export default function LoginPage() {
           action: 'verify_otp',
           sessionId: otpSessionId,
           code: otpCode.trim(),
-          qrId: scannedQrId || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -427,21 +331,21 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Mode Switcher Tabs */}
-        <div className="grid grid-cols-4 gap-1 p-1 bg-black/60 border border-nothing-border rounded-xl mb-6">
+        {/* Mode Switcher Tabs (EMAIL and TOKEN only) */}
+        <div className="grid grid-cols-2 gap-1 p-1 bg-black/60 border border-nothing-border rounded-xl mb-6">
           <button
             type="button"
             onClick={() => {
               setActiveTab('email');
               setError(null);
             }}
-            className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
+            className={`py-2.5 px-3 rounded-lg text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
               activeTab === 'email'
                 ? 'bg-nothing-red text-white shadow'
                 : 'text-nothing-gray hover:text-white'
             }`}
           >
-            <Mail className="w-3.5 h-3.5 shrink-0" />
+            <Mail className="w-4 h-4 shrink-0" />
             <span>EMAIL</span>
           </button>
           <button
@@ -450,44 +354,14 @@ export default function LoginPage() {
               setActiveTab('token');
               setError(null);
             }}
-            className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
+            className={`py-2.5 px-3 rounded-lg text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
               activeTab === 'token'
                 ? 'bg-nothing-red text-white shadow'
                 : 'text-nothing-gray hover:text-white'
             }`}
           >
-            <Key className="w-3.5 h-3.5 shrink-0" />
+            <Key className="w-4 h-4 shrink-0" />
             <span>TOKEN</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('qr');
-              setError(null);
-            }}
-            className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
-              activeTab === 'qr'
-                ? 'bg-nothing-red text-white shadow'
-                : 'text-nothing-gray hover:text-white'
-            }`}
-          >
-            <QrCode className="w-3.5 h-3.5 shrink-0" />
-            <span>QR CODE</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('bridge');
-              setError(null);
-            }}
-            className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
-              activeTab === 'bridge'
-                ? 'bg-nothing-red text-white shadow'
-                : 'text-nothing-gray hover:text-white'
-            }`}
-          >
-            <Terminal className="w-3.5 h-3.5 shrink-0" />
-            <span>SYNC</span>
           </button>
         </div>
 
@@ -554,7 +428,7 @@ export default function LoginPage() {
                     <span>Zero-Knowledge Sign In</span>
                   </div>
                   <p className="text-[10px] text-nothing-gray leading-relaxed">
-                    If Nothing restricts cloud IP logins, switch to the <span className="text-white">TOKEN</span> or <span className="text-white">SYNC</span> tab to authenticate directly.
+                    If Nothing restricts cloud IP logins, switch to the <span className="text-white">TOKEN</span> tab to authenticate directly.
                   </p>
                 </div>
 
@@ -739,131 +613,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-        )}
-
-        {/* TAB 3: QR CODE */}
-        {activeTab === 'qr' && (
-          <div className="space-y-4 text-center">
-            <div className="p-5 bg-black/50 border border-nothing-border rounded-2xl flex flex-col items-center">
-              {qrLoading || !qrMobileUrl ? (
-                <div className="w-52 h-52 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-nothing-red" />
-                </div>
-              ) : (
-                <div className="p-3 bg-white rounded-2xl shadow-lg">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(
-                      qrMobileUrl
-                    )}`}
-                    alt="QR Code Login"
-                    className="w-48 h-48 rounded-lg"
-                  />
-                </div>
-              )}
-
-              <div className="mt-4 space-y-1.5">
-                <div className="flex items-center justify-center gap-2 text-xs font-dot uppercase tracking-wider text-white">
-                  <Smartphone className="w-4 h-4 text-nothing-red" />
-                  <span>SCAN WITH YOUR PHONE CAMERA</span>
-                </div>
-                <p className="text-[11px] text-nothing-gray leading-relaxed max-w-xs">
-                  Scan this QR code with your Nothing Phone camera. If you are already logged in on your phone, you can approve desktop sign-in!
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={generateNewQr}
-                className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-mono text-nothing-gray hover:text-white transition-colors"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>Refresh QR code</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: 1-CLICK BROWSER SYNC */}
-        {activeTab === 'bridge' && (
-          <div className="space-y-4">
-            <div className="p-4 bg-black/50 border border-nothing-border rounded-2xl space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono uppercase text-nothing-red tracking-wider">
-                  STEP 1 • SIGN IN ON OFFICIAL NOTHING SITE
-                </span>
-                <span className="text-[10px] font-mono text-nothing-gray">Web Portal</span>
-              </div>
-              <p className="text-xs text-nothing-gray leading-relaxed">
-                Open the official Nothing login in a new tab:
-              </p>
-              <a
-                href="https://account.nothing.tech/v2/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white hover:text-black text-white font-dot uppercase tracking-wider text-xs transition-all flex items-center justify-center gap-2"
-              >
-                <span>OPEN ACCOUNT.NOTHING.TECH</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-
-            <div className="p-4 bg-black/50 border border-nothing-border rounded-2xl space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono uppercase text-green-400 tracking-wider">
-                  STEP 2 • SYNC SESSION COMMAND
-                </span>
-              </div>
-
-              <p className="text-xs text-nothing-gray leading-relaxed">
-                On <code className="text-white">account.nothing.tech</code>, press{' '}
-                <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[11px] font-mono">F12</kbd> → Console, paste this command, and press Enter:
-              </p>
-
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(getBridgeSnippet())}
-                  className="w-full py-3 px-3 rounded-xl bg-nothing-red hover:bg-white hover:text-black text-white font-dot uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-nothing-red/20 font-medium"
-                >
-                  {copiedSnippet ? (
-                    <>
-                      <Check className="w-4 h-4 text-green-300" />
-                      <span>COPIED! PASTE IN NOTHING F12 CONSOLE</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" />
-                      <span>COPY 1-LINE SYNC COMMAND</span>
-                    </>
-                  )}
-                </button>
-
-                <div className="relative">
-                  <textarea
-                    readOnly
-                    rows={3}
-                    value={getBridgeSnippet()}
-                    onClick={e => (e.target as HTMLTextAreaElement).select()}
-                    className="w-full bg-black/80 border border-nothing-border rounded-xl p-2.5 text-[10px] font-mono text-nothing-gray hover:text-white select-all focus:outline-none focus:border-nothing-red"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-nothing-border/50">
-                <div className="text-[10px] font-mono text-nothing-gray uppercase mb-1.5">
-                  Or drag this to your Bookmarks Bar:
-                </div>
-                <a
-                  href={getBridgeSnippet()}
-                  title="Drag to your Bookmarks Bar, then click while on account.nothing.tech"
-                  className="w-full py-2.5 px-4 rounded-xl bg-nothing-card hover:bg-nothing-hover border border-dashed border-nothing-gray/50 text-xs font-mono text-white flex items-center justify-center gap-2 cursor-grab active:cursor-grabbing"
-                >
-                  <Bookmark className="w-3.5 h-3.5 text-nothing-red" />
-                  <span>⚡ Sync Nothing Space (Drag to Bookmarks)</span>
-                </a>
-              </div>
-            </div>
-          </div>
         )}
 
         {/* Footer Info */}
