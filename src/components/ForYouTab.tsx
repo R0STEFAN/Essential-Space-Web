@@ -143,6 +143,21 @@ export default function ForYouTab({
     return Array.from(map.values());
   }, [tasks]);
 
+  // Lists that have at least 1 UNCOMPLETED task (pendingCount > 0)
+  const activeSourceLists = useMemo(() => {
+    return sourceLists.filter(l => l.pendingCount > 0);
+  }, [sourceLists]);
+
+  // If selectedListId no longer has any pending tasks (in pending view), reset to all
+  useEffect(() => {
+    if (selectedListId && taskFilter === 'pending') {
+      const current = activeSourceLists.find(l => l.cardId === selectedListId);
+      if (!current) {
+        setSelectedListId('');
+      }
+    }
+  }, [activeSourceLists, selectedListId, taskFilter]);
+
   const filteredTasks = tasks.filter(t => {
     if (selectedListId && t.cardId !== selectedListId) return false;
     if (taskFilter === 'pending') return t.check === 0;
@@ -436,8 +451,8 @@ export default function ForYouTab({
           </div>
         </div>
 
-        {/* List / Categories Selector (Separation into distinct task lists) */}
-        {sourceLists.length > 1 && (
+        {/* List / Categories Selector (Only show pills for lists that have UNCOMPLETED tasks) */}
+        {activeSourceLists.length > 0 && (
           <div className="max-w-4xl mx-auto flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none">
             <span className="text-[10px] font-mono text-nothing-gray uppercase shrink-0 mr-1 flex items-center gap-1">
               <ListTodo size={12} className="text-nothing-red" />
@@ -452,10 +467,10 @@ export default function ForYouTab({
                   : 'bg-nothing-card border border-nothing-border text-nothing-gray hover:text-white hover:border-white/40'
               }`}
             >
-              All Lists ({tasks.length})
+              All Lists ({pendingCount})
             </button>
 
-            {sourceLists.map(list => {
+            {activeSourceLists.map(list => {
               const isSelected = selectedListId === list.cardId;
               return (
                 <button
@@ -476,7 +491,7 @@ export default function ForYouTab({
                         : 'bg-nothing-border/60 text-nothing-gray'
                     }`}
                   >
-                    {list.count}
+                    {list.pendingCount}
                   </span>
                 </button>
               );
