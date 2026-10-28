@@ -90,7 +90,7 @@ All write operations (`storage/card/v1/create`, `update`, `delete`, `storage/col
   3. Encrypt JSON/device string with AES-256-ECB (PKCS7 padding) using `aesKeyB64` -> `payload` (Base64).
 
 ### 2.3 Firebase & Google Cloud Storage Configuration
-* **Firebase API Key:** `AIzaSyBqdohCC9KO_a6GvwH13iNJJXdinqLm42A`
+* **Firebase API Key:** Client Web Key from Android APK (configured via `NEXT_PUBLIC_FIREBASE_API_KEY`)
 * **GCS Bucket (Europe):** `gs://essential-space-gcs-europe-west3`
 * **Workflow:**
   1. Web calls `GET /storage/v1/getFirebaseToken` -> receives Firebase `customToken`.

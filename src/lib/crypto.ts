@@ -3,7 +3,8 @@ import forge from 'node-forge';
 /**
  * Nothing Essential Space API Constants (Reverse engineered from Nothing Space & User Center APKs)
  */
-export const NOTHING_API_KEY = 'ZNtCkkSHqahusjfyouYxeaHUryeqKNaG';
+export const NOTHING_API_KEY =
+  process.env.NOTHING_API_KEY || 'ZNtCkkSHqahusjfyouYxeaHUryeqKNaG';
 export const NOTHING_BASE_URL = 'https://essential-space.nothingtech.link/essentialSpace';
 
 const CLAIM_PUBLIC_KEY_B64 =

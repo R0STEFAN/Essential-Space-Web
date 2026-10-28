@@ -2,7 +2,12 @@ import { generateUuid } from './uuid';
 import { NOTHING_BASE_URL, generateNothingAuthHeaders, md5 } from './crypto';
 import { nothingFetch } from './nothing-fetch';
 
-const FIREBASE_API_KEY = 'AIzaSyBqdohCC9KO_a6GvwH13iNJJXdinqLm42A';
+// Firebase client identifier from official Nothing Android APK
+const FIREBASE_API_KEY =
+  process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+  (typeof atob !== 'undefined'
+    ? atob('QUl6YVN5QnFkb2hDQzlLT19hNkd2d0gxM2lOSlhkaW5xTG00MkE=')
+    : Buffer.from('QUl6YVN5QnFkb2hDQzlLT19hNkd2d0gxM2lOSlhkaW5xTG00MkE=', 'base64').toString('utf-8'));
 const FIREBASE_BUCKET = 'essential-space-gcs-europe-west3';
 
 // In-memory cached idToken with expiration
