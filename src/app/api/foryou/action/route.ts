@@ -74,9 +74,14 @@ export async function POST(req: NextRequest) {
           }));
 
         if (matchingCards.length > 0) {
-          updateCloudCards(user.token, matchingCards).catch(err => {
+          try {
+            const syncRes = await updateCloudCards(user.token, matchingCards);
+            if (!syncRes.success) {
+              console.warn('Nothing Cloud card assignment sync error:', syncRes.error);
+            }
+          } catch (err) {
             console.warn('Background Nothing Cloud card assignment failed:', err);
-          });
+          }
         }
       }
 
@@ -106,9 +111,14 @@ export async function POST(req: NextRequest) {
           }));
 
         if (matchingCards.length > 0) {
-          updateCloudCards(user.token, matchingCards).catch(err => {
+          try {
+            const syncRes = await updateCloudCards(user.token, matchingCards);
+            if (!syncRes.success) {
+              console.warn('Nothing Cloud card assignment sync error:', syncRes.error);
+            }
+          } catch (err) {
             console.warn('Background Nothing Cloud card assignment failed:', err);
-          });
+          }
         }
       }
 
