@@ -105,7 +105,7 @@ export default function TextCard({
         </div>
 
         {card.title && (
-          <h3 className="font-medium text-white text-base mb-2 leading-snug">
+          <h3 className="font-normal text-white text-base sm:text-lg mb-2 leading-snug tracking-wide">
             {card.title}
           </h3>
         )}

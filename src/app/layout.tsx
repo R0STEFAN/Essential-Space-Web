@@ -2,22 +2,25 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 
-const ndot55 = localFont({
-  src: '../../public/fonts/Ndot55Caps-Regular.otf',
-  variable: '--font-ndot55',
-  display: 'swap',
-});
-
 const ndot57 = localFont({
   src: '../../public/fonts/Ndot57Caps-Regular.otf',
   variable: '--font-ndot57',
   display: 'swap',
+  weight: '400',
+});
+
+const ndot55 = localFont({
+  src: '../../public/fonts/Ndot55Caps-Regular.otf',
+  variable: '--font-ndot55',
+  display: 'swap',
+  weight: '400',
 });
 
 const ndotOriginal = localFont({
   src: '../../public/fonts/ndot.otf',
   variable: '--font-ndot-orig',
   display: 'swap',
+  weight: '400',
 });
 
 export const metadata: Metadata = {

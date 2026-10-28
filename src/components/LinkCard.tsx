@@ -132,7 +132,7 @@ export default function LinkCard({
             </div>
           </div>
 
-          <h3 className="font-medium text-white text-base mb-2 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors">
+          <h3 className="font-normal text-white text-base sm:text-lg mb-2 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors tracking-wide">
             {title}
           </h3>
 

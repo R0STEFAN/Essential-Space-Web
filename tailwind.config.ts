@@ -25,8 +25,8 @@ const config: Config = {
       },
       fontFamily: {
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-        dot: ['var(--font-ndot55)', 'var(--font-ndot57)', 'var(--font-ndot-orig)', 'NDot55', 'NDot57', 'NDotOriginal', 'ui-monospace', 'Courier New', 'monospace'],
-        ndot: ['var(--font-ndot55)', 'var(--font-ndot57)', 'var(--font-ndot-orig)', 'NDot55', 'NDot57', 'NDotOriginal', 'ui-monospace', 'Courier New', 'monospace'],
+        dot: ['var(--font-ndot57)', 'var(--font-ndot55)', 'var(--font-ndot-orig)', 'NDot57', 'NDot55', 'NDotOriginal', 'ui-monospace', 'Courier New', 'monospace'],
+        ndot: ['var(--font-ndot57)', 'var(--font-ndot55)', 'var(--font-ndot-orig)', 'NDot57', 'NDot55', 'NDotOriginal', 'ui-monospace', 'Courier New', 'monospace'],
       },
     },
   },

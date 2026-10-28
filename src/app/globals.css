@@ -3,17 +3,17 @@
 @tailwind utilities;
 
 @font-face {
-  font-family: 'NDot55';
-  src: url('/fonts/Ndot55Caps-Regular.otf') format('opentype');
-  font-weight: 400 700;
+  font-family: 'NDot57';
+  src: url('/fonts/Ndot57Caps-Regular.otf') format('opentype');
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'NDot57';
-  src: url('/fonts/Ndot57Caps-Regular.otf') format('opentype');
-  font-weight: 400 700;
+  font-family: 'NDot55';
+  src: url('/fonts/Ndot55Caps-Regular.otf') format('opentype');
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
@@ -21,7 +21,7 @@
 @font-face {
   font-family: 'NDotOriginal';
   src: url('/fonts/ndot.otf') format('opentype');
-  font-weight: 400 700;
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
@@ -53,18 +53,27 @@ body {
   background: #404044;
 }
 
-/* Dot-Matrix Typography Emulation */
-.font-dot {
-  font-family: var(--font-ndot55), var(--font-ndot57), var(--font-ndot-orig), 'NDot55', 'NDot57', 'NDotOriginal', ui-monospace, monospace;
+/* Dot-Matrix Typography Emulation - Authentic Nothing OS NDot 57 Primary */
+.font-dot,
+.font-ndot {
+  font-family: var(--font-ndot57), 'NDot57', var(--font-ndot55), 'NDot55', var(--font-ndot-orig), ui-monospace, monospace;
+  font-weight: 400 !important;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* Headings and subheadings using the authentic Nothing Dot Matrix font */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-ndot55), var(--font-ndot57), var(--font-ndot-orig), 'NDot55', 'NDot57', 'NDotOriginal', ui-monospace, monospace;
-  letter-spacing: 0.04em;
+  font-family: var(--font-ndot57), 'NDot57', var(--font-ndot55), 'NDot55', var(--font-ndot-orig), ui-monospace, monospace;
+  font-weight: 400 !important;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* Nothing card aesthetic */

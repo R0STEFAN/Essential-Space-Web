@@ -145,7 +145,7 @@ export default function AudioCard({
         )}
 
         {card.title && (
-          <h3 className="font-medium text-white text-base mb-1.5 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors">
+          <h3 className="font-normal text-white text-base sm:text-lg mb-1.5 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors tracking-wide">
             {card.title}
           </h3>
         )}

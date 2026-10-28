@@ -91,7 +91,7 @@ export default function TodoCard({
         </div>
 
         {card.title && (
-          <h3 className="font-medium text-white text-base mb-3 leading-snug">
+          <h3 className="font-normal text-white text-base sm:text-lg mb-3 leading-snug tracking-wide">
             {card.title}
           </h3>
         )}
