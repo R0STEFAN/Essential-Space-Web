@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
-import { getForYouData } from '@/lib/foryou';
+import { computeForYouData } from '@/lib/foryou';
+import { getUserCards, getUserCollections, getDismissedSuggestions } from '@/lib/storage';
 
 export async function GET() {
   const user = await getSession();
@@ -9,7 +10,10 @@ export async function GET() {
   }
 
   try {
-    const data = await getForYouData(user.uuid, user.token);
+    const cards = await getUserCards(user.uuid);
+    const collections = await getUserCollections(user.uuid);
+    const dismissed = await getDismissedSuggestions(user.uuid);
+    const data = await computeForYouData(cards, collections, new Set(dismissed), user.token);
     return NextResponse.json({ success: true, ...data });
   } catch (err: any) {
     console.error('Failed to get For You data:', err);
