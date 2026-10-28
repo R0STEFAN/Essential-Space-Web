@@ -234,11 +234,11 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [activeTab, qrId, scannedQrId, router]);
 
-  // Step 1: Submit Email (with optional Password or direct OTP)
+  // Step 1: Submit Email and Password (triggers 2FA OTP if required)
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
-      setError('Please enter your Nothing Account email');
+    if (!email || !password) {
+      setError('Please enter your Nothing Account email and password');
       return;
     }
     setLoading(true);
@@ -620,21 +620,17 @@ export default function LoginPage() {
                     </div>
 
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-mono uppercase text-nothing-gray">
-                          PASSWORD (OPTIONAL)
-                        </label>
-                        <span className="text-[10px] font-mono text-nothing-gray/60">
-                          Empty = Send code to email (OTP)
-                        </span>
-                      </div>
+                      <label className="block text-xs font-mono uppercase text-nothing-gray mb-1.5">
+                        PASSWORD
+                      </label>
                       <div className="relative">
                         <Lock className="w-4 h-4 text-nothing-gray absolute left-3.5 top-3.5 pointer-events-none" />
                         <input
                           type={showPassword ? 'text' : 'password'}
+                          required
                           value={password}
                           onChange={e => setPassword(e.target.value)}
-                          placeholder="•••••••••••• (leave blank for email code)"
+                          placeholder="••••••••••••"
                           className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-10 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono"
                         />
                         <button
