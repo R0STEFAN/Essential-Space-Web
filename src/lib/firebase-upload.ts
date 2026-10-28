@@ -6,8 +6,8 @@ import { nothingFetch } from './nothing-fetch';
 const FIREBASE_API_KEY =
   process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
   (typeof atob !== 'undefined'
-    ? atob('QUl6YVN5QnFkb2hDQzlLT19hNkd2d0gxM2lOSlhkaW5xTG00MkE=')
-    : Buffer.from('QUl6YVN5QnFkb2hDQzlLT19hNkd2d0gxM2lOSlhkaW5xTG00MkE=', 'base64').toString('utf-8'));
+    ? atob('QUl6YVN5QnFkb2hDQzlLT19hNkd2d0gxM2lOSkpYZGlucUxtNDJB')
+    : Buffer.from('QUl6YVN5QnFkb2hDQzlLT19hNkd2d0gxM2lOSkpYZGlucUxtNDJB', 'base64').toString('utf-8'));
 const FIREBASE_BUCKET = 'essential-space-gcs-europe-west3';
 
 // In-memory cached idToken with expiration
@@ -48,7 +48,9 @@ export async function getFirebaseIdToken(nothingToken: string): Promise<string> 
   });
 
   if (!exchangeRes.ok) {
-    throw new Error(`Firebase token exchange failed: HTTP ${exchangeRes.status}`);
+    const errData = await exchangeRes.json().catch(() => null);
+    const detail = errData?.error?.message || `HTTP ${exchangeRes.status}`;
+    throw new Error(`Firebase token exchange failed: ${detail}`);
   }
 
   const exchangeJson = await exchangeRes.json();
