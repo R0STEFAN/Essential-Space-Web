@@ -644,7 +644,7 @@ export default function ForYouTab({
                         )
                       }
                       disabled={isLoading}
-                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-nothing-hover text-black text-xs font-dot tracking-wider font-semibold transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-neutral-200 active:bg-neutral-300 text-black text-xs font-dot tracking-wider font-semibold transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-sm"
                     >
                       {isCreate ? <FolderPlus size={13} /> : <Check size={13} />}
                       <span>{isCreate ? 'CREATE COLLECTION' : 'ADD ALL NOTES'}</span>
