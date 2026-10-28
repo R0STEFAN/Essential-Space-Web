@@ -93,6 +93,16 @@ export async function requestNothingAiAnalysis(params: {
       }
     }
 
+    if (d?.choices && Array.isArray(d.choices) && d.choices[0]?.message?.content) {
+      try {
+        const innerContent = d.choices[0].message.content;
+        const innerObj = typeof innerContent === 'string' ? JSON.parse(innerContent) : innerContent;
+        d = { ...d, ...innerObj };
+      } catch (err) {
+        console.warn('Failed to parse inner choices message content:', err);
+      }
+    }
+
     if (!d || d.error) {
       console.warn('Nothing AI returned error payload:', d);
       return null;
@@ -100,7 +110,7 @@ export async function requestNothingAiAnalysis(params: {
 
     // Normalize tags
     const rawTags = d.hashtags || d.tags || [];
-    const tags = Array.isArray(rawTags)
+    let tags = Array.isArray(rawTags)
       ? rawTags.map((t: string) => (t.startsWith('#') ? t : `#${t}`))
       : [];
 
@@ -120,7 +130,10 @@ export async function requestNothingAiAnalysis(params: {
 
     // Normalize bullet points
     let bulletPoints: string[] = [];
-    if (Array.isArray(d.bullet_points)) {
+    const bulletPointsTitle = d.bullet_points_title || d.bulletPoint?.title || 'Key Points';
+    if (Array.isArray(d.bulletPoint?.bulletPointItem)) {
+      bulletPoints = d.bulletPoint.bulletPointItem;
+    } else if (Array.isArray(d.bullet_points)) {
       bulletPoints = d.bullet_points;
     } else if (Array.isArray(d.bulletPoints)) {
       bulletPoints = d.bulletPoints;
@@ -128,12 +141,27 @@ export async function requestNothingAiAnalysis(params: {
       bulletPoints = d.bullet_points.split('\n').filter(Boolean);
     }
 
+    // Normalize info extract
+    let infoExtract: Array<{ title: string; value: string }> | undefined;
+    if (Array.isArray(d.info_extract)) {
+      infoExtract = d.info_extract;
+    } else if (Array.isArray(d.infoExtract)) {
+      infoExtract = d.infoExtract;
+    } else if (d.informationExtract && d.informationExtract.title && d.informationExtract.extractedInformation) {
+      infoExtract = [
+        {
+          title: d.informationExtract.title,
+          value: d.informationExtract.extractedInformation,
+        },
+      ];
+    }
+
     return {
       title: d.title || d.card_title,
       summary: d.summary || d.card_summary,
       bulletPoints,
-      bulletPointsTitle: d.bullet_points_title || 'Key Points',
-      infoExtract: Array.isArray(d.info_extract) ? d.info_extract : undefined,
+      bulletPointsTitle,
+      infoExtract,
       events,
       tags,
       raw: d,
@@ -214,11 +242,33 @@ export async function requestAudioAiAnalysis(params: {
       return null;
     }
 
-    const d = json.data;
+    let d = json.data;
+    if (typeof d === 'string') {
+      try {
+        d = JSON.parse(d);
+      } catch {
+        // string
+      }
+    }
+
+    if (d?.choices && Array.isArray(d.choices) && d.choices[0]?.message?.content) {
+      try {
+        const innerContent = d.choices[0].message.content;
+        const innerObj = typeof innerContent === 'string' ? JSON.parse(innerContent) : innerContent;
+        d = { ...d, ...innerObj };
+      } catch (err) {
+        console.warn('Failed to parse audio inner choices message content:', err);
+      }
+    }
+
+    if (!d || d.error) {
+      console.warn('Nothing Audio AI returned error payload:', d);
+      return null;
+    }
 
     // Normalize tags
     const rawTags = d.hashtags || d.tags || [];
-    const tags = Array.isArray(rawTags)
+    let tags = Array.isArray(rawTags)
       ? rawTags.map((t: string) => (t.startsWith('#') ? t : `#${t}`))
       : [];
 
@@ -238,7 +288,10 @@ export async function requestAudioAiAnalysis(params: {
 
     // Normalize bullet points
     let bulletPoints: string[] = [];
-    if (Array.isArray(d.bullet_points)) {
+    const bulletPointsTitle = d.bullet_points_title || d.bulletPoint?.title || 'Audio Summary';
+    if (Array.isArray(d.bulletPoint?.bulletPointItem)) {
+      bulletPoints = d.bulletPoint.bulletPointItem;
+    } else if (Array.isArray(d.bullet_points)) {
       bulletPoints = d.bullet_points;
     } else if (Array.isArray(d.bulletPoints)) {
       bulletPoints = d.bulletPoints;
@@ -246,13 +299,28 @@ export async function requestAudioAiAnalysis(params: {
       bulletPoints = d.bullet_points.split('\n').filter(Boolean);
     }
 
+    // Normalize info extract
+    let infoExtract: Array<{ title: string; value: string }> | undefined;
+    if (Array.isArray(d.info_extract)) {
+      infoExtract = d.info_extract;
+    } else if (Array.isArray(d.infoExtract)) {
+      infoExtract = d.infoExtract;
+    } else if (d.informationExtract && d.informationExtract.title && d.informationExtract.extractedInformation) {
+      infoExtract = [
+        {
+          title: d.informationExtract.title,
+          value: d.informationExtract.extractedInformation,
+        },
+      ];
+    }
+
     return {
       title: d.title || d.card_title || 'Voice Note',
       summary: d.summary || d.card_summary,
       transcript: d.transcript || d.asr_text,
       bulletPoints,
-      bulletPointsTitle: d.bullet_points_title || 'Audio Summary',
-      infoExtract: Array.isArray(d.info_extract) ? d.info_extract : undefined,
+      bulletPointsTitle,
+      infoExtract,
       events,
       tags,
       raw: d,
