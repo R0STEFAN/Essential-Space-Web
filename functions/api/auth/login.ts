@@ -1,5 +1,3 @@
-import crypto from 'node:crypto';
-
 interface Env {}
 
 const CORS_HEADERS = {
@@ -18,7 +16,7 @@ const USER_AGENT = 'Dart/3.5 (dart:io)';
 
 interface CachedDeviceIdentity {
   deviceId: string;
-  privateKeyPem: string;
+  privateKey: CryptoKey;
   publicSpkiBase64: string;
   deviceInfoB64: string;
   nextRotationAt: number;
@@ -27,7 +25,7 @@ interface CachedDeviceIdentity {
 interface AuthflowSession {
   id: string;
   email: string;
-  privateKeyPem: string;
+  privateKey: CryptoKey;
   publicSpkiBase64: string;
   deviceInfoB64: string;
   deviceId: string;
@@ -51,12 +49,35 @@ function cleanupExpiredSessions() {
   }
 }
 
-function base64UrlEncode(buf: Buffer): string {
-  return buf
-    .toString('base64')
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function base64UrlEncodeBytes(bytes: Uint8Array): string {
+  return bytesToBase64(bytes)
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/g, '');
+}
+
+function stringToBase64(str: string): string {
+  return bytesToBase64(new TextEncoder().encode(str));
+}
+
+function base64UrlDecodeToString(str: string): string {
+  let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function formatCookieHeader(cookieJar: Record<string, string>): string {
@@ -84,17 +105,17 @@ function extractSetCookies(res: Response, cookieJar: Record<string, string>) {
   }
 }
 
-function buildAppSignature(
+async function buildAppSignature(
   apiKey: string,
   nonce: string,
   timestamp: string,
   path: string,
   body: string
-): string {
-  const bodyHash = crypto
-    .createHash('sha256')
-    .update(body || '', 'utf8')
-    .digest('hex');
+): Promise<string> {
+  const bodyBytes = new TextEncoder().encode(body || '');
+  const bodyHashBuf = await crypto.subtle.digest('SHA-256', bodyBytes);
+  const hashArray = Array.from(new Uint8Array(bodyHashBuf));
+  const bodyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
   const params: Record<string, string> = {
     body: bodyHash,
@@ -109,30 +130,38 @@ function buildAppSignature(
   parts.push(`apiKey=${apiKey}`);
 
   const signingStr = parts.join('&');
-  const hmac = crypto.createHmac('sha256', Buffer.from(apiKey, 'utf8'));
-  hmac.update(signingStr, 'utf8');
-  return base64UrlEncode(hmac.digest());
+  const keyBytes = new TextEncoder().encode(apiKey);
+  const hmacKey = await crypto.subtle.importKey(
+    'raw',
+    keyBytes,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sigBuf = await crypto.subtle.sign('HMAC', hmacKey, new TextEncoder().encode(signingStr));
+  return base64UrlEncodeBytes(new Uint8Array(sigBuf));
 }
 
-function signBodyEcdsa(privateKeyPem: string, timestamp: string, body: string): string {
-  const msg = Buffer.from(`${timestamp}.${body || ''}`, 'utf8');
-  const sig = crypto.sign('sha256', msg, {
-    key: privateKeyPem,
-    dsaEncoding: 'ieee-p1363',
-  });
-  return base64UrlEncode(sig);
+async function signBodyEcdsa(privateKey: CryptoKey, timestamp: string, body: string): Promise<string> {
+  const msg = new TextEncoder().encode(`${timestamp}.${body || ''}`);
+  const sigBuf = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKey,
+    msg
+  );
+  return base64UrlEncodeBytes(new Uint8Array(sigBuf));
 }
 
-function buildDeviceHeaders(
-  identity: { privateKeyPem: string; deviceId: string; deviceInfoB64: string },
+async function buildDeviceHeaders(
+  identity: { privateKey: CryptoKey; deviceId: string; deviceInfoB64: string },
   path: string,
   bodyStr: string,
   extraHeaders: Record<string, string> = {}
-): Record<string, string> {
+): Promise<Record<string, string>> {
   const ts = String(Date.now());
   const nonce = crypto.randomUUID();
-  const devSig = signBodyEcdsa(identity.privateKeyPem, ts, bodyStr);
-  const appSig = buildAppSignature(DEVICE_API_KEY, nonce, ts, path, bodyStr);
+  const devSig = await signBodyEcdsa(identity.privateKey, ts, bodyStr);
+  const appSig = await buildAppSignature(DEVICE_API_KEY, nonce, ts, path, bodyStr);
 
   return {
     'Content-Type': 'application/json',
@@ -153,12 +182,13 @@ async function getOrCreateDeviceIdentity(cookies: Record<string, string>): Promi
     return cachedIdentity;
   }
 
-  const { publicKey, privateKey } = crypto.generateKeyPairSync('ec', {
-    namedCurve: 'prime256v1',
-  });
-  const spkiDer = publicKey.export({ type: 'spki', format: 'der' }) as Buffer;
-  const publicSpkiBase64 = spkiDer.toString('base64');
-  const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }) as string;
+  const keyPair = await crypto.subtle.generateKey(
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    true,
+    ['sign', 'verify']
+  );
+  const spkiDer = await crypto.subtle.exportKey('spki', keyPair.publicKey);
+  const publicSpkiBase64 = bytesToBase64(new Uint8Array(spkiDer));
 
   const deviceInfoObj = {
     platform: 'ANDROID',
@@ -183,11 +213,11 @@ async function getOrCreateDeviceIdentity(cookies: Record<string, string>): Promi
     public_key: publicSpkiBase64,
   };
   const deviceInfoStr = JSON.stringify(deviceInfoObj);
-  const deviceInfoB64 = Buffer.from(deviceInfoStr, 'utf8').toString('base64');
+  const deviceInfoB64 = stringToBase64(deviceInfoStr);
 
   const ts = String(Date.now());
   const nonce = crypto.randomUUID();
-  const appSig = buildAppSignature(
+  const appSig = await buildAppSignature(
     DEVICE_API_KEY,
     nonce,
     ts,
@@ -221,7 +251,7 @@ async function getOrCreateDeviceIdentity(cookies: Record<string, string>): Promi
   const reportData = (await reportRes.json()) as any;
   cachedIdentity = {
     deviceId: reportData.device_id,
-    privateKeyPem,
+    privateKey: keyPair.privateKey,
     publicSpkiBase64,
     deviceInfoB64,
     nextRotationAt: reportData.next_key_rotation_at
@@ -237,13 +267,21 @@ async function initAuthflowSession(email: string): Promise<AuthflowSession> {
 
   const cookies: Record<string, string> = {};
   const identity = await getOrCreateDeviceIdentity(cookies);
-  const { deviceId, privateKeyPem, publicSpkiBase64, deviceInfoB64 } = identity;
+  const { deviceId, privateKey, publicSpkiBase64, deviceInfoB64 } = identity;
 
-  const codeVerifier = base64UrlEncode(crypto.randomBytes(32));
-  const codeChallenge = base64UrlEncode(
-    crypto.createHash('sha256').update(codeVerifier, 'ascii').digest()
+  const verifierBytes = new Uint8Array(32);
+  crypto.getRandomValues(verifierBytes);
+  const codeVerifier = base64UrlEncodeBytes(verifierBytes);
+
+  const challengeDigest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(codeVerifier)
   );
-  const oauthState = base64UrlEncode(crypto.randomBytes(16));
+  const codeChallenge = base64UrlEncodeBytes(new Uint8Array(challengeDigest));
+
+  const stateBytes = new Uint8Array(16);
+  crypto.getRandomValues(stateBytes);
+  const oauthState = base64UrlEncodeBytes(stateBytes);
 
   const authorizeParams = new URLSearchParams({
     response_type: 'code',
@@ -282,7 +320,7 @@ async function initAuthflowSession(email: string): Promise<AuthflowSession> {
 
   const afPath = '/api/v2/authflow';
   const afBody = JSON.stringify({ type: 'login', name: loginFlow || 'default' });
-  const afHeaders = buildDeviceHeaders(identity, afPath, afBody, {
+  const afHeaders = await buildDeviceHeaders(identity, afPath, afBody, {
     ...(xRef ? { 'X-OAuth-Session-Id': xRef } : {}),
     ...(Object.keys(cookies).length ? { Cookie: formatCookieHeader(cookies) } : {}),
   });
@@ -302,7 +340,7 @@ async function initAuthflowSession(email: string): Promise<AuthflowSession> {
   const session: AuthflowSession = {
     id: crypto.randomUUID(),
     email,
-    privateKeyPem,
+    privateKey,
     publicSpkiBase64,
     deviceInfoB64,
     deviceId,
@@ -329,7 +367,7 @@ async function postAuthflowInput(
     input: inputPayload,
   });
   const inputPath = '/api/v2/authflow/state/input';
-  const headers = buildDeviceHeaders(session, inputPath, bodyStr, {
+  const headers = await buildDeviceHeaders(session, inputPath, bodyStr, {
     ...(session.xRef ? { 'X-OAuth-Session-Id': session.xRef } : {}),
     ...(Object.keys(session.cookies).length ? { Cookie: formatCookieHeader(session.cookies) } : {}),
   });
@@ -406,7 +444,7 @@ async function exchangeCodeForUser(session: AuthflowSession, code: string) {
   });
   const bodyStr = params.toString();
   const tokenPath = '/api/v2/oauth2/token';
-  const headers = buildDeviceHeaders(session, tokenPath, bodyStr, {
+  const headers = await buildDeviceHeaders(session, tokenPath, bodyStr, {
     'Content-Type': 'application/x-www-form-urlencoded',
     ...(Object.keys(session.cookies).length ? { Cookie: formatCookieHeader(session.cookies) } : {}),
   });
@@ -435,7 +473,7 @@ async function exchangeCodeForUser(session: AuthflowSession, code: string) {
   try {
     const parts = tokenData.access_token.split('.');
     if (parts.length === 3) {
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+      const payload = JSON.parse(base64UrlDecodeToString(parts[1]));
       if (payload.uuid) uuid = payload.uuid;
       else if (payload.sub) uuid = `sub_${payload.sub}`;
       if (payload.email) email = payload.email;
