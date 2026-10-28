@@ -133,6 +133,7 @@ export async function GET(req: NextRequest) {
       uuid: user.uuid,
       email: user.email,
       userName: user.userName,
+      token: user.token,
     },
   });
 }

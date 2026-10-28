@@ -17,6 +17,7 @@ export async function middleware(req: NextRequest) {
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') || // Allow all auth endpoints
+    pathname.startsWith('/api/proxy') || // Allow stateless CORS proxy
     pathname.startsWith('/icon') ||
     pathname.startsWith('/apple-icon') ||
     pathname.startsWith('/apple-touch-icon') ||

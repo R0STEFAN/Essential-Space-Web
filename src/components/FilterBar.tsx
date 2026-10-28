@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Search, X, Tag, ChevronDown, Check } from 'lucide-react';
+import { Search, X, Tag, ChevronDown, Check, FolderPlus, Settings2 } from 'lucide-react';
 import type { Collection } from '@/types';
 
 export interface TagCount {
@@ -18,6 +18,8 @@ interface FilterBarProps {
   tags: TagCount[];
   activeTag: string;
   onSelectTag: (tag: string) => void;
+  onOpenCreateCollection?: () => void;
+  onOpenEditCollection?: (col: Collection) => void;
 }
 
 export default function FilterBar({
@@ -29,6 +31,8 @@ export default function FilterBar({
   tags = [],
   activeTag = '',
   onSelectTag,
+  onOpenCreateCollection,
+  onOpenEditCollection,
 }: FilterBarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -138,6 +142,21 @@ export default function FilterBar({
             {/* Dropdown Menu */}
             {isDropdownOpen && (
               <div className="absolute right-0 top-full mt-1.5 w-64 sm:w-72 max-h-72 overflow-y-auto rounded-xl bg-nothing-card/95 border border-white/20 shadow-2xl p-1.5 z-50 backdrop-blur-xl scrollbar-thin">
+                {/* Create New Collection button at top */}
+                {onOpenCreateCollection && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      onOpenCreateCollection();
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-xs font-mono text-nothing-red hover:bg-nothing-red/10 transition-all flex items-center gap-2 border-b border-nothing-border/40 mb-1"
+                  >
+                    <FolderPlus size={13} />
+                    <span>+ New Collection</span>
+                  </button>
+                )}
+
                 {collections.length === 0 ? (
                   <div className="p-3 text-center text-xs font-mono text-nothing-gray">
                     No collections found
@@ -147,14 +166,13 @@ export default function FilterBar({
                     {collections.map(col => {
                       const isSelected = activeCollection === col.collectionId;
                       return (
-                        <button
+                        <div
                           key={col.collectionId}
-                          type="button"
                           onClick={() => {
                             onSelectCollection(col.collectionId);
                             setIsDropdownOpen(false);
                           }}
-                          className={`w-full px-3 py-2 rounded-lg text-xs font-mono transition-all flex items-center justify-between gap-2 text-left ${
+                          className={`w-full px-3 py-2 rounded-lg text-xs font-mono transition-all flex items-center justify-between gap-2 text-left cursor-pointer group ${
                             isSelected
                               ? 'bg-white/15 text-white font-medium'
                               : 'text-nothing-gray hover:text-white hover:bg-white/5'
@@ -168,15 +186,30 @@ export default function FilterBar({
                             <span className="truncate">{col.name}</span>
                           </div>
 
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
                             {col.cardCount !== undefined && col.cardCount > 0 && (
                               <span className="text-[10px] text-nothing-gray">
                                 {col.cardCount}
                               </span>
                             )}
                             {isSelected && <Check size={13} className="text-nothing-red flex-shrink-0" />}
+
+                            {onOpenEditCollection && (
+                              <button
+                                type="button"
+                                title="Edit Collection"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsDropdownOpen(false);
+                                  onOpenEditCollection(col);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/20 text-nothing-gray hover:text-white transition-opacity ml-1"
+                              >
+                                <Settings2 size={12} />
+                              </button>
+                            )}
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>

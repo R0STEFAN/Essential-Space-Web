@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { RefreshCw, LogOut, Sparkles, Layers } from 'lucide-react';
+import { RefreshCw, LogOut, Sparkles, Layers, Plus } from 'lucide-react';
 
 interface NavbarProps {
   userEmail: string;
@@ -10,6 +10,7 @@ interface NavbarProps {
   onSelectTab: (tab: 'foryou' | 'library') => void;
   onSync: () => void;
   onLogout: () => void;
+  onOpenCreateNote?: () => void;
 }
 
 export default function Navbar({
@@ -19,6 +20,7 @@ export default function Navbar({
   onSelectTab,
   onSync,
   onLogout,
+  onOpenCreateNote,
 }: NavbarProps) {
   const [time, setTime] = useState<string>('');
 
@@ -86,6 +88,17 @@ export default function Navbar({
               <span className="w-1.5 h-1.5 rounded-full bg-nothing-red animate-pulse" />
               <span>{time}</span>
             </div>
+          )}
+
+          {/* Create Capture Button */}
+          {onOpenCreateNote && (
+            <button
+              onClick={onOpenCreateNote}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-nothing-red hover:bg-nothing-red/80 text-white font-dot text-xs tracking-wider transition-all shadow-md shadow-nothing-red/20 active:scale-95"
+            >
+              <Plus size={13} strokeWidth={3} />
+              <span className="hidden sm:inline">CAPTURE</span>
+            </button>
           )}
 
           {/* Sync Button */}

@@ -9,6 +9,9 @@ import CardGrid from '@/components/CardGrid';
 import FloatingFilterDock from '@/components/FloatingFilterDock';
 import ForYouTab from '@/components/ForYouTab';
 import CardDetailModal from '@/components/CardDetailModal';
+import CreateNoteModal from '@/components/CreateNoteModal';
+import CollectionModal from '@/components/CollectionModal';
+import { saveDbCards, saveDbCollections, saveDbAuth, getDbCards, getDbCollections, getDbAuth } from '@/lib/db';
 import type { Card, Collection } from '@/types';
 
 export default function DashboardPage() {
@@ -18,6 +21,8 @@ export default function DashboardPage() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [tags, setTags] = useState<TagCount[]>([]);
   const [userEmail, setUserEmail] = useState('');
+  const [userToken, setUserToken] = useState('');
+  const [userId, setUserId] = useState('');
   const [activeType, setActiveType] = useState('');
   const [activeCollection, setActiveCollection] = useState('');
   const [activeTag, setActiveTag] = useState('');
@@ -28,6 +33,39 @@ export default function DashboardPage() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
   const [modalCard, setModalCard] = useState<Card | null>(null);
+
+  // Modal states for Capture & Collection CRUD
+  const [isCreateNoteOpen, setIsCreateNoteOpen] = useState(false);
+  const [collectionModalState, setCollectionModalState] = useState<{
+    isOpen: boolean;
+    mode: 'CREATE' | 'EDIT';
+    collection?: Collection | null;
+  }>({ isOpen: false, mode: 'CREATE' });
+
+  // Initial Local-First load from IndexedDB
+  useEffect(() => {
+    async function loadLocalData() {
+      try {
+        const localAuth = await getDbAuth();
+        if (localAuth) {
+          setUserEmail(localAuth.email);
+          if (localAuth.token) setUserToken(localAuth.token);
+          if (localAuth.uuid) setUserId(localAuth.uuid);
+        }
+
+        const localCards = await getDbCards();
+        const localCollections = await getDbCollections();
+        if (localCards.length > 0) {
+          setCards(localCards);
+          setCollections(localCollections);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.warn('Local IndexedDB load notice:', err);
+      }
+    }
+    loadLocalData();
+  }, []);
 
   const fetchCards = useCallback(async () => {
     try {
@@ -50,6 +88,13 @@ export default function DashboardPage() {
         setCollections(data.collections);
         setTags(data.tags || []);
         setUserEmail(data.user?.email || 'user@nothing.tech');
+        if (data.user?.token) setUserToken(data.user.token);
+        if (data.user?.uuid) setUserId(data.user.uuid);
+
+        // Sync into local-first IndexedDB
+        saveDbCards(data.cards);
+        saveDbCollections(data.collections);
+        if (data.user) saveDbAuth(data.user);
       }
     } catch (err) {
       console.error('Failed to load cards:', err);
@@ -157,6 +202,7 @@ export default function DashboardPage() {
         onSelectTab={setActiveTab}
         onSync={() => handleSync(false)}
         onLogout={handleLogout}
+        onOpenCreateNote={() => setIsCreateNoteOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
@@ -227,6 +273,12 @@ export default function DashboardPage() {
               tags={tags}
               activeTag={activeTag}
               onSelectTag={setActiveTag}
+              onOpenCreateCollection={() =>
+                setCollectionModalState({ isOpen: true, mode: 'CREATE' })
+              }
+              onOpenEditCollection={col =>
+                setCollectionModalState({ isOpen: true, mode: 'EDIT', collection: col })
+              }
             />
 
             <div className="mb-4 flex items-center justify-between text-xs font-mono text-nothing-gray">
@@ -289,6 +341,47 @@ export default function DashboardPage() {
             onToggleTodo={handleToggleTodo}
           />
         )}
+
+        {/* Modal for creating a new Note / Link / Photo / Voice memo */}
+        <CreateNoteModal
+          isOpen={isCreateNoteOpen}
+          onClose={() => setIsCreateNoteOpen(false)}
+          collections={collections}
+          activeCollectionId={activeCollection}
+          token={userToken}
+          userId={userId}
+          onCardCreated={newCard => {
+            setCards(prev => [newCard, ...prev]);
+            fetchCards();
+          }}
+        />
+
+        {/* Modal for creating / editing collections */}
+        <CollectionModal
+          isOpen={collectionModalState.isOpen}
+          onClose={() => setCollectionModalState({ isOpen: false, mode: 'CREATE' })}
+          mode={collectionModalState.mode}
+          collection={collectionModalState.collection}
+          token={userToken}
+          userId={userId}
+          onCollectionSaved={savedCol => {
+            setCollections(prev => {
+              const idx = prev.findIndex(c => c.collectionId === savedCol.collectionId);
+              if (idx >= 0) {
+                const updated = [...prev];
+                updated[idx] = { ...updated[idx], ...savedCol };
+                return updated;
+              }
+              return [...prev, savedCol];
+            });
+            fetchCards();
+          }}
+          onCollectionDeleted={deletedId => {
+            setCollections(prev => prev.filter(c => c.collectionId !== deletedId));
+            if (activeCollection === deletedId) setActiveCollection('');
+            fetchCards();
+          }}
+        />
       </main>
     </div>
   );
