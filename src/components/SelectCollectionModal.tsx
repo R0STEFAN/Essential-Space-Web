@@ -12,6 +12,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import type { Collection } from '@/types';
+import { useScrollLock } from '@/lib/useScrollLock';
 
 interface SelectCollectionModalProps {
   isOpen: boolean;
@@ -33,6 +34,9 @@ export default function SelectCollectionModal({
   const [search, setSearch] = useState('');
   const [selectedColId, setSelectedColId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Lock background page scroll while modal is open
+  useScrollLock(isOpen);
 
   useEffect(() => {
     if (isOpen) {

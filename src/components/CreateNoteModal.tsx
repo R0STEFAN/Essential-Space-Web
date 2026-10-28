@@ -23,6 +23,7 @@ import {
 } from '@/lib/nothing-cards';
 import { convertToWebP } from '@/lib/image-optimizer';
 import { uploadMediaToGcs } from '@/lib/firebase-upload';
+import { useScrollLock } from '@/lib/useScrollLock';
 
 interface CreateNoteModalProps {
   isOpen: boolean;
@@ -50,6 +51,9 @@ export default function CreateNoteModal({
   const [linkUrl, setLinkUrl] = useState('');
   const [selectedCollection, setSelectedCollection] = useState(activeCollectionId || '');
   const [useAi, setUseAi] = useState(true);
+
+  // Lock background page scroll while modal is open
+  useScrollLock(isOpen);
 
   // Attachments state
   const [showImageAttachment, setShowImageAttachment] = useState(false);

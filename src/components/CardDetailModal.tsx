@@ -24,6 +24,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import type { Card } from '@/types';
+import { useScrollLock } from '@/lib/useScrollLock';
 
 interface CardDetailModalProps {
   card: Card | null;
@@ -48,6 +49,9 @@ export default function CardDetailModal({
   const [showSpeakers, setShowSpeakers] = useState(true);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Lock background page scroll while modal is open
+  useScrollLock(Boolean(card));
 
   useEffect(() => {
     setIsPlaying(false);

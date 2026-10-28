@@ -8,6 +8,7 @@ import {
   updateCloudCollection,
   deleteCloudCollection,
 } from '@/lib/nothing-collections';
+import { useScrollLock } from '@/lib/useScrollLock';
 
 interface CollectionModalProps {
   isOpen: boolean;
@@ -45,6 +46,9 @@ export default function CollectionModal({
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Lock background page scroll while modal is open
+  useScrollLock(isOpen);
 
   useEffect(() => {
     if (isOpen) {
