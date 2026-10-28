@@ -134,3 +134,64 @@ export async function toggleTodoEvent(userId: string, cardId: string, eventId: s
   await saveUserCards(userId, cards);
   return card;
 }
+
+export async function getDismissedSuggestions(userId: string): Promise<string[]> {
+  try {
+    const userDir = await ensureUserDir(userId);
+    const filePath = path.join(userDir, 'dismissed_suggestions.json');
+    const content = await fs.readFile(filePath, 'utf-8');
+    return JSON.parse(content);
+  } catch {
+    return [];
+  }
+}
+
+export async function dismissSuggestion(userId: string, suggestionId: string): Promise<void> {
+  const dismissed = await getDismissedSuggestions(userId);
+  if (!dismissed.includes(suggestionId)) {
+    dismissed.push(suggestionId);
+    const userDir = await ensureUserDir(userId);
+    const filePath = path.join(userDir, 'dismissed_suggestions.json');
+    await fs.writeFile(filePath, JSON.stringify(dismissed, null, 2), 'utf-8');
+  }
+}
+
+export async function assignCardsToCollection(
+  userId: string,
+  cardIds: string[],
+  collectionId: string,
+  collectionName?: string
+): Promise<void> {
+  const cards = await getUserCards(userId);
+  let changed = false;
+  for (const c of cards) {
+    if (cardIds.includes(c.cardId)) {
+      c.collectionId = collectionId;
+      if (collectionName) c.collectionName = collectionName;
+      c.updateTime = Date.now();
+      changed = true;
+    }
+  }
+  if (changed) {
+    await saveUserCards(userId, cards);
+  }
+}
+
+export async function createSmartCollection(
+  userId: string,
+  name: string,
+  cardIds: string[]
+): Promise<Collection> {
+  const collections = await getUserCollections(userId);
+  const newColl: Collection = {
+    collectionId: `col_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    userId,
+    name,
+    updateTime: Date.now(),
+    cardCount: cardIds.length,
+  };
+  collections.push(newColl);
+  await saveUserCollections(userId, collections);
+  await assignCardsToCollection(userId, cardIds, newColl.collectionId, newColl.name);
+  return newColl;
+}

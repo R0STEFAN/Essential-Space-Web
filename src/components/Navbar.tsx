@@ -1,27 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { RefreshCw, LogOut, Trash2, Layers, Mic, CheckSquare, Bookmark, FileText, Image as ImageIcon } from 'lucide-react';
+import { RefreshCw, LogOut, Sparkles, Layers } from 'lucide-react';
 
 interface NavbarProps {
   userEmail: string;
   isSyncing: boolean;
-  activeType: string;
-  isTrash: boolean;
+  activeTab: 'foryou' | 'library';
+  onSelectTab: (tab: 'foryou' | 'library') => void;
   onSync: () => void;
-  onSelectType: (type: string) => void;
-  onToggleTrash: () => void;
   onLogout: () => void;
 }
 
 export default function Navbar({
   userEmail,
   isSyncing,
-  activeType,
-  isTrash,
+  activeTab,
+  onSelectTab,
   onSync,
-  onSelectType,
-  onToggleTrash,
   onLogout,
 }: NavbarProps) {
   const [time, setTime] = useState<string>('');
@@ -37,15 +33,6 @@ export default function Navbar({
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  const navItems = [
-    { id: '', label: 'ALL', icon: Layers },
-    { id: 'IMAGE', label: 'CAPTURES', icon: ImageIcon },
-    { id: 'AUDIO', label: 'VOICE', icon: Mic },
-    { id: 'TODO', label: 'TASKS', icon: CheckSquare },
-    { id: 'LINK', label: 'LINKS', icon: Bookmark },
-    { id: 'TEXT', label: 'NOTES', icon: FileText },
-  ];
 
   return (
     <header className="border-b border-nothing-border bg-black/80 backdrop-blur-md sticky top-0 z-50">
@@ -64,44 +51,30 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Navigation Categories */}
-        <nav className="hidden md:flex items-center gap-1 bg-nothing-card p-1 rounded-full border border-nothing-border">
-          {navItems.map(item => {
-            const Icon = item.icon;
-            const isActive = !isTrash && activeType === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (isTrash) onToggleTrash();
-                  onSelectType(item.id);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-dot transition-all ${
-                  isActive
-                    ? 'bg-white text-black font-medium shadow-sm'
-                    : 'text-nothing-gray hover:text-white'
-                }`}
-              >
-                <Icon size={12} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-
-          <div className="w-[1px] h-4 bg-nothing-border mx-1" />
-
-          {/* Trash Toggle */}
+        {/* Tab Switcher: For You / Library in Nothing OS Style */}
+        <nav className="flex items-center gap-1 bg-nothing-card/90 p-1 rounded-full border border-nothing-border shadow-inner">
           <button
-            onClick={onToggleTrash}
-            title="Bin / Trash"
-            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-dot transition-all ${
-              isTrash
-                ? 'bg-nothing-red text-white'
-                : 'text-nothing-gray hover:text-white'
+            onClick={() => onSelectTab('foryou')}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-dot tracking-wider transition-all duration-200 select-none ${
+              activeTab === 'foryou'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-white hover:bg-nothing-hover/30'
             }`}
           >
-            <Trash2 size={12} />
-            <span>BIN</span>
+            <Sparkles size={13} className={activeTab === 'foryou' ? 'text-nothing-red' : ''} />
+            <span>FOR YOU</span>
+          </button>
+
+          <button
+            onClick={() => onSelectTab('library')}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-dot tracking-wider transition-all duration-200 select-none ${
+              activeTab === 'library'
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-white hover:bg-nothing-hover/30'
+            }`}
+          >
+            <Layers size={13} />
+            <span>LIBRARY</span>
           </button>
         </nav>
 
@@ -110,7 +83,7 @@ export default function Navbar({
           {/* Digital Clock */}
           {time && (
             <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded bg-nothing-card border border-nothing-border text-nothing-light font-mono text-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-nothing-red" />
+              <span className="w-1.5 h-1.5 rounded-full bg-nothing-red animate-pulse" />
               <span>{time}</span>
             </div>
           )}

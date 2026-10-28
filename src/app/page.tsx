@@ -6,10 +6,14 @@ import { AlertCircle, CheckCircle2, X, KeyRound } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FilterBar, { type TagCount } from '@/components/FilterBar';
 import CardGrid from '@/components/CardGrid';
+import FloatingFilterDock from '@/components/FloatingFilterDock';
+import ForYouTab from '@/components/ForYouTab';
+import CardDetailModal from '@/components/CardDetailModal';
 import type { Card, Collection } from '@/types';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<'foryou' | 'library'>('foryou');
   const [cards, setCards] = useState<Card[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [tags, setTags] = useState<TagCount[]>([]);
@@ -23,6 +27,7 @@ export default function DashboardPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
+  const [modalCard, setModalCard] = useState<Card | null>(null);
 
   const fetchCards = useCallback(async () => {
     try {
@@ -51,7 +56,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeType, activeCollection, activeTag, searchQuery, isTrash, router]);
+  }, [activeType, activeCollection, activeTag, searchQuery, isTrash]);
 
   useEffect(() => {
     fetchCards();
@@ -98,7 +103,7 @@ export default function DashboardPage() {
         setIsSyncing(false);
       }
     },
-    [fetchCards, router]
+    [fetchCards]
   );
 
   // Validate active Nothing token & auto-sync on initial dashboard mount
@@ -148,14 +153,9 @@ export default function DashboardPage() {
       <Navbar
         userEmail={userEmail}
         isSyncing={isSyncing}
-        activeType={activeType}
-        isTrash={isTrash}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
         onSync={() => handleSync(false)}
-        onSelectType={type => {
-          setActiveType(type);
-          setActiveCollection('');
-        }}
-        onToggleTrash={() => setIsTrash(!isTrash)}
         onLogout={handleLogout}
       />
 
@@ -203,55 +203,92 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <FilterBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          collections={collections}
-          activeCollection={activeCollection}
-          onSelectCollection={setActiveCollection}
-          tags={tags}
-          activeTag={activeTag}
-          onSelectTag={setActiveTag}
-        />
+        {/* Conditional Tab Rendering */}
+        {activeTab === 'foryou' ? (
+          <ForYouTab
+            cards={cards}
+            collections={collections}
+            onToggleTodo={handleToggleTodo}
+            onRefreshData={fetchCards}
+            onOpenCardDetail={card => setModalCard(card)}
+            onNavigateToCollection={collId => {
+              setActiveCollection(collId);
+              setActiveTab('library');
+            }}
+          />
+        ) : (
+          <div>
+            <FilterBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              collections={collections}
+              activeCollection={activeCollection}
+              onSelectCollection={setActiveCollection}
+              tags={tags}
+              activeTag={activeTag}
+              onSelectTag={setActiveTag}
+            />
 
-        <div className="mb-4 flex items-center justify-between text-xs font-mono text-nothing-gray">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-dot">
-              {isTrash ? 'BIN / TRASH' : activeType ? `${activeType} CARDS` : 'ALL NOTES'}
-            </span>
-            {activeTag && (
-              <>
-                <span className="text-nothing-border">•</span>
-                <span className="px-2 py-0.5 rounded-full bg-nothing-red/20 border border-nothing-red/40 text-nothing-red inline-flex items-center gap-1">
-                  #{activeTag}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTag('')}
-                    className="hover:text-white ml-0.5"
-                  >
-                    <X size={10} />
-                  </button>
+            <div className="mb-4 flex items-center justify-between text-xs font-mono text-nothing-gray">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-dot">
+                  {isTrash ? 'BIN / TRASH' : activeType ? `${activeType} CARDS` : 'ALL NOTES'}
                 </span>
-              </>
-            )}
-            <span className="text-nothing-border">•</span>
-            <span>{cards.length} items</span>
+                {activeTag && (
+                  <>
+                    <span className="text-nothing-border">•</span>
+                    <span className="px-2 py-0.5 rounded-full bg-nothing-red/20 border border-nothing-red/40 text-nothing-red inline-flex items-center gap-1">
+                      #{activeTag}
+                      <button
+                        type="button"
+                        onClick={() => setActiveTag('')}
+                        className="hover:text-white ml-0.5"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  </>
+                )}
+                <span className="text-nothing-border">•</span>
+                <span>{cards.length} items</span>
+              </div>
+
+              {cards.length > 0 && (
+                <span className="text-[11px] text-nothing-gray/70 hidden sm:inline">
+                  Sorted by date (latest first)
+                </span>
+              )}
+            </div>
+
+            <CardGrid
+              cards={cards}
+              isLoading={isLoading}
+              onToggleTodo={handleToggleTodo}
+              activeTag={activeTag}
+              onSelectTag={setActiveTag}
+            />
+
+            {/* Floating Bottom Filter Dock - ONLY visible on Library tab */}
+            <FloatingFilterDock
+              activeType={activeType}
+              isTrash={isTrash}
+              onSelectType={type => {
+                setActiveType(type);
+                setActiveCollection('');
+              }}
+              onToggleTrash={() => setIsTrash(!isTrash)}
+            />
           </div>
+        )}
 
-          {cards.length > 0 && (
-            <span className="text-[11px] text-nothing-gray/70 hidden sm:inline">
-              Sorted by date (latest first)
-            </span>
-          )}
-        </div>
-
-        <CardGrid
-          cards={cards}
-          isLoading={isLoading}
-          onToggleTodo={handleToggleTodo}
-          activeTag={activeTag}
-          onSelectTag={setActiveTag}
-        />
+        {/* Modal for card detail if clicked from For You */}
+        {modalCard && (
+          <CardDetailModal
+            card={modalCard}
+            onClose={() => setModalCard(null)}
+            onToggleTodo={handleToggleTodo}
+          />
+        )}
       </main>
     </div>
   );
