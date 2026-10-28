@@ -374,6 +374,14 @@ export async function createCloudCard(params: {
       });
     }
 
+    // Prevent Android Room NullPointerException: IMAGE and AUDIO cards MUST have matching resources
+    if (newCard.type === 'IMAGE' && !params.imageGcsKey) {
+      newCard.type = 'TEXT';
+    }
+    if (newCard.type === 'AUDIO' && !params.audioGcsKey) {
+      newCard.type = 'TEXT';
+    }
+
     const cardAnalysis: any[] = [];
     if (params.bulletPoints && params.bulletPoints.length > 0) {
       cardAnalysis.push({
