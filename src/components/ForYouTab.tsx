@@ -275,135 +275,7 @@ export default function ForYouTab({
         </div>
       </div>
 
-      {/* 2. SECTION 1: Smart Recommendations Carousel */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-nothing-red" />
-            <h3 className="font-dot text-sm tracking-wider text-white uppercase font-medium">
-              COLLECTION RECOMMENDATIONS
-            </h3>
-          </div>
-          <span className="text-[11px] font-mono text-nothing-gray">
-            {recommendations.length} available
-          </span>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
-            <div className="h-48 rounded-2xl bg-nothing-card/60 border border-nothing-border" />
-            <div className="h-48 rounded-2xl bg-nothing-card/60 border border-nothing-border" />
-          </div>
-        ) : recommendations.length === 0 ? (
-          <div className="p-6 rounded-2xl bg-nothing-card/30 border border-dashed border-nothing-border/60 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-full bg-nothing-border/30 text-nothing-gray">
-                <FolderCheck size={18} />
-              </div>
-              <div>
-                <p className="text-xs font-mono text-white">All collections are up to date</p>
-                <p className="text-[11px] font-mono text-nothing-gray">
-                  Nothing Space will automatically suggest new collections as you capture more notes.
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recommendations.map(rec => {
-              const isLoading = actionLoadingId === rec.id;
-              const isCreate = rec.type === 'CREATE_COLLECTION';
-
-              return (
-                <div
-                  key={rec.id}
-                  className="group relative flex flex-col justify-between p-5 rounded-2xl bg-nothing-card border border-nothing-border/80 hover:border-white/40 transition-all duration-200 shadow-lg hover:shadow-black/50"
-                >
-                  {/* Top Bar: Badge & Dismiss */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-red/15 border border-nothing-red/30 text-[10px] font-mono text-nothing-red uppercase tracking-wider">
-                      <Sparkles size={10} />
-                      <span>{isCreate ? 'NEW COLLECTION' : 'ADD TO EXISTING'}</span>
-                    </div>
-
-                    <button
-                      onClick={() => handleRecommendationAction(rec, 'DISMISS')}
-                      disabled={isLoading}
-                      title="Dismiss suggestion"
-                      className="p-1 rounded-lg text-nothing-gray/60 hover:text-white hover:bg-white/10 transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-
-                  {/* Title & Reason */}
-                  <div className="my-3">
-                    <h4 className="font-dot text-sm text-white font-semibold tracking-wide">
-                      {rec.title}
-                    </h4>
-                    {rec.reason && (
-                      <p className="text-[11px] font-mono text-nothing-gray mt-1">
-                        {rec.reason}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Fan Stack Previews (Stacked Cards) */}
-                  <div className="relative h-20 my-2 flex items-center pl-2">
-                    {rec.previewCards.map((prevCard, idx) => {
-                      const rotation = idx === 0 ? '-rotate-3' : idx === 1 ? 'rotate-1 translate-x-4' : 'rotate-4 translate-x-8';
-                      const zIndex = 30 - idx * 10;
-                      return (
-                        <div
-                          key={prevCard.cardId}
-                          onClick={() => {
-                            const fullCard = cards.find(c => c.cardId === prevCard.cardId);
-                            if (fullCard) onOpenCardDetail(fullCard);
-                          }}
-                          className={`absolute w-36 h-16 p-2 rounded-xl bg-black border border-nothing-border/90 shadow-md flex flex-col justify-between cursor-pointer hover:border-white transition-all transform ${rotation}`}
-                          style={{ zIndex, left: `${idx * 28}px` }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-nothing-card text-nothing-gray border border-nothing-border">
-                              {prevCard.type}
-                            </span>
-                          </div>
-                          <p className="text-[10px] font-mono text-white/90 truncate">
-                            {prevCard.title}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="pt-3 border-t border-nothing-border/60 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-mono text-nothing-gray">
-                      {rec.cardIds.length} notes
-                    </span>
-
-                    <button
-                      onClick={() =>
-                        handleRecommendationAction(
-                          rec,
-                          isCreate ? 'CREATE_COLLECTION' : 'ADD_TO_COLLECTION'
-                        )
-                      }
-                      disabled={isLoading}
-                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-nothing-hover text-black text-xs font-dot tracking-wider font-semibold transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
-                    >
-                      {isCreate ? <FolderPlus size={13} /> : <Check size={13} />}
-                      <span>{isCreate ? 'CREATE COLLECTION' : 'ADD ALL NOTES'}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* 3. SECTION 2: Tasks & Reminders from All Notes */}
+      {/* 2. SECTION 1: Tasks & Reminders from All Notes */}
       <section className="space-y-4">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -619,6 +491,164 @@ export default function ForYouTab({
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* 3. SECTION 2: Smart Recommendations Carousel */}
+      <section className="space-y-4 pt-6 border-t border-nothing-border/60">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-nothing-red" />
+            <h3 className="font-dot text-sm tracking-wider text-white uppercase font-medium">
+              COLLECTION RECOMMENDATIONS
+            </h3>
+          </div>
+          <span className="text-[11px] font-mono text-nothing-gray">
+            {recommendations.length} available
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+            <div className="h-48 rounded-2xl bg-nothing-card/60 border border-nothing-border" />
+            <div className="h-48 rounded-2xl bg-nothing-card/60 border border-nothing-border" />
+          </div>
+        ) : recommendations.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-nothing-card/30 border border-dashed border-nothing-border/60 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-nothing-border/30 text-nothing-gray">
+                <FolderCheck size={18} />
+              </div>
+              <div>
+                <p className="text-xs font-mono text-white">All collections are up to date</p>
+                <p className="text-[11px] font-mono text-nothing-gray">
+                  Nothing Space will automatically suggest new collections as you capture more notes.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recommendations.map(rec => {
+              const isLoading = actionLoadingId === rec.id;
+              const isCreate = rec.type === 'CREATE_COLLECTION';
+
+              return (
+                <div
+                  key={rec.id}
+                  className="group relative flex flex-col justify-between p-5 rounded-2xl bg-nothing-card border border-nothing-border/80 hover:border-white/40 transition-all duration-200 shadow-lg hover:shadow-black/50"
+                >
+                  {/* Top Bar: Badge & Dismiss */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-red/15 border border-nothing-red/30 text-[10px] font-mono text-nothing-red uppercase tracking-wider">
+                      <Sparkles size={10} />
+                      <span>{isCreate ? 'NEW COLLECTION' : 'ADD TO EXISTING'}</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleRecommendationAction(rec, 'DISMISS')}
+                      disabled={isLoading}
+                      title="Dismiss suggestion"
+                      className="p-1 rounded-lg text-nothing-gray/60 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {/* Title & Reason */}
+                  <div className="my-3">
+                    <h4 className="font-dot text-sm text-white font-semibold tracking-wide">
+                      {rec.title}
+                    </h4>
+                    {rec.reason && (
+                      <p className="text-[11px] font-mono text-nothing-gray mt-1">
+                        {rec.reason}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Fan Stack Previews (Stacked Cards with Visual Previews) */}
+                  <div className="relative h-24 my-2 flex items-center pl-1 overflow-visible">
+                    {rec.previewCards.map((prevCard, idx) => {
+                      const fullCard = cards.find(c => c.cardId === prevCard.cardId);
+                      const previewImg =
+                        prevCard.imageUrl || fullCard?.imageUrl || fullCard?.link?.preview;
+                      const rotation =
+                        idx === 0
+                          ? '-rotate-3 hover:-rotate-1'
+                          : idx === 1
+                          ? 'rotate-1 translate-x-2'
+                          : 'rotate-5 translate-x-4';
+                      const zIndex = 30 - idx * 10;
+
+                      return (
+                        <div
+                          key={prevCard.cardId}
+                          onClick={() => {
+                            if (fullCard) onOpenCardDetail(fullCard);
+                          }}
+                          className={`group/stack absolute w-36 sm:w-40 h-20 rounded-xl bg-black border border-white/20 shadow-lg flex flex-col justify-between cursor-pointer hover:border-white hover:z-40 transition-all duration-200 transform ${rotation} overflow-hidden`}
+                          style={{ zIndex, left: `${idx * 32}px` }}
+                        >
+                          {/* Image preview or dark gradient */}
+                          {previewImg ? (
+                            <div className="absolute inset-0 w-full h-full overflow-hidden">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={previewImg}
+                                alt={prevCard.title || 'Preview'}
+                                className="w-full h-full object-cover object-center group-hover/stack:scale-105 transition-transform duration-300"
+                                onError={e => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/25 pointer-events-none" />
+                            </div>
+                          ) : (
+                            <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 to-black pointer-events-none" />
+                          )}
+
+                          {/* Content Overlay */}
+                          <div className="relative z-10 p-2 flex flex-col justify-between h-full">
+                            <div className="flex items-center justify-between">
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-sm text-nothing-gray border border-white/10 shadow-sm">
+                                {getCardTypeIcon(prevCard.type)}
+                                <span className="tracking-wider">{prevCard.type}</span>
+                              </span>
+                            </div>
+                            <p className="text-[10px] font-mono text-white/95 font-medium truncate drop-shadow-md">
+                              {prevCard.title || 'Untitled Note'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-3 border-t border-nothing-border/60 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-mono text-nothing-gray">
+                      {rec.cardIds.length} notes
+                    </span>
+
+                    <button
+                      onClick={() =>
+                        handleRecommendationAction(
+                          rec,
+                          isCreate ? 'CREATE_COLLECTION' : 'ADD_TO_COLLECTION'
+                        )
+                      }
+                      disabled={isLoading}
+                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-nothing-hover text-black text-xs font-dot tracking-wider font-semibold transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                    >
+                      {isCreate ? <FolderPlus size={13} /> : <Check size={13} />}
+                      <span>{isCreate ? 'CREATE COLLECTION' : 'ADD ALL NOTES'}</span>
+                    </button>
                   </div>
                 </div>
               );
