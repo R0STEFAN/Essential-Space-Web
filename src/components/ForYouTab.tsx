@@ -330,7 +330,7 @@ export default function ForYouTab({
 
       {/* 3. SECTION 2: Tasks & Reminders from All Notes */}
       <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CheckSquare size={16} className="text-nothing-red" />
             <h3 className="font-dot text-sm tracking-wider text-white uppercase font-medium">
@@ -376,9 +376,9 @@ export default function ForYouTab({
           </div>
         </div>
 
-        {/* Tasks List */}
+        {/* Tasks List - 1 Centered Column */}
         {filteredTasks.length === 0 ? (
-          <div className="p-8 rounded-2xl bg-nothing-card/30 border border-dashed border-nothing-border/60 text-center">
+          <div className="max-w-4xl mx-auto p-8 rounded-2xl bg-nothing-card/30 border border-dashed border-nothing-border/60 text-center">
             <div className="p-3 rounded-full bg-nothing-border/30 text-nothing-gray mx-auto w-fit mb-2">
               <Check size={20} />
             </div>
@@ -390,7 +390,7 @@ export default function ForYouTab({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="max-w-4xl mx-auto flex flex-col gap-2.5 w-full">
             {filteredTasks.map(task => {
               const isChecked = task.check === 1;
               const formattedTime = formatTaskTime(task.time);
@@ -399,17 +399,17 @@ export default function ForYouTab({
               return (
                 <div
                   key={`${task.cardId}_${task.eventId}`}
-                  className={`group p-4 rounded-2xl border transition-all duration-200 flex items-start justify-between gap-3 ${
+                  className={`group px-4 py-2.5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                     isChecked
                       ? 'bg-nothing-card/40 border-nothing-border/40 opacity-70'
                       : 'bg-nothing-card border-nothing-border hover:border-white/40'
                   }`}
                 >
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    {/* Checkbox button with Nothing style */}
+                  {/* Left part: Checkbox + Title & Content */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <button
                       onClick={() => handleTaskToggle(task.cardId, task.eventId)}
-                      className={`shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-all mt-0.5 ${
+                      className={`shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
                         isChecked
                           ? 'bg-nothing-red border-nothing-red text-white'
                           : 'border-nothing-border bg-black hover:border-white'
@@ -418,45 +418,49 @@ export default function ForYouTab({
                       {isChecked && <Check size={12} strokeWidth={3} />}
                     </button>
 
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5">
                       <p
-                        className={`text-xs font-mono font-medium leading-relaxed transition-all ${
+                        className={`text-xs font-mono font-medium truncate ${
                           isChecked ? 'line-through text-nothing-gray' : 'text-white'
                         }`}
                       >
                         {task.title}
                       </p>
 
-                      {task.content && (
-                        <p className="text-[11px] font-mono text-nothing-gray mt-1 line-clamp-2">
+                      {task.content && task.content !== task.title && (
+                        <span
+                          className={`text-[11px] font-mono truncate ${
+                            isChecked ? 'line-through text-nothing-gray/50' : 'text-nothing-gray'
+                          }`}
+                        >
                           {task.content}
-                        </p>
+                        </span>
                       )}
-
-                      {/* Meta pills: time & parent card */}
-                      <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-                        {formattedTime && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-nothing-red/10 border border-nothing-red/30 text-[10px] font-mono text-nothing-red">
-                            <Clock size={10} />
-                            <span>{formattedTime}</span>
-                          </span>
-                        )}
-
-                        {parentCard && (
-                          <button
-                            onClick={() => onOpenCardDetail(parentCard)}
-                            title="Open parent note"
-                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[10px] font-mono text-nothing-gray transition-colors"
-                          >
-                            {getCardTypeIcon(task.cardType)}
-                            <span className="truncate max-w-[140px] sm:max-w-[200px]">
-                              {task.cardTitle}
-                            </span>
-                            <ExternalLink size={9} />
-                          </button>
-                        )}
-                      </div>
                     </div>
+                  </div>
+
+                  {/* Right part: Meta badges (Time + Parent Note pill) */}
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pl-8 sm:pl-0">
+                    {formattedTime && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-red/10 border border-nothing-red/30 text-[10px] font-mono text-nothing-red whitespace-nowrap">
+                        <Clock size={10} />
+                        <span>{formattedTime}</span>
+                      </span>
+                    )}
+
+                    {parentCard && (
+                      <button
+                        onClick={() => onOpenCardDetail(parentCard)}
+                        title="Open parent note"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap"
+                      >
+                        {getCardTypeIcon(task.cardType)}
+                        <span className="truncate max-w-[120px] sm:max-w-[160px]">
+                          {task.cardTitle}
+                        </span>
+                        <ExternalLink size={9} />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
