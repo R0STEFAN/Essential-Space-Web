@@ -26,9 +26,14 @@ export async function POST(
 
   // Synchronize toggled checklist event with Nothing Cloud
   if (user.token) {
-    updateCloudCard(user.token, updatedCard).catch(err => {
+    try {
+      const syncRes = await updateCloudCard(user.token, updatedCard);
+      if (!syncRes.success) {
+        console.warn('Nothing Cloud todo sync returned error:', syncRes.error);
+      }
+    } catch (err) {
       console.warn('Background Nothing Cloud todo sync failed:', err);
-    });
+    }
   }
 
   return NextResponse.json({ success: true, card: updatedCard });

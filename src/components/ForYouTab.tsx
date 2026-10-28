@@ -61,7 +61,7 @@ export default function ForYouTab({
 
   useEffect(() => {
     fetchForYou();
-  }, [fetchForYou, cards]);
+  }, [fetchForYou]);
 
   const handleRecommendationAction = async (
     rec: ForYouRecommendation,
@@ -101,22 +101,42 @@ export default function ForYouTab({
   };
 
   const handleTaskToggle = (cardId: string, eventId: string) => {
-    // Optimistic toggle in local list
-    setForyouData(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        tasks: prev.tasks.map(t =>
-          t.cardId === cardId && t.eventId === eventId
-            ? { ...t, check: t.check === 1 ? 0 : 1 }
-            : t
-        ),
-      };
-    });
     onToggleTodo(cardId, eventId);
   };
 
-  const tasks = foryouData?.tasks || [];
+  // Derive tasks reactively from parent cards state to avoid race conditions
+  const tasks = useMemo<ForYouTask[]>(() => {
+    const activeCards = cards.filter(c => c.targetState === 0);
+    const list: ForYouTask[] = [];
+    for (const card of activeCards) {
+      if (Array.isArray(card.events) && card.events.length > 0) {
+        for (const ev of card.events) {
+          if (!ev.title) continue;
+          list.push({
+            eventId: ev.eventId,
+            cardId: card.cardId,
+            title: ev.title,
+            content: ev.content,
+            check: ev.check === 1 ? 1 : 0,
+            time: ev.time,
+            isPotentialReminder: ev.isPotentialReminder,
+            cardTitle: card.title || 'Untitled Note',
+            cardType: card.type,
+            cardCreateTime: card.createTime,
+          });
+        }
+      }
+    }
+    list.sort((a, b) => {
+      if (a.check !== b.check) return a.check - b.check;
+      if (a.time && b.time) return a.time - b.time;
+      if (a.time && !b.time) return -1;
+      if (!a.time && b.time) return 1;
+      return b.cardCreateTime - a.cardCreateTime;
+    });
+    return list;
+  }, [cards]);
+
   const recommendations = foryouData?.recommendations || [];
 
   // Group unique source lists (parent captures)

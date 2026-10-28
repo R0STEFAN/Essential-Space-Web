@@ -631,38 +631,102 @@ export async function updateCloudCards(
     const itemPayload = encryptPayload('0', aesKeyB64);
 
     const body = {
+      clientVersion: cardsToUpdate[0]?.clientVersion || 2,
       payload,
       cipherKey,
       cards: updatedCards.map(c => {
-        const clientRequestResponse = JSON.stringify({
-          cards: {
-            card_id: c.cardId,
-            title: c.title,
-            summary: c.summary || c.content || '',
-            type: c.type,
-            create_time: c.createTime || now,
-            update_time: now,
-            target_state: c.targetState || 0,
-          },
-          card_events: (c.events || []).map(ev => ({
-            type: 2,
-            title: ev.title,
-            content: ev.content || '',
-            check: ev.check === 1,
-            is_potential_reminder: ev.isPotentialReminder ?? true,
-            time: ev.time || now,
-            update_time: now,
-            special_key: ev.eventId,
-            start_time: -1,
-            end_time: -1,
-          })),
-        });
+        let cr: any = null;
+        if (c.rawClientRequestResponse) {
+          try {
+            cr = JSON.parse(c.rawClientRequestResponse);
+          } catch {
+            cr = null;
+          }
+        }
+
+        if (cr && typeof cr === 'object') {
+          if (!cr.cards) cr.cards = {};
+          cr.cards.card_id = c.cardId;
+          if (c.title) cr.cards.title = c.title;
+          if (c.summary || c.content) cr.cards.summary = c.summary || c.content;
+          cr.cards.update_time = now;
+          cr.cards.target_state = c.targetState ?? cr.cards.target_state ?? 0;
+
+          // Update checklist items if present
+          if (Array.isArray(cr.card_events) && c.events) {
+            cr.card_events = cr.card_events.map((ev: any) => {
+              const match = c.events?.find(
+                (e: any) => e.eventId === (ev.special_key || ev.card_event_id)
+              );
+              if (match) {
+                return {
+                  ...ev,
+                  check: match.check === 1,
+                  update_time: now,
+                };
+              }
+              return ev;
+            });
+          } else if (c.events && c.events.length > 0) {
+            cr.card_events = c.events.map(ev => ({
+              type: 2,
+              title: ev.title,
+              content: ev.content || '',
+              check: ev.check === 1,
+              is_potential_reminder: ev.isPotentialReminder ?? true,
+              time: ev.time || now,
+              update_time: now,
+              special_key: ev.eventId,
+              start_time: -1,
+              end_time: -1,
+            }));
+          }
+
+          // Update collection reference
+          if (c.collectionId) {
+            cr.card_collection_cross_ref = [
+              { collection_id: c.collectionId, create_time: now },
+            ];
+          }
+        } else {
+          // Construct baseline client_request_response
+          cr = {
+            cards: {
+              card_id: c.cardId,
+              title: c.title,
+              summary: c.summary || c.content || '',
+              type: c.type,
+              create_time: c.createTime || now,
+              update_time: now,
+              target_state: c.targetState || 0,
+            },
+            card_resources: [],
+            card_analysis: [],
+            card_events: (c.events || []).map(ev => ({
+              type: 2,
+              title: ev.title,
+              content: ev.content || '',
+              check: ev.check === 1,
+              is_potential_reminder: ev.isPotentialReminder ?? true,
+              time: ev.time || now,
+              update_time: now,
+              special_key: ev.eventId,
+              start_time: -1,
+              end_time: -1,
+            })),
+            card_collection_cross_ref: c.collectionId
+              ? [{ collection_id: c.collectionId, create_time: now }]
+              : [],
+          };
+        }
+
+        const clientRequestResponse = JSON.stringify(cr);
 
         return {
           cardId: c.cardId,
           collectionIds: c.collectionId ? [c.collectionId] : [],
           client_request_response: clientRequestResponse,
-          files: [],
+          files: Array.isArray(c.files) ? c.files : [],
           clientUpdateTime: now,
           payload: itemPayload,
           cipherKey,
@@ -681,6 +745,90 @@ export async function updateCloudCards(
     if (!res.ok || data?.code !== '00000') {
       const errorMsg = data?.msg || `Failed to update cards (HTTP ${res.status})`;
       return { success: false, error: errorMsg };
+    }
+
+    // Inspect individual card responses for SERVER_CODE_CLIENT_DATA_TOO_OLD (300007)
+    if (Array.isArray(data?.data)) {
+      for (const item of data.data) {
+        if (item.code === '300007' && item.client_request_response) {
+          console.log(`[Nothing Cloud] Conflict 300007 for card ${item.cardId}, resolving with server state...`);
+          try {
+            const serverCr =
+              typeof item.client_request_response === 'string'
+                ? JSON.parse(item.client_request_response)
+                : item.client_request_response;
+
+            const targetCard = updatedCards.find(c => c.cardId === item.cardId);
+            if (targetCard) {
+              const bumpedTime = Math.max(Date.now(), (item.clientUpdateTime || 0) + 1000);
+
+              if (serverCr.cards) {
+                serverCr.cards.update_time = bumpedTime;
+                if (targetCard.title) serverCr.cards.title = targetCard.title;
+                if (targetCard.summary || targetCard.content) {
+                  serverCr.cards.summary = targetCard.summary || targetCard.content;
+                }
+                serverCr.cards.target_state =
+                  targetCard.targetState ?? serverCr.cards.target_state ?? 0;
+              }
+
+              if (Array.isArray(serverCr.card_events) && targetCard.events) {
+                for (const ev of serverCr.card_events) {
+                  const localEv = targetCard.events.find(
+                    (e: any) => e.eventId === (ev.special_key || ev.card_event_id)
+                  );
+                  if (localEv) {
+                    ev.check = localEv.check === 1;
+                    ev.update_time = bumpedTime;
+                  }
+                }
+              }
+
+              if (targetCard.collectionId) {
+                serverCr.card_collection_cross_ref = [
+                  { collection_id: targetCard.collectionId, create_time: bumpedTime },
+                ];
+              }
+
+              targetCard.rawClientRequestResponse = JSON.stringify(serverCr);
+              targetCard.updateTime = bumpedTime;
+
+              const retryBody = {
+                clientVersion: item.clientVersion || targetCard.clientVersion || 2,
+                payload,
+                cipherKey,
+                cards: [
+                  {
+                    cardId: item.cardId,
+                    collectionIds: targetCard.collectionId
+                      ? [targetCard.collectionId]
+                      : item.collectionIds || [],
+                    client_request_response: JSON.stringify(serverCr),
+                    files: item.files || targetCard.files || [],
+                    clientUpdateTime: bumpedTime,
+                    payload: itemPayload,
+                    cipherKey,
+                  },
+                ],
+              };
+
+              const retryRes = await nothingFetch(targetUrl, {
+                method: 'POST',
+                headers: generateNothingAuthHeaders(token),
+                body: JSON.stringify(retryBody),
+              });
+              const retryData = await retryRes.json().catch(() => null);
+              console.log(
+                `[Nothing Cloud] Conflict retry for card ${item.cardId} returned code:`,
+                retryData?.code,
+                retryData?.data?.[0]?.code
+              );
+            }
+          } catch (conflictErr) {
+            console.error('Failed to resolve 300007 conflict:', conflictErr);
+          }
+        }
+      }
     }
 
     // Update in local IndexedDB

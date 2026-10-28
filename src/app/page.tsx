@@ -177,7 +177,7 @@ export default function DashboardPage() {
   }, []);
 
   const handleToggleTodo = async (cardId: string, eventId: string) => {
-    // Optimistic update
+    // Optimistic update in cards list
     setCards(prev =>
       prev.map(c => {
         if (c.cardId === cardId && c.events) {
@@ -192,12 +192,29 @@ export default function DashboardPage() {
       })
     );
 
+    // Also update modalCard if currently viewing this card
+    setModalCard(prev => {
+      if (prev && prev.cardId === cardId && prev.events) {
+        return {
+          ...prev,
+          events: prev.events.map(e =>
+            e.eventId === eventId ? { ...e, check: e.check === 1 ? 0 : 1 } : e
+          ),
+        };
+      }
+      return prev;
+    });
+
     try {
-      await fetch(`/api/cards/${cardId}/toggle-todo`, {
+      const res = await fetch(`/api/cards/${cardId}/toggle-todo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId }),
       });
+      if (!res.ok) {
+        console.error('Server failed to toggle todo');
+        fetchCards();
+      }
     } catch (err) {
       console.error('Failed to toggle todo:', err);
       fetchCards();

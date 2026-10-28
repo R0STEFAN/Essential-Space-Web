@@ -81,6 +81,9 @@ export interface Card {
   events?: CardEvent[];
   link?: CardLink;
   attachments?: CardAttachment[];
+  clientVersion?: number;
+  rawClientRequestResponse?: string;
+  files?: Array<{ region?: string; gcsKey?: string }>;
 }
 
 export interface Collection {

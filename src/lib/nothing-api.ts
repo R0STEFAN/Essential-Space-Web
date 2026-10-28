@@ -654,6 +654,12 @@ export async function syncUserData(user: NothingUser): Promise<SyncResult> {
                 speakerName: speakers[0]?.speaker_id || 'Speaker',
               }
             : undefined,
+        clientVersion: raw.clientVersion || 2,
+        rawClientRequestResponse:
+          typeof raw.client_request_response === 'string'
+            ? raw.client_request_response
+            : JSON.stringify(raw.client_request_response || {}),
+        files: Array.isArray(raw.files) ? raw.files : [],
       };
     });
 
