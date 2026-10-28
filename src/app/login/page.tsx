@@ -3,10 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
   Key,
   ArrowRight,
   ShieldCheck,
   Loader2,
+  QrCode,
+  Smartphone,
+  RefreshCw,
   CheckCircle2,
   ExternalLink,
   Copy,
@@ -14,6 +21,7 @@ import {
   Sparkles,
   Terminal,
   Bookmark,
+  ChevronLeft,
   UserCheck,
 } from 'lucide-react';
 import { parseNothingJwt } from '@/lib/crypto';
@@ -21,11 +29,22 @@ import { saveDbAuth, getDbAuth, clearDbAuth } from '@/lib/db';
 import { syncNothingCloud } from '@/lib/sync-engine';
 import type { NothingUser } from '@/types';
 
-type LoginTab = 'token' | 'bridge';
+type LoginTab = 'email' | 'token' | 'qr' | 'bridge';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<LoginTab>('token');
+  const [activeTab, setActiveTab] = useState<LoginTab>('email');
+
+  // Email & Password + 2FA OTP state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isOtpStep, setIsOtpStep] = useState(false);
+  const [otpSessionId, setOtpSessionId] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
 
   // Direct Token state
   const [token, setToken] = useState('');
@@ -33,16 +52,32 @@ export default function LoginPage() {
   const [showAdvancedToken, setShowAdvancedToken] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
 
-  // Saved local session
+  // QR Code state (Desktop polling & Mobile approval)
+  const [qrId, setQrId] = useState('');
+  const [qrMobileUrl, setQrMobileUrl] = useState('');
+  const [qrLoading, setQrLoading] = useState(false);
+
+  // Mobile QR Scanner view (?qr=...)
+  const [scannedQrId, setScannedQrId] = useState<string | null>(null);
   const [savedAccount, setSavedAccount] = useState<{ email: string; userName?: string } | null>(
     null
   );
+  const [qrApprovedSuccess, setQrApprovedSuccess] = useState(false);
 
-  // Status
+  // Shared UI status
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Robust clipboard copy
+  // Cooldown countdown timer for OTP resend
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  // Robust clipboard copy with fallback
   const copyToClipboard = async (text: string) => {
     let ok = false;
     try {
@@ -83,14 +118,14 @@ export default function LoginPage() {
     return `location.href='${origin}/login?token='+encodeURIComponent(localStorage.getItem('nothingAuth_account-app-web_accessToken')||sessionStorage.getItem('nothingAuth_account-app-web_accessToken')||'')+'&refresh='+encodeURIComponent(localStorage.getItem('nothingAuth_account-app-web_refreshToken')||'');`;
   };
 
-  const handleTokenSubmit = async (tokenStr: string, refreshStr?: string) => {
+  // Pure Client-Side Token Handler (Local-First IndexedDB)
+  const handleClientTokenLogin = async (tokenStr: string, refreshStr?: string) => {
     let cleanToken = tokenStr.trim().replace(/^["']|["']$/g, '');
     if (cleanToken.toLowerCase().startsWith('bearer ')) {
       cleanToken = cleanToken.slice(7).trim();
     }
     let cleanRefresh = (refreshStr || '').trim().replace(/^["']|["']$/g, '');
 
-    // Support JSON format e.g. {"accessToken": "...", "refreshToken": "..."}
     if (cleanToken.startsWith('{') && cleanToken.endsWith('}')) {
       try {
         const parsed = JSON.parse(cleanToken);
@@ -149,17 +184,177 @@ export default function LoginPage() {
     checkSaved();
 
     const params = new URLSearchParams(window.location.search);
+    const qrParam = params.get('qr');
     const urlToken = params.get('token');
     const urlRefresh = params.get('refresh');
+
     if (params.get('expired') === '1') {
       setError('Your Nothing Account session expired or was invalidated. Please sign in again.');
       window.history.replaceState({}, '', '/login');
-    } else if (urlToken) {
+    }
+
+    if (qrParam) {
+      setScannedQrId(qrParam);
+    }
+
+    if (urlToken) {
       window.history.replaceState({}, '', '/login');
-      handleTokenSubmit(urlToken, urlRefresh || undefined);
+      handleClientTokenLogin(urlToken, urlRefresh || undefined);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Generate QR code when switching to 'qr' tab
+  const generateNewQr = async () => {
+    setQrLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setQrId(data.qrId);
+        setQrMobileUrl(data.mobileUrl);
+      }
+    } catch {
+      // In static Cloudflare mode, fallback QR demo
+      const fakeId = `qr_${Date.now()}`;
+      setQrId(fakeId);
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://essential-space.pages.dev';
+      setQrMobileUrl(`${origin}/login?qr=${fakeId}`);
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'qr' && !qrId && !scannedQrId) {
+      generateNewQr();
+    }
+  }, [activeTab, qrId, scannedQrId]);
+
+  // Step 1: Submit Email and Password
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError('Please enter your Nothing Account email and password');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          qrId: scannedQrId || undefined,
+        }),
+      });
+
+      if (res.status === 404) {
+        throw new Error(
+          'Cloudflare Pages runs in pure client-side mode to protect your password. Nothing Cloud restricts server logins from datacenter IPs. Please use the TOKEN or SYNC tab to connect your Nothing Account!'
+        );
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(
+          data.error ||
+            'Nothing Cloud authentication failed. Please sign in via the TOKEN or SYNC tab.'
+        );
+      }
+
+      // Check if 2FA code is needed
+      if (data.otpRequired) {
+        setIsOtpStep(true);
+        setOtpSessionId(data.sessionId);
+        setMaskedEmail(data.maskedEmail || email.trim());
+        setCooldown(60);
+        return;
+      }
+
+      if (data.user) {
+        await saveDbAuth(data.user);
+        window.location.href = '/';
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Authentication failed. Please use the TOKEN or SYNC tab.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Verify 6-digit Code from Email
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setError('Please enter the 6-digit code received on your email');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify_otp',
+          sessionId: otpSessionId,
+          code: otpCode.trim(),
+          qrId: scannedQrId || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Invalid verification code');
+      }
+
+      if (data.user) {
+        await saveDbAuth(data.user);
+      }
+      window.location.href = '/';
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend OTP code
+  const handleResendOtp = async () => {
+    if (cooldown > 0 || resending) return;
+    setResending(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'resend_otp',
+          sessionId: otpSessionId,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to resend code');
+      }
+      setCooldown(60);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setResending(false);
+    }
+  };
 
   const pasteFromClipboard = async (setter: (val: string) => void) => {
     try {
@@ -170,14 +365,12 @@ export default function LoginPage() {
           setError(null);
         }
       }
-    } catch {
-      // ignore clipboard permission prompt rejection
-    }
+    } catch {}
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleTokenFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await handleTokenSubmit(token, refreshToken);
+    await handleClientTokenLogin(token, refreshToken);
   };
 
   return (
@@ -197,7 +390,7 @@ export default function LoginPage() {
             ESSENTIAL SPACE
           </h1>
           <p className="text-xs font-mono text-nothing-gray tracking-widest uppercase">
-            LOCAL-FIRST CLOUD SYNC
+            NOTHING OS CLOUD SYNC
           </p>
         </div>
 
@@ -235,14 +428,29 @@ export default function LoginPage() {
         )}
 
         {/* Mode Switcher Tabs */}
-        <div className="grid grid-cols-2 gap-1 p-1 bg-black/60 border border-nothing-border rounded-xl mb-6">
+        <div className="grid grid-cols-4 gap-1 p-1 bg-black/60 border border-nothing-border rounded-xl mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('email');
+              setError(null);
+            }}
+            className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
+              activeTab === 'email'
+                ? 'bg-nothing-red text-white shadow'
+                : 'text-nothing-gray hover:text-white'
+            }`}
+          >
+            <Mail className="w-3.5 h-3.5 shrink-0" />
+            <span>EMAIL</span>
+          </button>
           <button
             type="button"
             onClick={() => {
               setActiveTab('token');
               setError(null);
             }}
-            className={`py-2 px-1 rounded-lg text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+            className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
               activeTab === 'token'
                 ? 'bg-nothing-red text-white shadow'
                 : 'text-nothing-gray hover:text-white'
@@ -254,30 +462,190 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => {
+              setActiveTab('qr');
+              setError(null);
+            }}
+            className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
+              activeTab === 'qr'
+                ? 'bg-nothing-red text-white shadow'
+                : 'text-nothing-gray hover:text-white'
+            }`}
+          >
+            <QrCode className="w-3.5 h-3.5 shrink-0" />
+            <span>QR CODE</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setActiveTab('bridge');
               setError(null);
             }}
-            className={`py-2 px-1 rounded-lg text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
+            className={`py-2 px-1 rounded-lg text-[10px] sm:text-[11px] font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
               activeTab === 'bridge'
                 ? 'bg-nothing-red text-white shadow'
                 : 'text-nothing-gray hover:text-white'
             }`}
           >
             <Terminal className="w-3.5 h-3.5 shrink-0" />
-            <span>1-CLICK SYNC</span>
+            <span>SYNC</span>
           </button>
         </div>
 
         {/* Error Banner */}
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-nothing-red/10 border border-nothing-red/30 text-nothing-red text-xs font-mono">
+          <div className="mb-4 p-3 rounded-xl bg-nothing-red/10 border border-nothing-red/30 text-nothing-red text-xs font-mono leading-relaxed">
             [ERROR]: {error}
           </div>
         )}
 
-        {/* TAB 1: DIRECT TOKEN */}
+        {/* TAB 1: EMAIL & PASSWORD + 2FA VERIFICATION CODE */}
+        {activeTab === 'email' && (
+          <div>
+            {!isOtpStep ? (
+              <form onSubmit={handleEmailLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase text-nothing-gray mb-1.5">
+                    NOTHING ACCOUNT EMAIL
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-nothing-gray absolute left-3.5 top-3.5 pointer-events-none" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase text-nothing-gray mb-1.5">
+                    PASSWORD
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-nothing-gray absolute left-3.5 top-3.5 pointer-events-none" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-10 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-3 text-nothing-gray hover:text-white transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white/5 border border-white/10 rounded-xl space-y-1 text-[11px] font-mono text-nothing-gray">
+                  <div className="text-white font-medium flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-nothing-red" />
+                    <span>Zero-Knowledge Sign In</span>
+                  </div>
+                  <p className="text-[10px] text-nothing-gray leading-relaxed">
+                    If Nothing restricts cloud IP logins, switch to the <span className="text-white">TOKEN</span> or <span className="text-white">SYNC</span> tab to authenticate directly.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-white text-black font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-nothing-red hover:text-white transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 mt-2 shadow-lg"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>AUTHENTICATING...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>SIGN IN TO NOTHING ACCOUNT</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            ) : (
+              /* Step 2: 2FA Verification Code */
+              <form onSubmit={handleVerifyOtp} className="space-y-4">
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-center space-y-1">
+                  <div className="text-xs font-mono uppercase text-nothing-red font-medium">
+                    2FA VERIFICATION CODE
+                  </div>
+                  <p className="text-xs text-nothing-gray leading-relaxed">
+                    Nothing Account sent a 6-digit confirmation code to:
+                  </p>
+                  <p className="text-xs font-mono text-white font-medium">{maskedEmail}</p>
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    className="w-full bg-black border border-nothing-border rounded-xl py-3 text-center text-lg font-mono tracking-[0.4em] text-white placeholder:text-nothing-gray/30 focus:outline-none focus:border-white transition-colors"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otpCode.length !== 6}
+                  className="w-full bg-nothing-red text-white font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-white hover:text-black transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 shadow-lg shadow-nothing-red/20"
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>VERIFY &amp; SIGN IN</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOtpStep(false);
+                      setOtpCode('');
+                    }}
+                    className="text-xs font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Back</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={cooldown > 0 || resending}
+                    className="text-xs font-mono text-nothing-gray hover:text-white transition-colors disabled:opacity-40"
+                  >
+                    {cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: DIRECT TOKEN */}
         {activeTab === 'token' && (
-          <form onSubmit={handleFormSubmit} className="space-y-4">
+          <form onSubmit={handleTokenFormSubmit} className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-mono uppercase text-nothing-gray">
@@ -373,7 +741,49 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* TAB 2: 1-CLICK BROWSER SYNC */}
+        {/* TAB 3: QR CODE */}
+        {activeTab === 'qr' && (
+          <div className="space-y-4 text-center">
+            <div className="p-5 bg-black/50 border border-nothing-border rounded-2xl flex flex-col items-center">
+              {qrLoading || !qrMobileUrl ? (
+                <div className="w-52 h-52 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-nothing-red" />
+                </div>
+              ) : (
+                <div className="p-3 bg-white rounded-2xl shadow-lg">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(
+                      qrMobileUrl
+                    )}`}
+                    alt="QR Code Login"
+                    className="w-48 h-48 rounded-lg"
+                  />
+                </div>
+              )}
+
+              <div className="mt-4 space-y-1.5">
+                <div className="flex items-center justify-center gap-2 text-xs font-dot uppercase tracking-wider text-white">
+                  <Smartphone className="w-4 h-4 text-nothing-red" />
+                  <span>SCAN WITH YOUR PHONE CAMERA</span>
+                </div>
+                <p className="text-[11px] text-nothing-gray leading-relaxed max-w-xs">
+                  Scan this QR code with your Nothing Phone camera. If you are already logged in on your phone, you can approve desktop sign-in!
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={generateNewQr}
+                className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-mono text-nothing-gray hover:text-white transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Refresh QR code</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: 1-CLICK BROWSER SYNC */}
         {activeTab === 'bridge' && (
           <div className="space-y-4">
             <div className="p-4 bg-black/50 border border-nothing-border rounded-2xl space-y-2.5">
@@ -460,7 +870,7 @@ export default function LoginPage() {
         <div className="mt-6 pt-5 border-t border-nothing-border flex items-start gap-2.5 text-xs text-nothing-gray">
           <ShieldCheck className="w-4 h-4 text-nothing-red shrink-0 mt-0.5" />
           <p className="leading-relaxed text-[11px]">
-            100% Client-Side Local-First. Your authentication token is saved exclusively in your browser&apos;s IndexedDB. Nothing is ever sent to third-party databases.
+            Your session is securely signed and stored inside your self-hosted instance. It communicates directly with Nothing Cloud to fetch notes, voice audio, and tasks.
           </p>
         </div>
       </div>
