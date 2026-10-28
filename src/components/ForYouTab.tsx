@@ -17,7 +17,10 @@ import {
   ListTodo,
 } from 'lucide-react';
 import type { Card, Collection } from '@/types';
-import type { ForYouTask, ForYouRecommendation, ForYouData } from '@/lib/foryou';
+import { computeForYouData, type ForYouTask, type ForYouRecommendation, type ForYouData } from '@/lib/foryou';
+import { getDbDismissedSuggestions, dismissDbSuggestion, updateDbCard } from '@/lib/db';
+import { createCloudCollection } from '@/lib/nothing-collections';
+import { bulkAssignCollectionCloudCards } from '@/lib/nothing-cards';
 import CardGrid from './CardGrid';
 
 interface ForYouTabProps {
@@ -27,6 +30,8 @@ interface ForYouTabProps {
   onRefreshData: () => void;
   onOpenCardDetail: (card: Card) => void;
   onNavigateToCollection: (collectionId: string) => void;
+  token?: string;
+  userId?: string;
 }
 
 export default function ForYouTab({
@@ -36,6 +41,8 @@ export default function ForYouTab({
   onRefreshData,
   onOpenCardDetail,
   onNavigateToCollection,
+  token,
+  userId,
 }: ForYouTabProps) {
   const [foryouData, setForyouData] = useState<ForYouData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,25 +50,22 @@ export default function ForYouTab({
   const [selectedListId, setSelectedListId] = useState<string>('');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  const fetchForYou = useCallback(async () => {
+  const computeForYou = useCallback(async () => {
     try {
-      const res = await fetch('/api/foryou');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setForyouData(data);
-        }
-      }
+      const dismissed = await getDbDismissedSuggestions();
+      const dismissedSet = new Set(dismissed);
+      const computed = await computeForYouData(cards, collections, dismissedSet, token);
+      setForyouData(computed);
     } catch (err) {
-      console.error('Failed to load For You data:', err);
+      console.error('Failed to compute For You data:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cards, collections, token]);
 
   useEffect(() => {
-    fetchForYou();
-  }, [fetchForYou]);
+    computeForYou();
+  }, [computeForYou]);
 
   const handleRecommendationAction = async (
     rec: ForYouRecommendation,
@@ -69,30 +73,45 @@ export default function ForYouTab({
   ) => {
     setActionLoadingId(rec.id);
     try {
-      const res = await fetch('/api/foryou/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          recommendationId: rec.id,
-          name: rec.suggestedName,
-          collectionId: rec.collectionId,
-          collectionName: rec.suggestedName,
-          cardIds: rec.cardIds,
-        }),
-      });
-
-      if (res.ok) {
-        // Optimistically remove from recommendations list
-        setForyouData(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            recommendations: prev.recommendations.filter(r => r.id !== rec.id),
-          };
-        });
-        onRefreshData();
+      if (action === 'DISMISS') {
+        await dismissDbSuggestion(rec.id);
+      } else if (action === 'CREATE_COLLECTION') {
+        await dismissDbSuggestion(rec.id);
+        if (token && userId) {
+          const createRes = await createCloudCollection(token, userId, rec.suggestedName);
+          if (createRes.success && createRes.collection) {
+            const targetCards = cards.filter(c => rec.cardIds.includes(c.cardId));
+            await bulkAssignCollectionCloudCards(token, targetCards, createRes.collection.collectionId);
+            for (const c of targetCards) {
+              await updateDbCard(c.cardId, {
+                collectionId: createRes.collection.collectionId,
+                collectionName: createRes.collection.name,
+              });
+            }
+          }
+        }
+      } else if (action === 'ADD_TO_COLLECTION') {
+        await dismissDbSuggestion(rec.id);
+        if (token && rec.collectionId) {
+          const targetCards = cards.filter(c => rec.cardIds.includes(c.cardId));
+          await bulkAssignCollectionCloudCards(token, targetCards, rec.collectionId);
+          for (const c of targetCards) {
+            await updateDbCard(c.cardId, {
+              collectionId: rec.collectionId,
+              collectionName: rec.suggestedName,
+            });
+          }
+        }
       }
+
+      setForyouData(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          recommendations: prev.recommendations.filter(r => r.id !== rec.id),
+        };
+      });
+      onRefreshData();
     } catch (err) {
       console.error('Failed to process recommendation:', err);
     } finally {

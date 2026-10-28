@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, X, KeyRound, CheckSquare } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -13,15 +13,32 @@ import CreateNoteModal from '@/components/CreateNoteModal';
 import CollectionModal from '@/components/CollectionModal';
 import BulkActionBar from '@/components/BulkActionBar';
 import SelectCollectionModal from '@/components/SelectCollectionModal';
-import { saveDbCards, saveDbCollections, saveDbAuth, getDbCards, getDbCollections, getDbAuth } from '@/lib/db';
+import {
+  saveDbCards,
+  saveDbCollections,
+  saveDbAuth,
+  getDbCards,
+  getDbCollections,
+  getDbAuth,
+  clearDbAuth,
+  updateDbCard,
+  deleteDbCard,
+} from '@/lib/db';
+import { syncNothingCloud } from '@/lib/sync-engine';
+import {
+  updateCloudCard,
+  bulkDeleteCloudCards,
+  bulkRestoreCloudCards,
+  bulkHardDeleteCloudCards,
+  bulkAssignCollectionCloudCards,
+} from '@/lib/nothing-cards';
 import type { Card, Collection } from '@/types';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'foryou' | 'library'>('foryou');
-  const [cards, setCards] = useState<Card[]>([]);
+  const [allDbCards, setAllDbCards] = useState<Card[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [tags, setTags] = useState<TagCount[]>([]);
   const [userEmail, setUserEmail] = useState('');
   const [userToken, setUserToken] = useState('');
   const [userId, setUserId] = useState('');
@@ -50,70 +67,125 @@ export default function DashboardPage() {
   const [isSelectCollectionModalOpen, setIsSelectCollectionModalOpen] = useState(false);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
-  // Initial Local-First load from IndexedDB
-  useEffect(() => {
-    async function loadLocalData() {
-      try {
-        const localAuth = await getDbAuth();
-        if (localAuth) {
-          setUserEmail(localAuth.email);
-          if (localAuth.token) setUserToken(localAuth.token);
-          if (localAuth.uuid) setUserId(localAuth.uuid);
-        }
-
-        const localCards = await getDbCards();
-        const localCollections = await getDbCollections();
-        if (localCards.length > 0) {
-          setCards(localCards);
-          setCollections(localCollections);
-          setIsLoading(false);
-        }
-      } catch (err) {
-        console.warn('Local IndexedDB load notice:', err);
-      }
-    }
-    loadLocalData();
-  }, []);
-
-  const fetchCards = useCallback(async () => {
+  // Load local data from IndexedDB
+  const loadLocalData = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      if (activeType) params.set('type', activeType);
-      if (activeCollection) params.set('collectionId', activeCollection);
-      if (activeTag) params.set('tag', activeTag);
-      if (searchQuery) params.set('query', searchQuery);
-      if (isTrash) params.set('trash', 'true');
-
-      const res = await fetch(`/api/cards?${params.toString()}`);
-      if (res.status === 401) {
-        window.location.href = '/login';
+      const localAuth = await getDbAuth();
+      if (!localAuth || !localAuth.token) {
+        router.push('/login');
         return;
       }
+      setUserEmail(localAuth.email || 'user@nothing.tech');
+      setUserToken(localAuth.token);
+      setUserId(localAuth.uuid);
 
-      const data = await res.json();
-      if (data.success) {
-        setCards(data.cards);
-        setCollections(data.collections);
-        setTags(data.tags || []);
-        setUserEmail(data.user?.email || 'user@nothing.tech');
-        if (data.user?.token) setUserToken(data.user.token);
-        if (data.user?.uuid) setUserId(data.user.uuid);
-
-        // Sync into local-first IndexedDB
-        saveDbCards(data.cards);
-        saveDbCollections(data.collections);
-        if (data.user) saveDbAuth(data.user);
-      }
-    } catch (err) {
-      console.error('Failed to load cards:', err);
-    } finally {
+      const dbCards = await getDbCards();
+      const dbCollections = await getDbCollections();
+      setAllDbCards(dbCards);
+      setCollections(dbCollections);
       setIsLoading(false);
+    } catch (err) {
+      console.error('Failed to load local IndexedDB data:', err);
     }
-  }, [activeType, activeCollection, activeTag, searchQuery, isTrash]);
+  }, [router]);
 
-  useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
+  // Card-Collection matcher
+  const cardMatchesCollection = useCallback((card: Card, col: Collection) => {
+    if (card.collectionId && card.collectionId === col.collectionId) return true;
+    if (col.name && Array.isArray(card.tags)) {
+      const colNameLower = col.name.trim().toLowerCase();
+      return card.tags.some(t => String(t).trim().toLowerCase() === colNameLower);
+    }
+    return false;
+  }, []);
+
+  // Filtered cards according to active filters
+  const filteredCards = useMemo(() => {
+    let result = allDbCards.filter(c => (isTrash ? c.targetState === 1 : c.targetState === 0));
+
+    // Attach collectionName if missing
+    if (collections.length > 0) {
+      const collMap = new Map(collections.map(col => [col.collectionId, col.name]));
+      result = result.map(c => ({
+        ...c,
+        collectionName: c.collectionName || (c.collectionId ? collMap.get(c.collectionId) : undefined),
+      }));
+    }
+
+    if (activeCollection) {
+      const selectedCol = collections.find(col => col.collectionId === activeCollection);
+      result = result.filter(c =>
+        selectedCol ? cardMatchesCollection(c, selectedCol) : c.collectionId === activeCollection
+      );
+    }
+
+    if (activeType) {
+      const upper = activeType.toUpperCase();
+      if (upper === 'AUDIO') {
+        result = result.filter(c => c.type === 'AUDIO' || Boolean(c.audio?.audioUri));
+      } else if (upper === 'TODO') {
+        result = result.filter(c => c.type === 'TODO' || Boolean(c.events && c.events.length > 0));
+      } else {
+        result = result.filter(c => c.type === upper);
+      }
+    }
+
+    if (activeTag) {
+      const tagLower = activeTag.toLowerCase();
+      result = result.filter(c => c.tags?.some(t => String(t).trim().toLowerCase() === tagLower));
+    }
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(c => {
+        const titleMatch = c.title?.toLowerCase().includes(q);
+        const summaryMatch = c.summary?.toLowerCase().includes(q);
+        const contentMatch = c.content?.toLowerCase().includes(q);
+        const tagMatch = c.tags?.some(t => t.toLowerCase().includes(q));
+        const eventMatch = c.events?.some(e => e.title?.toLowerCase().includes(q));
+        return titleMatch || summaryMatch || contentMatch || tagMatch || eventMatch;
+      });
+    }
+
+    // Sort by createTime descending (latest first)
+    return result.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
+  }, [allDbCards, isTrash, collections, activeCollection, activeType, activeTag, searchQuery, cardMatchesCollection]);
+
+  // Compute collections with dynamic cardCount
+  const collectionsWithCounts = useMemo(() => {
+    const activeCards = allDbCards.filter(c => c.targetState === 0);
+    return collections.map(col => ({
+      ...col,
+      cardCount: activeCards.filter(c => cardMatchesCollection(c, col)).length,
+    }));
+  }, [allDbCards, collections, cardMatchesCollection]);
+
+  // Compute tags dynamically across current active/trash view
+  const computedTags = useMemo<TagCount[]>(() => {
+    const pool = allDbCards.filter(c => (isTrash ? c.targetState === 1 : c.targetState === 0));
+    const tagCountMap = new Map<string, { name: string; count: number }>();
+    for (const c of pool) {
+      if (Array.isArray(c.tags)) {
+        const seenOnCard = new Set<string>();
+        for (const rawTag of c.tags) {
+          const clean = String(rawTag).trim();
+          if (!clean) continue;
+          const key = clean.toLowerCase();
+          if (seenOnCard.has(key)) continue;
+          seenOnCard.add(key);
+          const existing = tagCountMap.get(key);
+          if (existing) {
+            existing.count += 1;
+          } else {
+            tagCountMap.set(key, { name: clean, count: 1 });
+          }
+        }
+      }
+    }
+    return Array.from(tagCountMap.values()).sort(
+      (a, b) => b.count - a.count || a.name.localeCompare(b.name)
+    );
+  }, [allDbCards, isTrash]);
 
   const handleSync = useCallback(
     async (silent = false) => {
@@ -122,63 +194,51 @@ export default function DashboardPage() {
         setSyncError(null);
         setSyncSuccess(null);
       }
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
       try {
-        const res = await fetch('/api/sync', { 
-          method: 'POST',
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-        const data = await res.json().catch(() => ({}));
-
-        if (res.status === 401 || data.authExpired) {
-          try {
-            await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-          } finally {
-            window.location.href = '/login?expired=1';
-          }
+        const localAuth = await getDbAuth();
+        if (!localAuth || !localAuth.token) {
+          router.push('/login');
           return;
         }
 
-        if (res.ok && data.success) {
-          await fetchCards();
-          if (!silent) {
-            setSyncSuccess(`Synced ${data.cardsCount} notes from Nothing Cloud`);
-            setTimeout(() => setSyncSuccess(null), 4000);
-          }
-        } else if (!silent) {
-          setSyncError(
-            data.error ||
-              'Cloud sync failed. Your Nothing Account session token may need to be refreshed.'
-          );
+        const syncResult = await syncNothingCloud(localAuth);
+        await loadLocalData();
+
+        if (!silent) {
+          setSyncSuccess(`Synced ${syncResult.cardsCount} notes from Nothing Cloud`);
+          setTimeout(() => setSyncSuccess(null), 4000);
         }
       } catch (err: any) {
-        clearTimeout(timeoutId);
         console.error('Sync failed:', err);
+        const errMsg = err?.message || String(err);
+        if (errMsg.includes('AUTH_EXPIRED') || errMsg.includes('NO_TOKEN')) {
+          await clearDbAuth();
+          router.push('/login?expired=1');
+          return;
+        }
         if (!silent) {
-          if (err?.name === 'AbortError') {
-            setSyncError('Синхронізація зайняла більше 30 секунд. Відображаються локальні дані.');
-          } else {
-            setSyncError(err?.message || 'Network error while syncing with Nothing Cloud');
-          }
+          setSyncError(errMsg || 'Network error while syncing with Nothing Cloud');
         }
       } finally {
         setIsSyncing(false);
       }
     },
-    [fetchCards]
+    [loadLocalData, router]
   );
 
-  // Validate active Nothing token & auto-sync on initial dashboard mount
+  // Initial mount: load IndexedDB data then auto-sync silently
   useEffect(() => {
-    handleSync(true);
+    async function init() {
+      await loadLocalData();
+      handleSync(true);
+    }
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleToggleTodo = async (cardId: string, eventId: string) => {
-    // Optimistic update in cards list
-    setCards(prev =>
+    // 1. Optimistic local update in allDbCards state
+    setAllDbCards(prev =>
       prev.map(c => {
         if (c.cardId === cardId && c.events) {
           return {
@@ -192,7 +252,7 @@ export default function DashboardPage() {
       })
     );
 
-    // Also update modalCard if currently viewing this card
+    // 2. Also update modalCard if currently viewing this card
     setModalCard(prev => {
       if (prev && prev.cardId === cardId && prev.events) {
         return {
@@ -205,19 +265,20 @@ export default function DashboardPage() {
       return prev;
     });
 
-    try {
-      const res = await fetch(`/api/cards/${cardId}/toggle-todo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId }),
-      });
-      if (!res.ok) {
-        console.error('Server failed to toggle todo');
-        fetchCards();
+    // 3. Persist to IndexedDB & sync to Nothing Cloud
+    const targetCard = allDbCards.find(c => c.cardId === cardId);
+    if (targetCard && targetCard.events) {
+      const updatedEvents = targetCard.events.map(e =>
+        e.eventId === eventId ? { ...e, check: e.check === 1 ? 0 : 1 } : e
+      );
+      await updateDbCard(cardId, { events: updatedEvents });
+
+      if (userToken) {
+        const updatedCard = { ...targetCard, events: updatedEvents };
+        updateCloudCard(userToken, updatedCard).catch(err =>
+          console.warn('Background Nothing Cloud todo toggle sync failed:', err)
+        );
       }
-    } catch (err) {
-      console.error('Failed to toggle todo:', err);
-      fetchCards();
     }
   };
 
@@ -237,10 +298,10 @@ export default function DashboardPage() {
   };
 
   const handleSelectAll = () => {
-    if (selectedCardIds.size === cards.length) {
+    if (selectedCardIds.size === filteredCards.length) {
       setSelectedCardIds(new Set());
     } else {
-      setSelectedCardIds(new Set(cards.map(c => c.cardId)));
+      setSelectedCardIds(new Set(filteredCards.map(c => c.cardId)));
     }
   };
 
@@ -265,28 +326,34 @@ export default function DashboardPage() {
     }
     setIsBulkProcessing(true);
     try {
-      // Optimistic local update
-      setCards(prev => prev.filter(c => !selectedCardIds.has(c.cardId)));
-      const action = isTrash ? 'PERMANENT_DELETE' : 'DELETE';
-      const res = await fetch('/api/cards/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, cardIds: ids }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSyncSuccess(
-          isTrash
-            ? `Permanently deleted: ${ids.length}`
-            : `Moved to trash: ${ids.length}`
+      if (isTrash) {
+        // Hard delete
+        setAllDbCards(prev => prev.filter(c => !selectedCardIds.has(c.cardId)));
+        for (const id of ids) {
+          await deleteDbCard(id);
+        }
+        if (userToken) {
+          await bulkHardDeleteCloudCards(userToken, ids);
+        }
+        setSyncSuccess(`Permanently deleted: ${ids.length}`);
+      } else {
+        // Move to trash
+        setAllDbCards(prev =>
+          prev.map(c => (selectedCardIds.has(c.cardId) ? { ...c, targetState: 1 } : c))
         );
-        setTimeout(() => setSyncSuccess(null), 3000);
+        for (const id of ids) {
+          await updateDbCard(id, { targetState: 1 });
+        }
+        if (userToken) {
+          await bulkDeleteCloudCards(userToken, ids);
+        }
+        setSyncSuccess(`Moved to trash: ${ids.length}`);
       }
+      setTimeout(() => setSyncSuccess(null), 3000);
       handleClearSelection();
-      fetchCards();
     } catch (err) {
       console.error('Failed bulk delete:', err);
-      fetchCards();
+      loadLocalData();
     } finally {
       setIsBulkProcessing(false);
     }
@@ -297,22 +364,21 @@ export default function DashboardPage() {
     const ids = Array.from(selectedCardIds);
     setIsBulkProcessing(true);
     try {
-      setCards(prev => prev.filter(c => !selectedCardIds.has(c.cardId)));
-      const res = await fetch('/api/cards/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'RESTORE', cardIds: ids }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSyncSuccess(`Restored from trash: ${ids.length}`);
-        setTimeout(() => setSyncSuccess(null), 3000);
+      setAllDbCards(prev =>
+        prev.map(c => (selectedCardIds.has(c.cardId) ? { ...c, targetState: 0 } : c))
+      );
+      for (const id of ids) {
+        await updateDbCard(id, { targetState: 0 });
       }
+      if (userToken) {
+        await bulkRestoreCloudCards(userToken, ids);
+      }
+      setSyncSuccess(`Restored from trash: ${ids.length}`);
+      setTimeout(() => setSyncSuccess(null), 3000);
       handleClearSelection();
-      fetchCards();
     } catch (err) {
       console.error('Failed bulk restore:', err);
-      fetchCards();
+      loadLocalData();
     } finally {
       setIsBulkProcessing(false);
     }
@@ -326,7 +392,7 @@ export default function DashboardPage() {
     const ids = Array.from(selectedCardIds);
     setIsBulkProcessing(true);
     try {
-      setCards(prev =>
+      setAllDbCards(prev =>
         prev.map(c => {
           if (selectedCardIds.has(c.cardId)) {
             return {
@@ -338,30 +404,26 @@ export default function DashboardPage() {
           return c;
         })
       );
-      const res = await fetch('/api/cards/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'ASSIGN_COLLECTION',
-          cardIds: ids,
-          collectionId,
-          collectionName,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSyncSuccess(
-          collectionId
-            ? `Added to "${collectionName}": ${ids.length}`
-            : `Removed from collection: ${ids.length}`
-        );
-        setTimeout(() => setSyncSuccess(null), 3000);
+      for (const id of ids) {
+        await updateDbCard(id, {
+          collectionId: collectionId || undefined,
+          collectionName: collectionId ? collectionName : undefined,
+        });
       }
+      if (userToken) {
+        const targetCards = allDbCards.filter(c => selectedCardIds.has(c.cardId));
+        await bulkAssignCollectionCloudCards(userToken, targetCards, collectionId);
+      }
+      setSyncSuccess(
+        collectionId
+          ? `Added to "${collectionName}": ${ids.length}`
+          : `Removed from collection: ${ids.length}`
+      );
+      setTimeout(() => setSyncSuccess(null), 3000);
       handleClearSelection();
-      fetchCards();
     } catch (err) {
       console.error('Failed bulk assign collection:', err);
-      fetchCards();
+      loadLocalData();
     } finally {
       setIsBulkProcessing(false);
     }
@@ -369,9 +431,9 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await clearDbAuth();
     } finally {
-      window.location.href = '/login';
+      router.push('/login');
     }
   };
 
@@ -434,25 +496,27 @@ export default function DashboardPage() {
         {/* Conditional Tab Rendering */}
         {activeTab === 'foryou' ? (
           <ForYouTab
-            cards={cards}
+            cards={allDbCards}
             collections={collections}
             onToggleTodo={handleToggleTodo}
-            onRefreshData={fetchCards}
+            onRefreshData={loadLocalData}
             onOpenCardDetail={card => setModalCard(card)}
             onNavigateToCollection={collId => {
               setActiveCollection(collId);
               setActiveTab('library');
             }}
+            token={userToken}
+            userId={userId}
           />
         ) : (
           <div>
             <FilterBar
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
-              collections={collections}
+              collections={collectionsWithCounts}
               activeCollection={activeCollection}
               onSelectCollection={setActiveCollection}
-              tags={tags}
+              tags={computedTags}
               activeTag={activeTag}
               onSelectTag={setActiveTag}
               onOpenCreateCollection={() =>
@@ -484,7 +548,7 @@ export default function DashboardPage() {
                   </>
                 )}
                 <span className="text-nothing-border">•</span>
-                <span>{cards.length} items</span>
+                <span>{filteredCards.length} items</span>
               </div>
 
               <div className="flex items-center gap-3">
@@ -507,7 +571,7 @@ export default function DashboardPage() {
                   <span>{isSelectMode ? 'Cancel' : 'Select'}</span>
                 </button>
 
-                {cards.length > 0 && (
+                {filteredCards.length > 0 && (
                   <span className="text-[11px] text-nothing-gray/70 hidden sm:inline">
                     Sorted by date (latest first)
                   </span>
@@ -516,7 +580,7 @@ export default function DashboardPage() {
             </div>
 
             <CardGrid
-              cards={cards}
+              cards={filteredCards}
               isLoading={isLoading}
               onToggleTodo={handleToggleTodo}
               activeTag={activeTag}
@@ -529,8 +593,8 @@ export default function DashboardPage() {
             {/* Bulk Actions Floating Dock */}
             <BulkActionBar
               selectedCount={selectedCardIds.size}
-              totalCount={cards.length}
-              isAllSelected={cards.length > 0 && selectedCardIds.size === cards.length}
+              totalCount={filteredCards.length}
+              isAllSelected={filteredCards.length > 0 && selectedCardIds.size === filteredCards.length}
               isTrash={isTrash}
               onSelectAll={handleSelectAll}
               onClearSelection={handleClearSelection}
@@ -585,8 +649,8 @@ export default function DashboardPage() {
           token={userToken}
           userId={userId}
           onCardCreated={newCard => {
-            setCards(prev => [newCard, ...prev]);
-            fetchCards();
+            setAllDbCards(prev => [newCard, ...prev]);
+            loadLocalData();
           }}
         />
 
@@ -608,12 +672,12 @@ export default function DashboardPage() {
               }
               return [...prev, savedCol];
             });
-            fetchCards();
+            loadLocalData();
           }}
           onCollectionDeleted={deletedId => {
             setCollections(prev => prev.filter(c => c.collectionId !== deletedId));
             if (activeCollection === deletedId) setActiveCollection('');
-            fetchCards();
+            loadLocalData();
           }}
         />
       </main>

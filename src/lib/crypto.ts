@@ -75,3 +75,38 @@ export function encryptPayload(plaintext: string, aesKeyB64: string): string {
   cipher.finish();
   return forge.util.encode64(cipher.output.getBytes());
 }
+
+/**
+ * Safely decodes a Nothing JWT payload and extracts user metadata (uuid, email, name).
+ */
+export function parseNothingJwt(token: string): { uuid: string; email: string; userName?: string } | null {
+  try {
+    const clean = token.trim().replace(/^Bearer\s+/i, '').replace(/^["']|["']$/g, '');
+    const parts = clean.split('.');
+    if (parts.length !== 3) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+    let uuid = `nt_user_${Date.now()}`;
+    let email = 'user@nothing.tech';
+    let userName: string | undefined;
+
+    if (payload.uuid) uuid = payload.uuid;
+    else if (payload.sub && String(payload.sub).includes('-')) uuid = payload.sub;
+    else if (payload.sub) uuid = `sub_${payload.sub}`;
+
+    if (payload.email) email = payload.email;
+    if (payload.given_name || payload.family_name) {
+      userName = [payload.given_name, payload.family_name].filter(Boolean).join(' ');
+    }
+    return { uuid, email, userName };
+  } catch {
+    return null;
+  }
+}

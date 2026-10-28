@@ -1,19 +1,10 @@
-import { createHash } from 'crypto';
 import type { Card, Collection } from '@/types';
-import {
-  getUserCards,
-  getUserCollections,
-  getDismissedSuggestions,
-} from './storage';
-
-const NOTHING_BASE = process.env.NOTHING_API_URL || 'https://essential-space.nothingtech.link/essentialSpace';
-const NOTHING_API_KEY = process.env.NOTHING_API_KEY || 'ZNtCkkSHqahusjfyouYxeaHUryeqKNaG';
+import { md5, NOTHING_BASE_URL, NOTHING_API_KEY } from './crypto';
+import { nothingFetch } from './nothing-fetch';
 
 function getNothingAuthHeaders(token: string) {
   const ts = Date.now().toString();
-  const auth = createHash('md5')
-    .update(NOTHING_API_KEY + ts)
-    .digest('hex');
+  const auth = md5(NOTHING_API_KEY + ts);
 
   return {
     'Authorization': `Bearer ${token}`,
@@ -77,14 +68,13 @@ async function fetchNothingSmartCollectionName(
   if (!token || cardTitles.length === 0) return null;
 
   try {
-    const res = await fetch(`${NOTHING_BASE}/ai/v1/getSmartCollectionName`, {
+    const res = await nothingFetch(`${NOTHING_BASE_URL}/ai/v1/getSmartCollectionName`, {
       method: 'POST',
       headers: getNothingAuthHeaders(token),
       body: JSON.stringify({
         cardTitles: cardTitles.slice(0, 10),
         language: 'en',
       }),
-      cache: 'no-store',
     });
 
     if (res.ok) {
@@ -132,11 +122,12 @@ function generateFallbackCollectionName(tags: string[], titles: string[]): strin
   return 'General Captures';
 }
 
-export async function getForYouData(userId: string, token?: string): Promise<ForYouData> {
-  const cards = await getUserCards(userId);
-  const collections = await getUserCollections(userId);
-  const dismissedIds = new Set(await getDismissedSuggestions(userId));
-
+export async function computeForYouData(
+  cards: Card[],
+  collections: Collection[],
+  dismissedIds: Set<string>,
+  token?: string
+): Promise<ForYouData> {
   // Only consider active, non-trashed cards
   const activeCards = cards.filter(c => c.targetState === 0);
 
