@@ -311,6 +311,7 @@ export default function CreateNoteModal({
         content,
         summary: aiResult?.summary,
         imageUrl: finalImageUrl,
+        imageGcsKey,
         collectionId: selectedCollection || undefined,
         tags: aiResult?.tags,
         bulletPoints: aiResult?.bulletPoints,
@@ -325,6 +326,7 @@ export default function CreateNoteModal({
               transcript: aiResult?.transcript,
             }
           : undefined,
+        audioGcsKey,
       });
 
       if (!createRes.success || !createRes.card) {

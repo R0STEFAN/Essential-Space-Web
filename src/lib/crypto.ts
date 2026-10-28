@@ -1,9 +1,9 @@
 import forge from 'node-forge';
 
 /**
- * Nothing Essential Space API Constants (Reverse engineered from libconfig-lib.so)
+ * Nothing Essential Space API Constants (Reverse engineered from Nothing Space & User Center APKs)
  */
-export const NOTHING_API_KEY = '3bf7f0aa23724b0881bf5cd4d23c1b5f';
+export const NOTHING_API_KEY = 'ZNtCkkSHqahusjfyouYxeaHUryeqKNaG';
 export const NOTHING_BASE_URL = 'https://essential-space.nothingtech.link/essentialSpace';
 
 const CLAIM_PUBLIC_KEY_B64 =

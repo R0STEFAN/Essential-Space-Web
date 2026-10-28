@@ -36,7 +36,7 @@ export async function getFirebaseIdToken(nothingToken: string): Promise<string> 
 
   // 2. Exchange customToken for idToken with Google Identity Toolkit
   const exchangeUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${FIREBASE_API_KEY}`;
-  const exchangeRes = await fetch(exchangeUrl, {
+  const exchangeRes = await nothingFetch(exchangeUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token: customToken, returnSecureToken: true }),
@@ -96,7 +96,7 @@ export async function uploadMediaToGcs(params: {
     gcsKey
   )}`;
 
-  const uploadRes = await fetch(uploadUrl, {
+  const uploadRes = await nothingFetch(uploadUrl, {
     method: 'POST',
     headers: {
       Authorization: `Firebase ${idToken}`,

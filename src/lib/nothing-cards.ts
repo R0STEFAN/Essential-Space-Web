@@ -262,6 +262,7 @@ export async function createCloudCard(params: {
   content?: string;
   summary?: string;
   imageUrl?: string;
+  imageGcsKey?: string;
   collectionId?: string;
   tags?: string[];
   bulletPoints?: string[];
@@ -280,6 +281,7 @@ export async function createCloudCard(params: {
     transcript?: string;
     duration?: number;
   };
+  audioGcsKey?: string;
 }): Promise<{ success: boolean; card?: Card; error?: string }> {
   try {
     const cardId = generateUuid();
@@ -329,34 +331,124 @@ export async function createCloudCard(params: {
       audio: params.audio,
     };
 
-    // Encrypt payload
+    // Build room database bundle for Nothing Phone CloudSyncWorker compatibility
+    const cardResources: any[] = [];
+    if (params.imageGcsKey) {
+      cardResources.push({
+        card_resource_id: generateUuid(),
+        raw_type: 'IMAGE',
+        data: '',
+        mime_type: 'image/webp',
+        is_primary: true,
+        metadata: JSON.stringify({ size: 0 }),
+        create_time: now,
+        update_time: now,
+        remote_gcsKey: params.imageGcsKey,
+        remote_region: 'europe-west3',
+      });
+    }
+    if (params.audioGcsKey) {
+      cardResources.push({
+        card_resource_id: generateUuid(),
+        raw_type: 'AUDIO',
+        data: '',
+        mime_type: 'audio/wav',
+        is_primary: !params.imageGcsKey,
+        metadata: JSON.stringify({ duration: params.audio?.duration || 0 }),
+        create_time: now,
+        update_time: now,
+        remote_gcsKey: params.audioGcsKey,
+        remote_region: 'europe-west3',
+      });
+    }
+
+    const cardAnalysis: any[] = [];
+    if (params.bulletPoints && params.bulletPoints.length > 0) {
+      cardAnalysis.push({
+        card_analysis_id: generateUuid(),
+        raw_type: 'BULLET_POINTS',
+        metadata: JSON.stringify({
+          title: params.bulletPointsTitle || 'Key Points',
+          bulletPointItem: params.bulletPoints.join('\n'),
+        }),
+        create_time: now,
+        update_time: now,
+      });
+    }
+    if (params.infoExtract && params.infoExtract.length > 0) {
+      for (const item of params.infoExtract) {
+        cardAnalysis.push({
+          card_analysis_id: generateUuid(),
+          raw_type: 'INFO_EXTRACT',
+          metadata: JSON.stringify({
+            title: item.title,
+            extractedInformation: item.value,
+          }),
+          create_time: now,
+          update_time: now,
+        });
+      }
+    }
+
+    const cardEvents: any[] = eventsWithId.map(ev => ({
+      type: 2,
+      title: ev.title,
+      content: ev.content || '',
+      check: ev.check === 1,
+      is_potential_reminder: ev.isPotentialReminder ?? true,
+      time: ev.time || now,
+      update_time: now,
+      special_key: ev.eventId,
+      start_time: -1,
+      end_time: -1,
+    }));
+
+    const clientRequestResponse = JSON.stringify({
+      cards: {
+        card_id: cardId,
+        title: newCard.title,
+        summary: newCard.summary || '',
+        type: newCard.type,
+        create_time: now,
+        update_time: now,
+        resource_mask: cardResources.length > 0 ? 1 : 0,
+        capture_from: 'web.essential.space',
+      },
+      card_resources: cardResources,
+      card_analysis: cardAnalysis,
+      card_events: cardEvents,
+    });
+
+    const files: any[] = [];
+    if (params.imageGcsKey) {
+      files.push({ region: 'europe-west3', gcsKey: params.imageGcsKey });
+    }
+    if (params.audioGcsKey) {
+      files.push({ region: 'europe-west3', gcsKey: params.audioGcsKey });
+    }
+
+    // Encrypt write payload
     const { aesKeyB64, cipherKey } = generateWriteCipherSession();
     const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
+    const itemPayload = encryptPayload('0', aesKeyB64);
 
     const body = {
+      clientVersion: 1,
+      payload,
+      cipherKey,
       cards: [
         {
           cardId: newCard.cardId,
-          clientCreateTime: newCard.createTime,
-          clientUpdateTime: newCard.updateTime,
-          collectionId: newCard.collectionId,
-          targetState: newCard.targetState,
-          type: newCard.type,
-          title: newCard.title,
-          content: newCard.content,
-          summary: newCard.summary,
-          tags: newCard.tags,
-          bulletPoints: newCard.bulletPoints,
-          bulletPointsTitle: newCard.bulletPointsTitle,
-          infoExtract: newCard.infoExtract,
-          events: newCard.events,
-          link: newCard.link,
-          imageUrl: newCard.imageUrl,
-          audio: newCard.audio,
+          collectionIds: newCard.collectionId ? [newCard.collectionId] : [],
+          categoryId: null,
+          clientRequestResponse,
+          files,
+          clientCreateTime: now,
+          clientUpdateTime: now,
+          payload: itemPayload,
+          cipherKey,
         },
       ],
-      payload,
-      cipherKey,
     };
 
     const targetUrl = `${NOTHING_BASE_URL}/storage/card/v1/create`;
@@ -401,22 +493,46 @@ export async function updateCloudCards(
 
     const { aesKeyB64, cipherKey } = generateWriteCipherSession();
     const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
+    const itemPayload = encryptPayload('0', aesKeyB64);
 
     const body = {
-      cards: updatedCards.map(c => ({
-        cardId: c.cardId,
-        clientUpdateTime: c.updateTime,
-        collectionId: c.collectionId,
-        targetState: c.targetState,
-        type: c.type,
-        title: c.title,
-        content: c.content,
-        summary: c.summary,
-        tags: c.tags,
-        events: c.events,
-      })),
       payload,
       cipherKey,
+      cards: updatedCards.map(c => {
+        const clientRequestResponse = JSON.stringify({
+          cards: {
+            card_id: c.cardId,
+            title: c.title,
+            summary: c.summary || '',
+            type: c.type,
+            create_time: c.createTime || now,
+            update_time: now,
+            target_state: c.targetState || 0,
+          },
+          card_events: (c.events || []).map(ev => ({
+            type: 2,
+            title: ev.title,
+            content: ev.content || '',
+            check: ev.check === 1,
+            is_potential_reminder: ev.isPotentialReminder ?? true,
+            time: ev.time || now,
+            update_time: now,
+            special_key: ev.eventId,
+            start_time: -1,
+            end_time: -1,
+          })),
+        });
+
+        return {
+          cardId: c.cardId,
+          collectionIds: c.collectionId ? [c.collectionId] : [],
+          clientRequestResponse,
+          files: [],
+          clientUpdateTime: now,
+          payload: itemPayload,
+          cipherKey,
+        };
+      }),
     };
 
     const targetUrl = `${NOTHING_BASE_URL}/storage/card/v1/update`;
@@ -462,8 +578,46 @@ export async function setCardTrashState(
   card: Card,
   isTrash: boolean
 ): Promise<{ success: boolean; error?: string }> {
-  return updateCloudCard(token, {
-    ...card,
-    targetState: isTrash ? 1 : 0,
-  });
+  try {
+    const now = Date.now();
+    const { aesKeyB64, cipherKey } = generateWriteCipherSession();
+    const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
+
+    const body = {
+      payload,
+      cipherKey,
+      cards: [
+        {
+          cardId: card.cardId,
+          clientUpdateTime: now,
+        },
+      ],
+    };
+
+    const endpoint = isTrash ? 'storage/card/v1/delete' : 'storage/card/v1/restore';
+    const targetUrl = `${NOTHING_BASE_URL}/${endpoint}`;
+    const res = await nothingFetch(targetUrl, {
+      method: 'POST',
+      headers: generateNothingAuthHeaders(token),
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.code !== '00000') {
+      const errorMsg = data?.msg || `Failed to change card trash state (HTTP ${res.status})`;
+      return { success: false, error: errorMsg };
+    }
+
+    const updatedCard: Card = {
+      ...card,
+      targetState: isTrash ? 1 : 0,
+      updateTime: now,
+    };
+    await updateDbCard(card.cardId, updatedCard);
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error changing card trash state:', err);
+    return { success: false, error: err?.message || 'Network error' };
+  }
 }
