@@ -385,36 +385,36 @@ export async function createCloudCard(params: {
 }
 
 /**
- * Updates a Card (title, checklist item toggle, move to collection) in Nothing Cloud and local DB
+ * Updates one or multiple Cards in Nothing Cloud and local DB
  */
-export async function updateCloudCard(
+export async function updateCloudCards(
   token: string,
-  card: Card
+  cardsToUpdate: Card[]
 ): Promise<{ success: boolean; error?: string }> {
+  if (cardsToUpdate.length === 0) return { success: true };
   try {
-    const updatedCard: Card = {
-      ...card,
-      updateTime: Date.now(),
-    };
+    const now = Date.now();
+    const updatedCards: Card[] = cardsToUpdate.map(c => ({
+      ...c,
+      updateTime: now,
+    }));
 
     const { aesKeyB64, cipherKey } = generateWriteCipherSession();
     const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
 
     const body = {
-      cards: [
-        {
-          cardId: updatedCard.cardId,
-          clientUpdateTime: updatedCard.updateTime,
-          collectionId: updatedCard.collectionId,
-          targetState: updatedCard.targetState,
-          type: updatedCard.type,
-          title: updatedCard.title,
-          content: updatedCard.content,
-          summary: updatedCard.summary,
-          tags: updatedCard.tags,
-          events: updatedCard.events,
-        },
-      ],
+      cards: updatedCards.map(c => ({
+        cardId: c.cardId,
+        clientUpdateTime: c.updateTime,
+        collectionId: c.collectionId,
+        targetState: c.targetState,
+        type: c.type,
+        title: c.title,
+        content: c.content,
+        summary: c.summary,
+        tags: c.tags,
+        events: c.events,
+      })),
       payload,
       cipherKey,
     };
@@ -428,18 +428,30 @@ export async function updateCloudCard(
 
     const data = await res.json().catch(() => null);
     if (!res.ok || data?.code !== '00000') {
-      const errorMsg = data?.msg || `Failed to update card (HTTP ${res.status})`;
+      const errorMsg = data?.msg || `Failed to update cards (HTTP ${res.status})`;
       return { success: false, error: errorMsg };
     }
 
     // Update in local IndexedDB
-    await updateDbCard(updatedCard.cardId, updatedCard);
+    for (const card of updatedCards) {
+      await updateDbCard(card.cardId, card);
+    }
 
     return { success: true };
   } catch (err: any) {
-    console.error('Error updating card:', err);
+    console.error('Error updating cards:', err);
     return { success: false, error: err?.message || 'Network error' };
   }
+}
+
+/**
+ * Updates a Card (title, checklist item toggle, move to collection) in Nothing Cloud and local DB
+ */
+export async function updateCloudCard(
+  token: string,
+  card: Card
+): Promise<{ success: boolean; error?: string }> {
+  return updateCloudCards(token, [card]);
 }
 
 /**
