@@ -124,7 +124,7 @@ export default function CardDetailModal({
     setTimeout(() => setCopiedInfoIdx(null), 1500);
   };
 
-  const previewImg = card.imageUrl || card.link?.preview;
+  const previewImg = card.cachedImageUrl || card.imageUrl || card.link?.preview;
   const candidateUrl =
     card.link?.url ||
     (card.audio?.transcript?.startsWith('http') ? card.audio.transcript.trim() : undefined);

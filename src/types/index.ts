@@ -47,6 +47,7 @@ export interface Card {
   content?: string;
   summary?: string;
   imageUrl?: string;
+  cachedImageUrl?: string;
   captureFrom?: string;
   tags?: string[];
   bulletPointsTitle?: string;

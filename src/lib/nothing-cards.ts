@@ -342,6 +342,7 @@ export async function createCloudCard(params: {
   content?: string;
   summary?: string;
   imageUrl?: string;
+  cachedImageUrl?: string;
   imageGcsKey?: string;
   collectionId?: string;
   tags?: string[];
@@ -382,6 +383,7 @@ export async function createCloudCard(params: {
       content: params.content || '',
       summary: params.summary || params.content || undefined,
       imageUrl: params.imageUrl || params.linkMeta?.preview,
+      cachedImageUrl: params.cachedImageUrl,
       collectionId: params.collectionId,
       tags: params.tags,
       bulletPoints: params.bulletPoints,

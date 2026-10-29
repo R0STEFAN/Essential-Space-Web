@@ -1,7 +1,7 @@
 import type { Card, CardType, Collection, NothingUser, SyncResult } from '@/types';
 import { generateNothingAuthHeaders, NOTHING_BASE_URL } from './crypto';
 import { nothingFetch } from './nothing-fetch';
-import { saveDbCards, saveDbCollections, setDbMeta, getDbAuth } from './db';
+import { db, saveDbCards, saveDbCollections, setDbMeta, getDbAuth } from './db';
 
 /**
  * Universal Client-Side Sync Engine
@@ -108,6 +108,10 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
   }
 
   // 4. Transform and map raw card entities
+  // Load existing cards from IndexedDB to preserve locally cached media and previews
+  const existingDbCards = await db.cards.toArray().catch(() => []);
+  const existingDbMap = new Map(existingDbCards.map(c => [c.cardId, c]));
+
   const isAudioKey = (key?: string) =>
     Boolean(
       key &&
@@ -406,6 +410,7 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
       summary: cardInfo.summary || undefined,
       content: userText || cardInfo.summary || undefined,
       imageUrl: imageUrl || (cardType === 'LINK' ? linkPreview : undefined),
+      cachedImageUrl: existingDbMap.get(cardId)?.cachedImageUrl,
       captureFrom: cardInfo.capture_from || undefined,
       tags,
       bulletPointsTitle,

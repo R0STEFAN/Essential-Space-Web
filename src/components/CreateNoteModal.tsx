@@ -204,6 +204,7 @@ export default function CreateNoteModal({
 
       let aiResult: any = null;
       let finalImageUrl: string | undefined;
+      let localDataUrl: string | undefined;
       let imageGcsKey: string | undefined;
       let finalAudioUri: string | undefined;
       let audioGcsKey: string | undefined;
@@ -212,6 +213,13 @@ export default function CreateNoteModal({
       if (hasImage && imageFile) {
         setStatusText('Optimizing image to WebP format...');
         const { blob: webpBlob } = await convertToWebP(imageFile);
+
+        // Pre-cache local data URL so image is always available offline and in trash
+        localDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(webpBlob);
+        });
 
         setStatusText('Uploading photo to Google Cloud Storage...');
         const upload = await uploadMediaToGcs({
@@ -315,6 +323,7 @@ export default function CreateNoteModal({
         content,
         summary: aiResult?.summary || (content.trim() ? content.trim() : undefined),
         imageUrl: finalImageUrl,
+        cachedImageUrl: localDataUrl,
         imageGcsKey,
         collectionId: selectedCollection || undefined,
         tags: aiResult?.tags,

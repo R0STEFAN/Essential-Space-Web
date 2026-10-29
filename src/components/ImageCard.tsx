@@ -121,11 +121,11 @@ export default function ImageCard({
         </div>
 
         {/* Image preview */}
-        {card.imageUrl && !imageError ? (
+        {(card.cachedImageUrl || card.imageUrl) && !imageError ? (
           <div className="relative w-full h-44 mb-3 rounded-xl overflow-hidden bg-nothing-black/80 border border-nothing-border/60 group-hover:border-nothing-red/40 transition-colors">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={card.imageUrl}
+              src={card.cachedImageUrl || card.imageUrl}
               alt={card.title || 'Captured Note'}
               onError={() => setImageError(true)}
               className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
@@ -133,7 +133,7 @@ export default function ImageCard({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
           </div>
-        ) : card.imageUrl && imageError ? (
+        ) : (card.cachedImageUrl || card.imageUrl) && imageError ? (
           <div className="w-full h-24 mb-3 rounded-xl bg-[#141414] border border-dashed border-nothing-border/60 flex flex-col items-center justify-center gap-1.5 p-3 text-nothing-gray">
             <ImageIcon size={20} className="text-nothing-gray/50" />
             <span className="text-[11px] font-mono text-nothing-gray text-center">
