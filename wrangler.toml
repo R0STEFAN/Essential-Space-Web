@@ -1,4 +1,4 @@
 name = "essential-space-web"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".next"
+pages_build_output_dir = "out"

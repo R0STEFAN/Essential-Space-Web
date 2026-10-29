@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node -e \"try{require('fs').rmSync('.next/cache',{recursive:true,force:true})}catch(e){}\"",
+    "build": "next build",
     "start": "node .next/standalone/server.js",
     "lint": "next lint"
   },
