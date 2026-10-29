@@ -162,46 +162,6 @@ export default function CardDetailModal({
         onClick={e => e.stopPropagation()}
         className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#111111] border border-nothing-border shadow-2xl p-5 sm:p-7 space-y-4 text-white"
       >
-        {/* Trash Notice & Actions */}
-        {card.targetState === 1 && (
-          <div className="rounded-2xl bg-red-950/40 border border-red-800/50 p-3.5 sm:p-4 flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 text-xs font-mono text-red-200">
-              <Trash2 size={16} className="text-nothing-red shrink-0" />
-              <span>This note is in the trash</span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {onRestoreCard && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onRestoreCard(card.cardId);
-                    onClose();
-                  }}
-                  className="px-3.5 py-1.5 rounded-xl bg-white text-black hover:bg-neutral-200 transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 font-medium shadow-sm"
-                  title="Restore note from trash"
-                >
-                  <RotateCcw size={13} />
-                  <span>Restore</span>
-                </button>
-              )}
-              {onDeleteCard && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onDeleteCard(card.cardId);
-                    onClose();
-                  }}
-                  className="px-3.5 py-1.5 rounded-xl bg-red-900/60 hover:bg-nothing-red text-white transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 border border-red-700/50"
-                  title="Permanently delete note"
-                >
-                  <Trash2 size={13} />
-                  <span>Delete Forever</span>
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Top Header Card */}
         <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-4 mb-2">
@@ -802,6 +762,46 @@ export default function CardDetailModal({
                   </button>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* Trash Notice & Actions (at bottom of note) */}
+        {card.targetState === 1 && (
+          <div className="sticky bottom-0 z-20 rounded-2xl bg-red-950/90 border border-red-800/60 p-3.5 sm:p-4 flex items-center justify-between gap-3 flex-wrap backdrop-blur-md shadow-lg">
+            <div className="flex items-center gap-2 text-xs font-mono text-red-200">
+              <Trash2 size={16} className="text-nothing-red shrink-0" />
+              <span>This note is in the trash</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {onRestoreCard && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRestoreCard(card.cardId);
+                    onClose();
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-white text-black hover:bg-neutral-200 transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 font-medium shadow-sm"
+                  title="Restore note from trash"
+                >
+                  <RotateCcw size={13} />
+                  <span>Restore</span>
+                </button>
+              )}
+              {onDeleteCard && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDeleteCard(card.cardId);
+                    onClose();
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-red-900/60 hover:bg-nothing-red text-white transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 border border-red-700/50"
+                  title="Permanently delete note"
+                >
+                  <Trash2 size={13} />
+                  <span>Delete Forever</span>
+                </button>
+              )}
             </div>
           </div>
         )}
