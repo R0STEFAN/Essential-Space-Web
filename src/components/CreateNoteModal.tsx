@@ -15,8 +15,10 @@ import {
   Trash2,
   Plus,
   ExternalLink,
+  Folder,
 } from 'lucide-react';
 import type { Collection, Card, CardLink } from '@/types';
+import { createCloudCollection } from '@/lib/nothing-collections';
 import {
   requestNothingAiAnalysis,
   requestAudioAiAnalysis,
@@ -35,6 +37,7 @@ interface CreateNoteModalProps {
   token: string;
   userId: string;
   onCardCreated: (card: Card) => void;
+  onCollectionCreated?: (col: Collection) => void;
 }
 
 type TabType = 'NOTE' | 'LINK' | 'IMAGE' | 'VOICE';
@@ -47,13 +50,20 @@ export default function CreateNoteModal({
   token,
   userId,
   onCardCreated,
+  onCollectionCreated,
 }: CreateNoteModalProps) {
   const [tab, setTab] = useState<TabType>('NOTE');
   const [content, setContent] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkPreview, setLinkPreview] = useState<CardLink | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  const [selectedCollection, setSelectedCollection] = useState(activeCollectionId || '');
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(
+    activeCollectionId ? [activeCollectionId] : []
+  );
+  const [showColInput, setShowColInput] = useState(false);
+  const [newColName, setNewColName] = useState('');
+  const [isCreatingCol, setIsCreatingCol] = useState(false);
+  const [createColError, setCreateColError] = useState<string | null>(null);
   const [useAi, setUseAi] = useState(true);
 
   // Lock background page scroll while modal is open
@@ -82,9 +92,37 @@ export default function CreateNoteModal({
 
   useEffect(() => {
     if (activeCollectionId) {
-      setSelectedCollection(activeCollectionId);
+      setSelectedCollectionIds(prev => (prev.includes(activeCollectionId) ? prev : [...prev, activeCollectionId]));
     }
   }, [activeCollectionId]);
+
+  const toggleCollection = (colId: string) => {
+    setSelectedCollectionIds(prev =>
+      prev.includes(colId) ? prev.filter(id => id !== colId) : [...prev, colId]
+    );
+  };
+
+  const handleCreateCollection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newColName.trim();
+    if (!name) return;
+    setIsCreatingCol(true);
+    setCreateColError(null);
+    try {
+      const res = await createCloudCollection(token, userId, name);
+      if (!res.success || !res.collection) {
+        throw new Error(res.error || 'Failed to create collection');
+      }
+      onCollectionCreated?.(res.collection);
+      setSelectedCollectionIds(prev => [...prev, res.collection!.collectionId]);
+      setNewColName('');
+      setShowColInput(false);
+    } catch (err: any) {
+      setCreateColError(err?.message || 'Failed to create collection');
+    } finally {
+      setIsCreatingCol(false);
+    }
+  };
 
   // Adjust visible attachments based on selected primary tab
   useEffect(() => {
@@ -126,6 +164,10 @@ export default function CreateNoteModal({
       setLinkUrl('');
       setLinkPreview(null);
       setIsLoadingPreview(false);
+      setSelectedCollectionIds(activeCollectionId ? [activeCollectionId] : []);
+      setShowColInput(false);
+      setNewColName('');
+      setCreateColError(null);
       setImageFile(null);
       setImagePreview(null);
       setAudioBlob(null);
@@ -383,7 +425,8 @@ export default function CreateNoteModal({
         imageUrl: (tab === 'LINK' ? activeMeta?.preview : undefined) || finalImageUrl,
         cachedImageUrl: localDataUrl,
         imageGcsKey,
-        collectionId: selectedCollection || undefined,
+        collectionId: selectedCollectionIds[0] || undefined,
+        collectionIds: selectedCollectionIds,
         tags: aiResult?.tags,
         bulletPoints: aiResult?.bulletPoints,
         bulletPointsTitle: aiResult?.bulletPointsTitle,
@@ -774,26 +817,117 @@ export default function CreateNoteModal({
             />
           </div>
 
-          {/* Collection & AI toggles */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-nothing-border/40">
-            {/* Collection dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-nothing-gray uppercase">Collection:</span>
-              <select
-                value={selectedCollection}
-                onChange={e => setSelectedCollection(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg bg-black border border-nothing-border text-xs font-mono text-white focus:outline-none focus:border-white"
-              >
-                <option value="">None (Inbox)</option>
-                {collections.map(c => (
-                  <option key={c.collectionId} value={c.collectionId}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+          {/* Collections Multi-Select Section */}
+          <div className="pt-3 border-t border-nothing-border/40 space-y-2.5">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-[11px] text-nothing-gray uppercase flex items-center gap-1.5">
+                <Folder size={12} className="text-nothing-red" />
+                <span>Collections</span>
+                {selectedCollectionIds.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-nothing-red/20 text-nothing-red text-[10px] font-semibold">
+                    {selectedCollectionIds.length}
+                  </span>
+                )}
+              </span>
+
+              <div className="flex items-center gap-2.5">
+                {selectedCollectionIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCollectionIds([])}
+                    className="text-[10px] text-nothing-gray hover:text-white underline font-mono"
+                  >
+                    Clear
+                  </button>
+                )}
+                {!showColInput && (
+                  <button
+                    type="button"
+                    onClick={() => setShowColInput(true)}
+                    className="text-[10px] text-nothing-red hover:underline flex items-center gap-0.5 font-mono"
+                  >
+                    <Plus size={11} />
+                    <span>+ New Collection</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* AI pipeline toggle */}
+            {/* Inline collection creator */}
+            {showColInput && (
+              <div className="flex items-center gap-2 p-2 rounded-xl bg-black border border-nothing-border animate-fadeIn">
+                <input
+                  type="text"
+                  autoFocus
+                  value={newColName}
+                  onChange={e => setNewColName(e.target.value)}
+                  placeholder="Collection name..."
+                  className="flex-1 bg-transparent text-xs font-mono text-white placeholder-nothing-gray focus:outline-none px-1"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateCollection(e);
+                    } else if (e.key === 'Escape') {
+                      setShowColInput(false);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={isCreatingCol || !newColName.trim()}
+                  onClick={handleCreateCollection}
+                  className="px-2.5 py-1 rounded-lg bg-nothing-red text-white text-[11px] font-dot uppercase tracking-wider disabled:opacity-50 flex items-center gap-1 shadow-sm"
+                >
+                  {isCreatingCol ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
+                  <span>Add</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowColInput(false)}
+                  className="p-1 text-nothing-gray hover:text-white"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+            {createColError && (
+              <p className="text-[10px] font-mono text-nothing-red">{createColError}</p>
+            )}
+
+            {/* Multi-Select Collection Chips */}
+            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+              {collections.map(c => {
+                const isSelected = selectedCollectionIds.includes(c.collectionId);
+                return (
+                  <button
+                    key={c.collectionId}
+                    type="button"
+                    onClick={() => toggleCollection(c.collectionId)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono transition-all border ${
+                      isSelected
+                        ? 'bg-nothing-red text-white border-nothing-red shadow-sm'
+                        : 'bg-black/40 border-nothing-border text-nothing-gray hover:text-white hover:border-white/40'
+                    }`}
+                  >
+                    {isSelected ? (
+                      <Check size={11} strokeWidth={3} />
+                    ) : (
+                      <Folder size={11} className="text-nothing-gray" />
+                    )}
+                    <span>{c.name}</span>
+                  </button>
+                );
+              })}
+              {collections.length === 0 && (
+                <span className="text-[11px] font-mono text-nothing-gray italic">
+                  No collections available. Create one using the button above.
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* AI pipeline toggle */}
+          <div className="pt-2.5 border-t border-nothing-border/40 flex items-center justify-between">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -801,9 +935,9 @@ export default function CreateNoteModal({
                 onChange={e => setUseAi(e.target.checked)}
                 className="rounded bg-black border-nothing-border text-nothing-red focus:ring-0"
               />
-              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-white">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-white">
                 <Sparkles size={11} className="text-nothing-red" />
-                <span>Nothing Cloud AI</span>
+                <span>Nothing Cloud AI Analysis</span>
               </span>
             </label>
           </div>

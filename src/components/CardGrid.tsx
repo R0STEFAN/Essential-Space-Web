@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Card } from '@/types';
+import type { Card, Collection } from '@/types';
 import AudioCard from './AudioCard';
 import TodoCard from './TodoCard';
 import LinkCard from './LinkCard';
@@ -21,6 +21,12 @@ interface CardGridProps {
   onToggleSelect?: (cardId: string) => void;
   onRestoreCard?: (cardId: string) => void;
   onDeleteCard?: (cardId: string) => void;
+  collections?: Collection[];
+  token?: string;
+  userId?: string;
+  onCardUpdated?: (card: Card) => void;
+  onOpenCreateCollection?: () => void;
+  onCollectionCreated?: (collection: Collection) => void;
 }
 
 export default function CardGrid({
@@ -34,6 +40,12 @@ export default function CardGrid({
   onToggleSelect,
   onRestoreCard,
   onDeleteCard,
+  collections = [],
+  token,
+  userId,
+  onCardUpdated,
+  onOpenCreateCollection,
+  onCollectionCreated,
 }: CardGridProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const selectedCard = cards.find(c => c.cardId === selectedCardId) || null;
@@ -141,6 +153,12 @@ export default function CardGrid({
       <CardDetailModal
         card={selectedCard}
         onClose={() => setSelectedCardId(null)}
+        collections={collections}
+        token={token}
+        userId={userId}
+        onCardUpdated={onCardUpdated}
+        onOpenCreateCollection={onOpenCreateCollection}
+        onCollectionCreated={onCollectionCreated}
         activeTag={activeTag}
         onSelectTag={onSelectTag}
         onToggleTodo={onToggleTodo}

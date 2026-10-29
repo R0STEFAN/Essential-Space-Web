@@ -88,7 +88,9 @@ export default function ForYouTab({
             for (const c of targetCards) {
               await updateDbCard(c.cardId, {
                 collectionId: createRes.collection.collectionId,
+                collectionIds: Array.from(new Set([...(c.collectionIds || []), createRes.collection.collectionId])),
                 collectionName: createRes.collection.name,
+                collectionNames: Array.from(new Set([...(c.collectionNames || []), createRes.collection.name])),
               });
             }
           }
@@ -101,7 +103,9 @@ export default function ForYouTab({
           for (const c of targetCards) {
             await updateDbCard(c.cardId, {
               collectionId: rec.collectionId,
+              collectionIds: Array.from(new Set([...(c.collectionIds || []), rec.collectionId])),
               collectionName: rec.suggestedName,
+              collectionNames: Array.from(new Set([...(c.collectionNames || []), rec.suggestedName])),
             });
           }
         }

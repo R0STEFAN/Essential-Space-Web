@@ -78,7 +78,10 @@ export async function getDbCards(options?: {
     let results = await collection.toArray();
 
     if (options?.collectionId) {
-      results = results.filter(c => c.collectionId === options.collectionId);
+      const targetColId = options.collectionId;
+      results = results.filter(
+        c => c.collectionId === targetColId || c.collectionIds?.includes(targetColId)
+      );
     }
 
     if (options?.type) {

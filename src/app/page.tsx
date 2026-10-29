@@ -91,6 +91,7 @@ export default function DashboardPage() {
 
   // Card-Collection matcher
   const cardMatchesCollection = useCallback((card: Card, col: Collection) => {
+    if (card.collectionIds && card.collectionIds.includes(col.collectionId)) return true;
     if (card.collectionId && card.collectionId === col.collectionId) return true;
     if (col.name && Array.isArray(card.tags)) {
       const colNameLower = col.name.trim().toLowerCase();
@@ -103,13 +104,22 @@ export default function DashboardPage() {
   const filteredCards = useMemo(() => {
     let result = allDbCards.filter(c => (isTrash ? c.targetState === 1 : c.targetState === 0));
 
-    // Attach collectionName if missing
+    // Attach collectionName and collectionNames
     if (collections.length > 0) {
       const collMap = new Map(collections.map(col => [col.collectionId, col.name]));
-      result = result.map(c => ({
-        ...c,
-        collectionName: c.collectionName || (c.collectionId ? collMap.get(c.collectionId) : undefined),
-      }));
+      result = result.map(c => {
+        const colNames = c.collectionIds
+          ? c.collectionIds.map(id => collMap.get(id)).filter((n): n is string => Boolean(n))
+          : [];
+        return {
+          ...c,
+          collectionNames: colNames.length > 0 ? colNames : (c.collectionNames || []),
+          collectionName:
+            colNames.length > 0
+              ? colNames.join(', ')
+              : (c.collectionId ? collMap.get(c.collectionId) : c.collectionName),
+        };
+      });
     }
 
     if (activeCollection) {
@@ -449,20 +459,24 @@ export default function DashboardPage() {
   };
 
   const handleBulkAssignCollection = async (
-    collectionId: string | null,
-    collectionName?: string
+    collectionIds: string[],
+    collectionNames?: string[]
   ) => {
     if (selectedCardIds.size === 0) return;
     const ids = Array.from(selectedCardIds);
     setIsBulkProcessing(true);
     try {
+      const joinedNames =
+        collectionNames && collectionNames.length > 0 ? collectionNames.join(', ') : undefined;
       setAllDbCards(prev =>
         prev.map(c => {
           if (selectedCardIds.has(c.cardId)) {
             return {
               ...c,
-              collectionId: collectionId || undefined,
-              collectionName: collectionId ? collectionName : undefined,
+              collectionIds,
+              collectionId: collectionIds[0] || undefined,
+              collectionNames,
+              collectionName: joinedNames,
             };
           }
           return c;
@@ -470,18 +484,20 @@ export default function DashboardPage() {
       );
       for (const id of ids) {
         await updateDbCard(id, {
-          collectionId: collectionId || undefined,
-          collectionName: collectionId ? collectionName : undefined,
+          collectionIds,
+          collectionId: collectionIds[0] || undefined,
+          collectionNames,
+          collectionName: joinedNames,
         });
       }
       if (userToken) {
         const targetCards = allDbCards.filter(c => selectedCardIds.has(c.cardId));
-        await bulkAssignCollectionCloudCards(userToken, targetCards, collectionId);
+        await bulkAssignCollectionCloudCards(userToken, targetCards, collectionIds);
       }
       setSyncSuccess(
-        collectionId
-          ? `Added to "${collectionName}": ${ids.length}`
-          : `Removed from collection: ${ids.length}`
+        collectionIds.length > 0
+          ? `Updated collections for ${ids.length} notes (${joinedNames || ''})`
+          : `Removed from collections: ${ids.length}`
       );
       setTimeout(() => setSyncSuccess(null), 3000);
       handleClearSelection();
@@ -675,6 +691,22 @@ export default function DashboardPage() {
               onToggleSelect={handleToggleSelect}
               onRestoreCard={handleSingleRestore}
               onDeleteCard={handleSingleHardDelete}
+              collections={collections}
+              token={userToken}
+              userId={userId}
+              onCardUpdated={updatedCard => {
+                setAllDbCards(prev =>
+                  prev.map(c => (c.cardId === updatedCard.cardId ? updatedCard : c))
+                );
+                loadLocalData();
+              }}
+              onOpenCreateCollection={() => {
+                setCollectionModalState({ isOpen: true, mode: 'CREATE' });
+              }}
+              onCollectionCreated={savedCol => {
+                setCollections(prev => [...prev, savedCol]);
+                loadLocalData();
+              }}
             />
 
             {/* Bulk Actions Floating Dock */}
@@ -697,9 +729,15 @@ export default function DashboardPage() {
               onClose={() => setIsSelectCollectionModalOpen(false)}
               collections={collections}
               selectedCardCount={selectedCardIds.size}
+              token={userToken}
+              userId={userId}
               onAssign={handleBulkAssignCollection}
               onOpenCreateCollection={() => {
                 setCollectionModalState({ isOpen: true, mode: 'CREATE' });
+              }}
+              onCollectionCreated={savedCol => {
+                setCollections(prev => [...prev, savedCol]);
+                loadLocalData();
               }}
             />
 
@@ -724,6 +762,23 @@ export default function DashboardPage() {
             card={modalCard}
             onClose={() => setModalCard(null)}
             onToggleTodo={handleToggleTodo}
+            collections={collections}
+            token={userToken}
+            userId={userId}
+            onCardUpdated={updatedCard => {
+              setModalCard(updatedCard);
+              setAllDbCards(prev =>
+                prev.map(c => (c.cardId === updatedCard.cardId ? updatedCard : c))
+              );
+              loadLocalData();
+            }}
+            onOpenCreateCollection={() => {
+              setCollectionModalState({ isOpen: true, mode: 'CREATE' });
+            }}
+            onCollectionCreated={savedCol => {
+              setCollections(prev => [...prev, savedCol]);
+              loadLocalData();
+            }}
           />
         )}
 
@@ -737,6 +792,10 @@ export default function DashboardPage() {
           userId={userId}
           onCardCreated={newCard => {
             setAllDbCards(prev => [newCard, ...prev]);
+            loadLocalData();
+          }}
+          onCollectionCreated={savedCol => {
+            setCollections(prev => [...prev, savedCol]);
             loadLocalData();
           }}
         />

@@ -74,7 +74,9 @@ export interface Card {
   }>;
   speakers?: Array<{ speakerId: string; description?: string }>;
   collectionId?: string;
+  collectionIds?: string[];
   collectionName?: string;
+  collectionNames?: string[];
   targetState: number; // 0 = active, 1 = bin/trash
   createTime: number;
   updateTime: number;

@@ -21,15 +21,25 @@ import {
   ChevronDown,
   ChevronUp,
   Folder,
+  FolderPlus,
   Maximize2,
   Trash2,
 } from 'lucide-react';
-import type { Card } from '@/types';
+import type { Card, Collection } from '@/types';
 import { useScrollLock } from '@/lib/useScrollLock';
+import SelectCollectionModal from './SelectCollectionModal';
+import { updateDbCard } from '@/lib/db';
+import { updateCloudCards } from '@/lib/nothing-cards';
 
 interface CardDetailModalProps {
   card: Card | null;
   onClose: () => void;
+  collections?: Collection[];
+  token?: string;
+  userId?: string;
+  onCardUpdated?: (card: Card) => void;
+  onOpenCreateCollection?: () => void;
+  onCollectionCreated?: (collection: Collection) => void;
   activeTag?: string;
   onSelectTag?: (tag: string) => void;
   onToggleTodo?: (cardId: string, eventId: string) => void;
@@ -40,12 +50,19 @@ interface CardDetailModalProps {
 export default function CardDetailModal({
   card,
   onClose,
+  collections = [],
+  token,
+  userId,
+  onCardUpdated,
+  onOpenCreateCollection,
+  onCollectionCreated,
   activeTag,
   onSelectTag,
   onToggleTodo,
   onRestoreCard,
   onDeleteCard,
 }: CardDetailModalProps) {
+  const [isSelectCollectionOpen, setIsSelectCollectionOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [imgError, setImgError] = useState(false);
@@ -186,12 +203,22 @@ export default function CardDetailModal({
                     ? 'CAPTURE + VOICE REPORT'
                     : `${card.type} NOTE`}
               </span>
-              {card.collectionName && (
+              {card.collectionNames && card.collectionNames.length > 0 ? (
+                card.collectionNames.map((name, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px] font-mono text-white"
+                  >
+                    <Folder size={11} className="text-nothing-red" />
+                    {name}
+                  </span>
+                ))
+              ) : card.collectionName ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px] font-mono text-white">
                   <Folder size={11} className="text-nothing-red" />
                   {card.collectionName}
                 </span>
-              )}
+              ) : null}
               {card.captureFrom && (
                 <span className="px-2 py-0.5 rounded-full bg-black/50 border border-nothing-border/60 text-[10px] font-mono text-nothing-gray">
                   via {card.captureFrom}
@@ -728,43 +755,92 @@ export default function CardDetailModal({
           </div>
         )}
 
-        {/* Tags & Collection Footer */}
-        {((card.tags && card.tags.length > 0) || card.collectionName) && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
-            <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
-              COLLECTIONS & TAGS
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {card.collectionName && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-nothing-hover border border-nothing-border text-xs font-mono text-white">
-                  <Folder size={12} className="text-nothing-red" />
-                  {card.collectionName}
-                </span>
-              )}
-              {card.tags?.map((tag, idx) => {
-                const isSelected = activeTag?.toLowerCase() === tag.toLowerCase();
-                return (
+        {/* Collections & Tags Footer */}
+        {(() => {
+          const assignedColIds = card.collectionIds && card.collectionIds.length > 0
+            ? card.collectionIds
+            : (card.collectionId ? [card.collectionId] : []);
+          const assignedCols = collections.filter(c => assignedColIds.includes(c.collectionId));
+          const hasTags = Boolean(card.tags && card.tags.length > 0);
+
+          return (
+            <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider flex items-center gap-2">
+                  <Folder size={13} className="text-nothing-red" />
+                  <span>COLLECTIONS</span>
+                </h3>
+                {card.targetState !== 1 && (
                   <button
-                    key={idx}
                     type="button"
-                    onClick={() => {
-                      onSelectTag?.(isSelected ? '' : tag);
-                      onClose();
-                    }}
-                    className={`inline-flex items-center gap-1 text-xs font-mono px-3 py-1 rounded-full border transition-all ${
-                      isSelected
-                        ? 'bg-nothing-red text-white border-nothing-red'
-                        : 'bg-black/60 border-nothing-border text-nothing-gray hover:text-white'
-                    }`}
+                    onClick={() => setIsSelectCollectionOpen(true)}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 shadow-sm"
                   >
-                    <Tag size={10} />
-                    <span>{tag}</span>
+                    <FolderPlus size={12} className="text-nothing-red" />
+                    <span>{assignedColIds.length > 0 ? 'Manage Collections' : '+ Add to Collection'}</span>
                   </button>
-                );
-              })}
+                )}
+              </div>
+
+              {/* Assigned Collections Pills */}
+              <div className="flex flex-wrap gap-2 items-center">
+                {assignedCols.length > 0 ? (
+                  assignedCols.map(col => (
+                    <span
+                      key={col.collectionId}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-nothing-border/80 text-xs font-mono text-white shadow-sm"
+                    >
+                      <Folder size={12} className="text-nothing-red" />
+                      <span>{col.name}</span>
+                    </span>
+                  ))
+                ) : card.collectionName ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-nothing-border/80 text-xs font-mono text-white shadow-sm">
+                    <Folder size={12} className="text-nothing-red" />
+                    <span>{card.collectionName}</span>
+                  </span>
+                ) : (
+                  <p className="text-xs font-mono text-nothing-gray italic">
+                    This note is not assigned to any collection.
+                  </p>
+                )}
+              </div>
+
+              {/* Tags Section */}
+              {hasTags && (
+                <div className="pt-3 border-t border-nothing-border/40 space-y-2">
+                  <h4 className="font-dot text-[11px] text-nothing-gray uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag size={11} className="text-nothing-red" />
+                    <span>TAGS</span>
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {card.tags?.map((tag, idx) => {
+                      const isSelected = activeTag?.toLowerCase() === tag.toLowerCase();
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            onSelectTag?.(isSelected ? '' : tag);
+                            onClose();
+                          }}
+                          className={`inline-flex items-center gap-1 text-xs font-mono px-3 py-1 rounded-full border transition-all ${
+                            isSelected
+                              ? 'bg-nothing-red text-white border-nothing-red'
+                              : 'bg-black/60 border-nothing-border text-nothing-gray hover:text-white'
+                          }`}
+                        >
+                          <Tag size={10} />
+                          <span>{tag}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Trash Notice & Actions (at bottom of note) */}
         {card.targetState === 1 && (
@@ -806,6 +882,47 @@ export default function CardDetailModal({
           </div>
         )}
       </div>
+
+      {/* Multi-Collection Selection Modal */}
+      {isSelectCollectionOpen && card && (
+        <SelectCollectionModal
+          isOpen={isSelectCollectionOpen}
+          onClose={() => setIsSelectCollectionOpen(false)}
+          collections={collections}
+          selectedCardCount={1}
+          initialCollectionIds={
+            card.collectionIds && card.collectionIds.length > 0
+              ? card.collectionIds
+              : (card.collectionId ? [card.collectionId] : [])
+          }
+          token={token}
+          userId={userId}
+          onAssign={async (newColIds, newColNames) => {
+            const updatedCard: Card = {
+              ...card,
+              collectionIds: newColIds,
+              collectionId: newColIds[0] || undefined,
+              collectionNames: newColNames,
+              collectionName:
+                newColNames && newColNames.length > 0 ? newColNames.join(', ') : undefined,
+              updateTime: Date.now(),
+            };
+            await updateDbCard(card.cardId, {
+              collectionIds: newColIds,
+              collectionId: newColIds[0] || undefined,
+              collectionNames: newColNames,
+              collectionName:
+                newColNames && newColNames.length > 0 ? newColNames.join(', ') : undefined,
+            });
+            if (token) {
+              await updateCloudCards(token, [updatedCard]);
+            }
+            onCardUpdated?.(updatedCard);
+          }}
+          onOpenCreateCollection={onOpenCreateCollection}
+          onCollectionCreated={onCollectionCreated}
+        />
+      )}
 
       {/* Fullscreen Image Lightbox when clicking image inside modal */}
       {isImageZoomed && previewImg && (

@@ -345,6 +345,7 @@ export async function createCloudCard(params: {
   cachedImageUrl?: string;
   imageGcsKey?: string;
   collectionId?: string;
+  collectionIds?: string[];
   tags?: string[];
   bulletPoints?: string[];
   bulletPointsTitle?: string;
@@ -369,6 +370,9 @@ export async function createCloudCard(params: {
   try {
     const cardId = generateUuid();
     const now = Date.now();
+    const targetCollectionIds = (params.collectionIds && params.collectionIds.length > 0)
+      ? params.collectionIds
+      : (params.collectionId ? [params.collectionId] : []);
 
     // Attach cardId to events
     const eventsWithId = (params.events || []).map(ev => ({
@@ -386,7 +390,8 @@ export async function createCloudCard(params: {
       summary: params.summary || (params.type === 'LINK' ? params.linkMeta?.description : params.content) || undefined,
       imageUrl: params.imageUrl || params.linkMeta?.preview,
       cachedImageUrl: params.cachedImageUrl,
-      collectionId: params.collectionId,
+      collectionId: targetCollectionIds[0] || params.collectionId,
+      collectionIds: targetCollectionIds,
       tags: params.tags,
       bulletPoints: params.bulletPoints,
       bulletPointsTitle: params.bulletPointsTitle,
@@ -596,6 +601,10 @@ export async function createCloudCard(params: {
       })),
       card_analysis: cardAnalysis,
       card_events: cardEvents,
+      card_collection_cross_ref: targetCollectionIds.map(colId => ({
+        collection_id: colId,
+        create_time: now,
+      })),
     });
 
     const files: any[] = [];
@@ -618,7 +627,7 @@ export async function createCloudCard(params: {
       cards: [
         {
           cardId: newCard.cardId,
-          collectionIds: newCard.collectionId ? [newCard.collectionId] : [],
+          collectionIds: targetCollectionIds,
           categoryId: null,
           client_request_response: clientRequestResponse,
           files,
@@ -680,6 +689,9 @@ export async function updateCloudCards(
       payload,
       cipherKey,
       cards: updatedCards.map(c => {
+        const colIds = (c.collectionIds && c.collectionIds.length > 0)
+          ? c.collectionIds
+          : (c.collectionId ? [c.collectionId] : []);
         let cr: any = null;
         if (c.rawClientRequestResponse) {
           try {
@@ -765,10 +777,12 @@ export async function updateCloudCards(
           }
 
           // Update collection reference
-          if (c.collectionId) {
-            cr.card_collection_cross_ref = [
-              { collection_id: c.collectionId, create_time: now },
-            ];
+          cr.card_collection_cross_ref = colIds.map(id => ({
+            collection_id: id,
+            create_time: now,
+          }));
+          if (cr.cards) {
+            cr.cards.collection_id = colIds[0] || null;
           }
         } else {
           // Construct baseline client_request_response
@@ -834,9 +848,10 @@ export async function updateCloudCards(
               start_time: -1,
               end_time: -1,
             })),
-            card_collection_cross_ref: c.collectionId
-              ? [{ collection_id: c.collectionId, create_time: now }]
-              : [],
+            card_collection_cross_ref: colIds.map(id => ({
+              collection_id: id,
+              create_time: now,
+            })),
           };
         }
 
@@ -844,7 +859,7 @@ export async function updateCloudCards(
 
         return {
           cardId: c.cardId,
-          collectionIds: c.collectionId ? [c.collectionId] : [],
+          collectionIds: colIds,
           client_request_response: clientRequestResponse,
           files: Array.isArray(c.files) ? c.files : [],
           clientUpdateTime: now,
@@ -1153,7 +1168,7 @@ export async function bulkHardDeleteCloudCards(
 export async function bulkAssignCollectionCloudCards(
   token: string,
   cards: Card[],
-  collectionId?: string | null
+  collectionIdsOrId?: string[] | string | null
 ): Promise<{ success: boolean; error?: string }> {
   if (cards.length === 0) return { success: true };
   try {
@@ -1162,39 +1177,70 @@ export async function bulkAssignCollectionCloudCards(
     const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
     const itemPayload = encryptPayload('0', aesKeyB64);
 
+    const targetCollectionIds = Array.isArray(collectionIdsOrId)
+      ? collectionIdsOrId.filter((id): id is string => typeof id === 'string' && Boolean(id.trim()))
+      : (collectionIdsOrId ? [collectionIdsOrId] : []);
+
     const body = {
       payload,
       cipherKey,
       cards: cards.map(c => {
-        const clientRequestResponse = JSON.stringify({
-          cards: {
-            card_id: c.cardId,
-            title: c.title,
-            summary: c.summary || c.content || '',
-            type: c.type,
-            create_time: c.createTime || now,
-            update_time: now,
-            target_state: c.targetState || 0,
-          },
-          card_events: (c.events || []).map(ev => ({
-            type: 2,
-            title: ev.title,
-            content: ev.content || '',
-            check: ev.check === 1,
-            is_potential_reminder: ev.isPotentialReminder ? 1 : 0,
-            time: ev.time || now,
-            update_time: now,
-            special_key: ev.eventId,
-            start_time: -1,
-            end_time: -1,
-          })),
-        });
+        let cr: any = null;
+        if (c.rawClientRequestResponse) {
+          try {
+            cr = JSON.parse(c.rawClientRequestResponse);
+          } catch {
+            cr = null;
+          }
+        }
+
+        if (cr && typeof cr === 'object') {
+          if (!cr.cards) cr.cards = {};
+          cr.cards.card_id = c.cardId;
+          cr.cards.update_time = now;
+          cr.cards.collection_id = targetCollectionIds[0] || null;
+          cr.card_collection_cross_ref = targetCollectionIds.map(id => ({
+            collection_id: id,
+            create_time: now,
+          }));
+        } else {
+          cr = {
+            cards: {
+              card_id: c.cardId,
+              title: c.title,
+              summary: c.summary || c.content || '',
+              type: c.type,
+              create_time: c.createTime || now,
+              update_time: now,
+              target_state: c.targetState || 0,
+              collection_id: targetCollectionIds[0] || null,
+            },
+            card_resources: [],
+            card_analysis: [],
+            card_events: (c.events || []).map(ev => ({
+              type: 2,
+              title: ev.title,
+              content: ev.content || '',
+              check: ev.check === 1,
+              is_potential_reminder: ev.isPotentialReminder ? 1 : 0,
+              time: ev.time || now,
+              update_time: now,
+              special_key: ev.eventId,
+              start_time: -1,
+              end_time: -1,
+            })),
+            card_collection_cross_ref: targetCollectionIds.map(id => ({
+              collection_id: id,
+              create_time: now,
+            })),
+          };
+        }
 
         return {
           cardId: c.cardId,
-          collectionIds: collectionId ? [collectionId] : [],
-          client_request_response: clientRequestResponse,
-          files: [],
+          collectionIds: targetCollectionIds,
+          client_request_response: JSON.stringify(cr),
+          files: Array.isArray(c.files) ? c.files : [],
           clientUpdateTime: now,
           payload: itemPayload,
           cipherKey,
