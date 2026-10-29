@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, FolderPlus, Trash2, Check, Loader2, Palette } from 'lucide-react';
+import { X, FolderPlus, Trash2, Check, Loader2 } from 'lucide-react';
 import type { Collection } from '@/types';
 import {
   createCloudCollection,
@@ -21,17 +21,6 @@ interface CollectionModalProps {
   onCollectionDeleted?: (collectionId: string) => void;
 }
 
-const PRESET_COLORS = [
-  '#D71921', // Nothing Red
-  '#FFFFFF', // White
-  '#A0A0A0', // Nothing Gray
-  '#3B82F6', // Blue
-  '#10B981', // Emerald
-  '#F59E0B', // Amber
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-];
-
 export default function CollectionModal({
   isOpen,
   onClose,
@@ -43,7 +32,6 @@ export default function CollectionModal({
   onCollectionDeleted,
 }: CollectionModalProps) {
   const [name, setName] = useState('');
-  const [color, setColor] = useState(PRESET_COLORS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,10 +42,8 @@ export default function CollectionModal({
     if (isOpen) {
       if (mode === 'EDIT' && collection) {
         setName(collection.name);
-        setColor(collection.color || PRESET_COLORS[0]);
       } else {
         setName('');
-        setColor(PRESET_COLORS[0]);
       }
       setError(null);
     }
@@ -77,20 +63,19 @@ export default function CollectionModal({
 
     try {
       if (mode === 'CREATE') {
-        const res = await createCloudCollection(token, userId, name.trim(), color);
+        const res = await createCloudCollection(token, userId, name.trim());
         if (!res.success || !res.collection) {
           throw new Error(res.error || 'Failed to create collection');
         }
         onCollectionSaved(res.collection);
       } else if (mode === 'EDIT' && collection) {
-        const res = await updateCloudCollection(token, collection.collectionId, name.trim(), color);
+        const res = await updateCloudCollection(token, collection.collectionId, name.trim());
         if (!res.success) {
           throw new Error(res.error || 'Failed to update collection');
         }
         onCollectionSaved({
           ...collection,
           name: name.trim(),
-          color,
           updateTime: Date.now(),
         });
       }
@@ -128,7 +113,7 @@ export default function CollectionModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-nothing-border/60">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+            <span className="w-2 h-2 rounded-full bg-nothing-red" />
             <h3 className="font-dot text-sm text-white uppercase tracking-wider font-semibold">
               {mode === 'CREATE' ? 'NEW COLLECTION' : 'EDIT COLLECTION'}
             </h3>
@@ -163,33 +148,6 @@ export default function CollectionModal({
               placeholder="e.g. Work, Ideas, Travel, Shopping"
               className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-nothing-border text-xs text-white placeholder:text-nothing-gray/50 focus:outline-none focus:border-white transition-colors font-mono"
             />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-mono text-nothing-gray uppercase mb-2">
-              Color Tag
-            </label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {PRESET_COLORS.map(c => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-                    color === c ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'
-                  }`}
-                  style={{ backgroundColor: c }}
-                >
-                  {color === c && (
-                    <Check
-                      size={14}
-                      className={c === '#FFFFFF' ? 'text-black' : 'text-white'}
-                      strokeWidth={3}
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Action buttons */}
