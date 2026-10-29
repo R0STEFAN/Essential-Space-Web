@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, X, KeyRound, CheckSquare } from 'lucide-react';
+import { AlertCircle, CheckCircle2, X, KeyRound, CheckSquare, RotateCcw, Trash2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FilterBar, { type TagCount } from '@/components/FilterBar';
 import CardGrid from '@/components/CardGrid';
@@ -397,6 +397,57 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSingleRestore = async (cardId: string) => {
+    setIsBulkProcessing(true);
+    try {
+      if (userToken) {
+        const res = await bulkRestoreCloudCards(userToken, [cardId]);
+        if (!res.success) {
+          throw new Error(res.error || 'Failed to restore note from cloud');
+        }
+      }
+      setAllDbCards(prev =>
+        prev.map(c => (c.cardId === cardId ? { ...c, targetState: 0 } : c))
+      );
+      await updateDbCard(cardId, { targetState: 0 });
+      setSyncSuccess('Restored 1 note from trash');
+      setTimeout(() => setSyncSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Failed to restore note:', err);
+      setSyncError(err?.message || 'Failed to restore note');
+      setTimeout(() => setSyncError(null), 4000);
+      loadLocalData();
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleSingleHardDelete = async (cardId: string) => {
+    if (!window.confirm('Permanently delete this note? This action cannot be undone.')) {
+      return;
+    }
+    setIsBulkProcessing(true);
+    try {
+      if (userToken) {
+        const res = await bulkHardDeleteCloudCards(userToken, [cardId]);
+        if (!res.success) {
+          throw new Error(res.error || 'Failed to permanently delete note from cloud');
+        }
+      }
+      setAllDbCards(prev => prev.filter(c => c.cardId !== cardId));
+      await deleteDbCard(cardId);
+      setSyncSuccess('Permanently deleted 1 note');
+      setTimeout(() => setSyncSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Failed to delete note:', err);
+      setSyncError(err?.message || 'Failed to delete note');
+      setTimeout(() => setSyncError(null), 4000);
+      loadLocalData();
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
   const handleBulkAssignCollection = async (
     collectionId: string | null,
     collectionName?: string
@@ -592,6 +643,27 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* Trash Helper Banner */}
+            {isTrash && filteredCards.length > 0 && !isSelectMode && (
+              <div className="mb-4 p-3.5 rounded-2xl bg-red-950/20 border border-red-900/30 flex items-center justify-between gap-3 text-xs font-mono text-red-200 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Trash2 size={15} className="text-nothing-red shrink-0" />
+                  <span>Notes in trash will stay here until restored or permanently deleted.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSelectMode(true);
+                    handleSelectAll();
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all font-dot uppercase tracking-wider text-[11px] flex items-center gap-1.5 shrink-0"
+                >
+                  <RotateCcw size={12} />
+                  <span>Select All to Restore</span>
+                </button>
+              </div>
+            )}
+
             <CardGrid
               cards={filteredCards}
               isLoading={isLoading}
@@ -601,6 +673,8 @@ export default function DashboardPage() {
               isSelectMode={isSelectMode}
               selectedCardIds={selectedCardIds}
               onToggleSelect={handleToggleSelect}
+              onRestoreCard={handleSingleRestore}
+              onDeleteCard={handleSingleHardDelete}
             />
 
             {/* Bulk Actions Floating Dock */}

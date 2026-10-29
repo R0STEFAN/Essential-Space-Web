@@ -76,11 +76,11 @@ export default function BulkActionBar({
                   type="button"
                   disabled={isProcessing}
                   onClick={onRestoreSelected}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-200 text-black transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50 font-medium shadow-sm"
                   title="Restore from trash"
                 >
                   {isProcessing ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
-                  <span className="hidden sm:inline">Restore</span>
+                  <span>Restore</span>
                 </button>
               )}
               <button

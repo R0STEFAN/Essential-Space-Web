@@ -19,6 +19,8 @@ interface CardGridProps {
   isSelectMode?: boolean;
   selectedCardIds?: Set<string>;
   onToggleSelect?: (cardId: string) => void;
+  onRestoreCard?: (cardId: string) => void;
+  onDeleteCard?: (cardId: string) => void;
 }
 
 export default function CardGrid({
@@ -30,6 +32,8 @@ export default function CardGrid({
   isSelectMode,
   selectedCardIds,
   onToggleSelect,
+  onRestoreCard,
+  onDeleteCard,
 }: CardGridProps) {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const selectedCard = cards.find(c => c.cardId === selectedCardId) || null;
@@ -140,6 +144,8 @@ export default function CardGrid({
         activeTag={activeTag}
         onSelectTag={onSelectTag}
         onToggleTodo={onToggleTodo}
+        onRestoreCard={onRestoreCard}
+        onDeleteCard={onDeleteCard}
       />
     </>
   );
