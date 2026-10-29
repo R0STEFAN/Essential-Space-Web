@@ -48,6 +48,7 @@ export default function CardDetailModal({
 }: CardDetailModalProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [imgError, setImgError] = useState(false);
   const [duration, setDuration] = useState(card?.audio?.duration || 45);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
   const [copiedInfoIdx, setCopiedInfoIdx] = useState<number | null>(null);
@@ -304,7 +305,7 @@ export default function CardDetailModal({
         </div>
 
         {/* Image / Link Preview Section */}
-        {previewImg && (
+        {previewImg && !imgError && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 overflow-hidden">
             <div
               onClick={() => setIsImageZoomed(true)}
@@ -314,12 +315,28 @@ export default function CardDetailModal({
               <img
                 src={previewImg}
                 alt={card.title || 'Preview'}
+                onError={() => setImgError(true)}
                 className="max-h-80 w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
               />
               <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/75 border border-nothing-border text-[11px] font-mono text-white flex items-center gap-1.5">
                 <Maximize2 size={12} /> Full Screen
               </span>
             </div>
+          </div>
+        )}
+        {previewImg && imgError && (
+          <div className="rounded-2xl bg-[#1A1A1A] border border-dashed border-nothing-border/60 p-5 flex flex-col items-center justify-center gap-2 text-center text-nothing-gray">
+            <ImageIcon size={28} className="text-nothing-gray/50" />
+            <p className="text-xs font-mono text-nothing-light">
+              {card.targetState === 1
+                ? 'Cloud photo preview was purged when note was moved to trash.'
+                : 'Photo preview is currently unavailable in cloud storage.'}
+            </p>
+            {card.targetState === 1 && (
+              <p className="text-[11px] font-mono text-nothing-gray">
+                The original photo remains safe on your Nothing Phone. Restoring this note will re-sync it with the cloud.
+              </p>
+            )}
           </div>
         )}
 

@@ -23,6 +23,7 @@ export default function AudioCard({
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [imageError, setImageError] = useState(false);
   const [duration, setDuration] = useState(card.audio?.duration || 45);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -131,12 +132,13 @@ export default function AudioCard({
         </div>
 
         {/* Optional attached image capture */}
-        {card.imageUrl && (
+        {card.imageUrl && !imageError && (
           <div className="relative w-full h-36 mb-3 rounded-xl overflow-hidden bg-nothing-black/80 border border-nothing-border/60">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={card.imageUrl}
               alt={card.title || 'Voice Note Capture'}
+              onError={() => setImageError(true)}
               className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
               loading="lazy"
             />
