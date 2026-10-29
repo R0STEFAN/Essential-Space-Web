@@ -828,7 +828,7 @@ export default function DashboardPage() {
               onToggleSelect={handleToggleSelect}
               onRestoreCard={handleSingleRestore}
               onDeleteCard={handleSingleHardDelete}
-              collections={collections}
+              collections={collectionsWithCounts}
               token={userToken}
               userId={userId}
               onCardUpdated={updatedCard => {
@@ -864,7 +864,7 @@ export default function DashboardPage() {
             <SelectCollectionModal
               isOpen={isSelectCollectionModalOpen}
               onClose={() => setIsSelectCollectionModalOpen(false)}
-              collections={collections}
+              collections={collectionsWithCounts}
               selectedCardCount={selectedCardIds.size}
               token={userToken}
               userId={userId}
@@ -899,7 +899,7 @@ export default function DashboardPage() {
             card={modalCard}
             onClose={() => setModalCard(null)}
             onToggleTodo={handleToggleTodo}
-            collections={collections}
+            collections={collectionsWithCounts}
             token={userToken}
             userId={userId}
             onCardUpdated={updatedCard => {
@@ -923,7 +923,7 @@ export default function DashboardPage() {
         <CreateNoteModal
           isOpen={isCreateNoteOpen}
           onClose={() => setIsCreateNoteOpen(false)}
-          collections={collections}
+          collections={collectionsWithCounts}
           activeCollectionId={activeCollection}
           token={userToken}
           userId={userId}

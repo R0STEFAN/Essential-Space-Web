@@ -391,20 +391,26 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
       }
     }
 
-    const collectionId: string | undefined =
-      raw.collectionId ||
-      raw.collection_id ||
-      cardInfo.collection_id ||
-      cardInfo.collectionId ||
-      (Array.isArray(inner.card_collection_cross_ref) &&
-        (inner.card_collection_cross_ref[0]?.collection_id ||
-          inner.card_collection_cross_ref[0]?.collectionId)) ||
-      undefined;
+    const crossRefs = Array.isArray(inner.card_collection_cross_ref)
+      ? inner.card_collection_cross_ref
+          .map((r: any) => r?.collection_id || r?.collectionId)
+          .filter((id: any): id is string => typeof id === 'string' && Boolean(id.trim()))
+      : [];
+    const rawCollectionIds = Array.isArray(raw.collectionIds)
+      ? raw.collectionIds.filter((id: any): id is string => typeof id === 'string' && Boolean(id.trim()))
+      : [];
+    const allColIds = Array.from(new Set([...crossRefs, ...rawCollectionIds]));
+    if (raw.collectionId && !allColIds.includes(raw.collectionId)) allColIds.push(raw.collectionId);
+    if (cardInfo.collection_id && !allColIds.includes(cardInfo.collection_id)) allColIds.push(cardInfo.collection_id);
+
+    const collectionIds: string[] = allColIds;
+    const collectionId: string | undefined = collectionIds[0] || undefined;
 
     return {
       cardId,
       userId: user.uuid,
       collectionId,
+      collectionIds,
       type: cardType,
       title: cardInfo.title || (cardType === 'AUDIO' ? 'Voice Note' : 'Untitled Note'),
       summary: cardInfo.summary || undefined,

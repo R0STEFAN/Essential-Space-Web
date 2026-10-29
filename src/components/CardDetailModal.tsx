@@ -48,7 +48,7 @@ interface CardDetailModalProps {
 }
 
 export default function CardDetailModal({
-  card,
+  card: incomingCard,
   onClose,
   collections = [],
   token,
@@ -62,6 +62,13 @@ export default function CardDetailModal({
   onRestoreCard,
   onDeleteCard,
 }: CardDetailModalProps) {
+  const [internalCard, setInternalCard] = useState<Card | null>(incomingCard);
+
+  useEffect(() => {
+    setInternalCard(incomingCard);
+  }, [incomingCard]);
+
+  const card = internalCard || incomingCard;
   const [isSelectCollectionOpen, setIsSelectCollectionOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -907,6 +914,7 @@ export default function CardDetailModal({
                 newColNames && newColNames.length > 0 ? newColNames.join(', ') : undefined,
               updateTime: Date.now(),
             };
+            setInternalCard(updatedCard);
             await updateDbCard(card.cardId, {
               collectionIds: newColIds,
               collectionId: newColIds[0] || undefined,

@@ -929,10 +929,15 @@ export async function updateCloudCards(
                 }
               }
 
-              if (targetCard.collectionId) {
-                serverCr.card_collection_cross_ref = [
-                  { collection_id: targetCard.collectionId, create_time: bumpedTime },
-                ];
+              const conflictColIds = (targetCard.collectionIds && targetCard.collectionIds.length > 0)
+                ? targetCard.collectionIds
+                : (targetCard.collectionId ? [targetCard.collectionId] : []);
+              serverCr.card_collection_cross_ref = conflictColIds.map(id => ({
+                collection_id: id,
+                create_time: bumpedTime,
+              }));
+              if (serverCr.cards) {
+                serverCr.cards.collection_id = conflictColIds[0] || null;
               }
 
               targetCard.rawClientRequestResponse = JSON.stringify(serverCr);
@@ -945,9 +950,7 @@ export async function updateCloudCards(
                 cards: [
                   {
                     cardId: item.cardId,
-                    collectionIds: targetCard.collectionId
-                      ? [targetCard.collectionId]
-                      : item.collectionIds || [],
+                    collectionIds: conflictColIds,
                     client_request_response: JSON.stringify(serverCr),
                     files: item.files || targetCard.files || [],
                     clientUpdateTime: bumpedTime,
