@@ -20,7 +20,7 @@ import type { Card, Collection } from '@/types';
 import { computeForYouData, type ForYouTask, type ForYouRecommendation, type ForYouData } from '@/lib/foryou';
 import { getDbDismissedSuggestions, dismissDbSuggestion, updateDbCard } from '@/lib/db';
 import { createCloudCollection } from '@/lib/nothing-collections';
-import { bulkAssignCollectionCloudCards } from '@/lib/nothing-cards';
+import { bulkAssignCollectionCloudCards, updateCloudCard } from '@/lib/nothing-cards';
 import CardGrid from './CardGrid';
 
 interface ForYouTabProps {
@@ -124,13 +124,14 @@ export default function ForYouTab({
   };
 
   // Derive tasks reactively from parent cards state to avoid race conditions
+  // Only include CONFIRMED tasks (isPotentialReminder !== true)
   const tasks = useMemo<ForYouTask[]>(() => {
     const activeCards = cards.filter(c => c.targetState === 0);
     const list: ForYouTask[] = [];
     for (const card of activeCards) {
       if (Array.isArray(card.events) && card.events.length > 0) {
         for (const ev of card.events) {
-          if (!ev.title) continue;
+          if (!ev.title || ev.isPotentialReminder) continue;
           list.push({
             eventId: ev.eventId,
             cardId: card.cardId,
@@ -138,7 +139,7 @@ export default function ForYouTab({
             content: ev.content,
             check: ev.check === 1 ? 1 : 0,
             time: ev.time,
-            isPotentialReminder: ev.isPotentialReminder,
+            isPotentialReminder: false,
             cardTitle: card.title || 'Untitled Note',
             cardType: card.type,
             cardCreateTime: card.createTime,
@@ -155,6 +156,66 @@ export default function ForYouTab({
     });
     return list;
   }, [cards]);
+
+  // Collect unconfirmed AI suggestions (events where isPotentialReminder === true)
+  const suggestedTasks = useMemo<ForYouTask[]>(() => {
+    const activeCards = cards.filter(c => c.targetState === 0);
+    const list: ForYouTask[] = [];
+    for (const card of activeCards) {
+      if (Array.isArray(card.events) && card.events.length > 0) {
+        for (const ev of card.events) {
+          if (!ev.title || !ev.isPotentialReminder || ev.check === 1) continue;
+          list.push({
+            eventId: ev.eventId,
+            cardId: card.cardId,
+            title: ev.title,
+            content: ev.content,
+            check: 0,
+            time: ev.time,
+            isPotentialReminder: true,
+            cardTitle: card.title || 'Untitled Note',
+            cardType: card.type,
+            cardCreateTime: card.createTime,
+          });
+        }
+      }
+    }
+    return list;
+  }, [cards]);
+
+  const handleAcceptTaskSuggestion = async (task: ForYouTask) => {
+    const parentCard = cards.find(c => c.cardId === task.cardId);
+    if (!parentCard || !parentCard.events) return;
+
+    // Confirm task: set isPotentialReminder = false
+    const updatedEvents = parentCard.events.map(e =>
+      e.eventId === task.eventId ? { ...e, isPotentialReminder: false } : e
+    );
+
+    await updateDbCard(task.cardId, { events: updatedEvents });
+    if (token) {
+      updateCloudCard(token, { ...parentCard, events: updatedEvents }).catch(err =>
+        console.warn('Sync confirmed task failed:', err)
+      );
+    }
+    onRefreshData();
+  };
+
+  const handleDismissTaskSuggestion = async (task: ForYouTask) => {
+    const parentCard = cards.find(c => c.cardId === task.cardId);
+    if (!parentCard || !parentCard.events) return;
+
+    // Dismiss: remove the potential reminder event from card
+    const updatedEvents = parentCard.events.filter(e => e.eventId !== task.eventId);
+
+    await updateDbCard(task.cardId, { events: updatedEvents });
+    if (token) {
+      updateCloudCard(token, { ...parentCard, events: updatedEvents }).catch(err =>
+        console.warn('Sync dismissed task suggestion failed:', err)
+      );
+    }
+    onRefreshData();
+  };
 
   const recommendations = foryouData?.recommendations || [];
 
@@ -305,10 +366,16 @@ export default function ForYouTab({
             <span className="text-white font-semibold">{pendingCount}</span>
             <span className="text-nothing-gray/60">pending</span>
           </div>
-          {recommendations.length > 0 && (
+          {suggestedTasks.length > 0 && (
             <div className="px-3 py-1.5 rounded-xl bg-nothing-red/10 border border-nothing-red/30 flex items-center gap-1.5 text-nothing-red">
               <Sparkles size={12} />
-              <span>{recommendations.length} SUGGESTIONS</span>
+              <span>{suggestedTasks.length} AI SUGGESTIONS</span>
+            </div>
+          )}
+          {recommendations.length > 0 && (
+            <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/20 flex items-center gap-1.5 text-white">
+              <FolderPlus size={12} />
+              <span>{recommendations.length} COLLECTIONS</span>
             </div>
           )}
         </div>
@@ -316,6 +383,75 @@ export default function ForYouTab({
 
       {/* 2. SECTION 1: Tasks & Reminders from All Notes */}
       <section className="space-y-4">
+        {/* AI Task Suggestions Box (Unconfirmed suggestions from Nothing AI) */}
+        {suggestedTasks.length > 0 && (
+          <div className="max-w-4xl mx-auto p-4 rounded-2xl bg-nothing-card/90 border border-nothing-red/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-nothing-red animate-pulse" />
+                <h4 className="font-dot text-xs text-white uppercase tracking-wider font-medium">
+                  AI TASK SUGGESTIONS ({suggestedTasks.length})
+                </h4>
+              </div>
+              <span className="text-[10px] font-mono text-nothing-gray">
+                Review and confirm before adding to tasks
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {suggestedTasks.map(task => {
+                const parentCard = cards.find(c => c.cardId === task.cardId);
+                return (
+                  <div
+                    key={`sug_${task.cardId}_${task.eventId}`}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl bg-black/60 border border-nothing-border hover:border-nothing-red/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <Sparkles size={12} className="text-nothing-red/80 shrink-0" />
+                      <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
+                        <span className="text-xs font-mono text-white truncate font-medium">
+                          {task.title}
+                        </span>
+                        {task.content && task.content !== task.title && (
+                          <span className="text-[11px] font-mono text-nothing-gray truncate">
+                            {task.content}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      {parentCard && (
+                        <button
+                          onClick={() => onOpenCardDetail(parentCard)}
+                          title="Open note"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap max-w-[140px]"
+                        >
+                          {getCardTypeIcon(task.cardType)}
+                          <span className="truncate">{task.cardTitle}</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleAcceptTaskSuggestion(task)}
+                        className="px-2.5 py-1 rounded-full bg-white hover:bg-neutral-200 text-black text-[10px] font-mono font-semibold transition-colors flex items-center gap-1"
+                      >
+                        <Check size={10} strokeWidth={3} />
+                        <span>ADD</span>
+                      </button>
+                      <button
+                        onClick={() => handleDismissTaskSuggestion(task)}
+                        title="Dismiss suggestion"
+                        className="p-1 rounded-full text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CheckSquare size={16} className="text-nothing-red" />
@@ -410,7 +546,7 @@ export default function ForYouTab({
           </div>
         )}
 
-        {/* Tasks List - 1 Centered Column with grouping by lists */}
+        {/* Tasks List - 1 Centered Column (Flat & compact list without bulky group headers) */}
         {filteredTasks.length === 0 ? (
           <div className="max-w-4xl mx-auto p-8 rounded-2xl bg-nothing-card/30 border border-dashed border-nothing-border/60 text-center">
             <div className="p-3 rounded-full bg-nothing-border/30 text-nothing-gray mx-auto w-fit mb-2">
@@ -424,112 +560,77 @@ export default function ForYouTab({
             </p>
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto flex flex-col gap-6 w-full">
-            {groupedTasks.map(group => {
-              const parentCard = cards.find(c => c.cardId === group.cardId);
+          <div className="max-w-4xl mx-auto flex flex-col gap-2 w-full">
+            {filteredTasks.map(task => {
+              const parentCard = cards.find(c => c.cardId === task.cardId);
+              const isChecked = task.check === 1;
+              const formattedTime = formatTaskTime(task.time);
 
               return (
-                <div key={group.cardId} className="space-y-2.5">
-                  {/* Distinct List Header (only when showing multiple lists) */}
-                  {sourceLists.length > 1 && (
-                    <div className="flex items-center justify-between px-2 pt-1 pb-1 border-b border-nothing-border/40">
-                      <div className="flex items-center gap-2">
-                        {getCardTypeIcon(group.type)}
-                        <span className="font-dot text-xs text-white uppercase tracking-wider font-medium">
-                          {group.title}
-                        </span>
-                        <span className="text-[10px] font-mono text-nothing-gray">
-                          ({group.tasks.length} {group.tasks.length === 1 ? 'task' : 'tasks'})
-                        </span>
-                      </div>
+                <div
+                  key={`${task.cardId}_${task.eventId}`}
+                  className={`group px-4 py-2.5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    isChecked
+                      ? 'bg-nothing-card/40 border-nothing-border/40 opacity-70'
+                      : 'bg-nothing-card border-nothing-border hover:border-white/40'
+                  }`}
+                >
+                  {/* Left part: Checkbox + Title & Content */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <button
+                      onClick={() => handleTaskToggle(task.cardId, task.eventId)}
+                      className={`shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                        isChecked
+                          ? 'bg-nothing-red border-nothing-red text-white'
+                          : 'border-nothing-border bg-black hover:border-white'
+                      }`}
+                    >
+                      {isChecked && <Check size={12} strokeWidth={3} />}
+                    </button>
 
-                      {parentCard && (
-                        <button
-                          onClick={() => onOpenCardDetail(parentCard)}
-                          className="text-[10px] font-mono text-nothing-gray hover:text-white flex items-center gap-1 transition-colors"
-                        >
-                          <span>Open full note</span>
-                          <ExternalLink size={9} />
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5">
+                      <p
+                        className={`text-xs font-mono font-medium truncate ${
+                          isChecked ? 'line-through text-nothing-gray' : 'text-white'
+                        }`}
+                      >
+                        {task.title}
+                      </p>
 
-                  {/* Tasks in this list */}
-                  <div className="flex flex-col gap-2">
-                    {group.tasks.map(task => {
-                      const isChecked = task.check === 1;
-                      const formattedTime = formatTaskTime(task.time);
-
-                      return (
-                        <div
-                          key={`${task.cardId}_${task.eventId}`}
-                          className={`group px-4 py-2.5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                            isChecked
-                              ? 'bg-nothing-card/40 border-nothing-border/40 opacity-70'
-                              : 'bg-nothing-card border-nothing-border hover:border-white/40'
+                      {task.content && task.content !== task.title && (
+                        <span
+                          className={`text-[11px] font-mono truncate ${
+                            isChecked ? 'line-through text-nothing-gray/50' : 'text-nothing-gray'
                           }`}
                         >
-                          {/* Left part: Checkbox + Title & Content */}
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <button
-                              onClick={() => handleTaskToggle(task.cardId, task.eventId)}
-                              className={`shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                                isChecked
-                                  ? 'bg-nothing-red border-nothing-red text-white'
-                                  : 'border-nothing-border bg-black hover:border-white'
-                              }`}
-                            >
-                              {isChecked && <Check size={12} strokeWidth={3} />}
-                            </button>
+                          {task.content}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                            <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5">
-                              <p
-                                className={`text-xs font-mono font-medium truncate ${
-                                  isChecked ? 'line-through text-nothing-gray' : 'text-white'
-                                }`}
-                              >
-                                {task.title}
-                              </p>
+                  {/* Right part: Meta badges (Time + Parent Note pill) */}
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pl-8 sm:pl-0">
+                    {formattedTime && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-red/10 border border-nothing-red/30 text-[10px] font-mono text-nothing-red whitespace-nowrap">
+                        <Clock size={10} />
+                        <span>{formattedTime}</span>
+                      </span>
+                    )}
 
-                              {task.content && task.content !== task.title && (
-                                <span
-                                  className={`text-[11px] font-mono truncate ${
-                                    isChecked ? 'line-through text-nothing-gray/50' : 'text-nothing-gray'
-                                  }`}
-                                >
-                                  {task.content}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Right part: Meta badges (Time + Parent Note pill) */}
-                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pl-8 sm:pl-0">
-                            {formattedTime && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-red/10 border border-nothing-red/30 text-[10px] font-mono text-nothing-red whitespace-nowrap">
-                                <Clock size={10} />
-                                <span>{formattedTime}</span>
-                              </span>
-                            )}
-
-                            {parentCard && (
-                              <button
-                                onClick={() => onOpenCardDetail(parentCard)}
-                                title="Open parent note"
-                                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap"
-                              >
-                                {getCardTypeIcon(task.cardType)}
-                                <span className="truncate max-w-[120px] sm:max-w-[160px]">
-                                  {task.cardTitle}
-                                </span>
-                                <ExternalLink size={9} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {parentCard && (
+                      <button
+                        onClick={() => onOpenCardDetail(parentCard)}
+                        title="Open parent note"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap"
+                      >
+                        {getCardTypeIcon(task.cardType)}
+                        <span className="truncate max-w-[120px] sm:max-w-[160px]">
+                          {task.cardTitle}
+                        </span>
+                        <ExternalLink size={9} />
+                      </button>
+                    )}
                   </div>
                 </div>
               );

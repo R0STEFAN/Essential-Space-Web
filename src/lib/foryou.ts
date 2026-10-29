@@ -136,7 +136,7 @@ export async function computeForYouData(
   for (const card of activeCards) {
     if (Array.isArray(card.events) && card.events.length > 0) {
       for (const ev of card.events) {
-        if (!ev.title) continue;
+        if (!ev.title || ev.isPotentialReminder) continue;
         tasks.push({
           eventId: ev.eventId,
           cardId: card.cardId,

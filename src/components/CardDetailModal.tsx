@@ -488,11 +488,12 @@ export default function CardDetailModal({
         {card.events && card.events.length > 0 && (
           <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
             <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
-              TASKS ({card.events.filter(e => e.check === 1).length}/{card.events.length})
+              TASKS ({card.events.filter(e => e.check === 1 && !e.isPotentialReminder).length}/{card.events.filter(e => !e.isPotentialReminder).length})
             </h3>
             <div className="space-y-2">
               {card.events.map(ev => {
                 const isDone = ev.check === 1;
+                const isSuggestion = Boolean(ev.isPotentialReminder);
                 return (
                   <button
                     key={ev.eventId}
@@ -501,6 +502,8 @@ export default function CardDetailModal({
                     className={`w-full text-left flex items-start gap-3 p-3 rounded-xl border transition-all ${
                       isDone
                         ? 'bg-black/30 border-nothing-border/30 opacity-60'
+                        : isSuggestion
+                        ? 'bg-black/50 border-nothing-red/30 hover:border-nothing-red/60'
                         : 'bg-black/50 border-nothing-border/60 hover:border-nothing-red/50'
                     }`}
                   >
@@ -508,19 +511,29 @@ export default function CardDetailModal({
                       className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center border shrink-0 transition-colors ${
                         isDone
                           ? 'bg-nothing-red border-nothing-red text-white'
+                          : isSuggestion
+                          ? 'border-nothing-red/60 text-nothing-red'
                           : 'border-nothing-gray/70'
                       }`}
                     >
                       {isDone && <Check size={11} />}
+                      {!isDone && isSuggestion && <Sparkles size={10} />}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p
-                        className={`text-xs sm:text-sm font-medium ${
-                          isDone ? 'line-through text-nothing-gray' : 'text-white'
-                        }`}
-                      >
-                        {ev.title}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p
+                          className={`text-xs sm:text-sm font-medium ${
+                            isDone ? 'line-through text-nothing-gray' : 'text-white'
+                          }`}
+                        >
+                          {ev.title}
+                        </p>
+                        {isSuggestion && !isDone && (
+                          <span className="px-1.5 py-0.5 rounded bg-nothing-red/15 text-nothing-red text-[9px] font-mono tracking-wider font-semibold">
+                            AI SUGGESTION
+                          </span>
+                        )}
+                      </div>
                       {ev.content && (
                         <p className="text-xs text-nothing-gray mt-0.5">{ev.content}</p>
                       )}

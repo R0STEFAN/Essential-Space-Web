@@ -124,7 +124,7 @@ export async function requestNothingAiAnalysis(params: {
           content: ev.content || '',
           check: ev.check === 1 ? 1 : 0,
           time: ev.time || ev.start_timestamp,
-          isPotentialReminder: ev.is_potential_reminder ?? true,
+          isPotentialReminder: Boolean(ev.is_potential_reminder),
         }))
       : [];
 
@@ -282,7 +282,7 @@ export async function requestAudioAiAnalysis(params: {
           content: ev.content || '',
           check: ev.check === 1 ? 1 : 0,
           time: ev.time || ev.start_timestamp,
-          isPotentialReminder: ev.is_potential_reminder ?? true,
+          isPotentialReminder: Boolean(ev.is_potential_reminder),
         }))
       : [];
 
@@ -530,7 +530,7 @@ export async function createCloudCard(params: {
       title: ev.title,
       content: ev.content || '',
       check: ev.check === 1,
-      is_potential_reminder: ev.isPotentialReminder ?? true,
+      is_potential_reminder: ev.isPotentialReminder ? 1 : 0,
       time: ev.time || now,
       update_time: now,
       special_key: ev.eventId,
@@ -673,7 +673,7 @@ export async function updateCloudCards(
               title: ev.title,
               content: ev.content || '',
               check: ev.check === 1,
-              is_potential_reminder: ev.isPotentialReminder ?? true,
+              is_potential_reminder: ev.isPotentialReminder ? 1 : 0,
               time: ev.time || now,
               update_time: now,
               special_key: ev.eventId,
@@ -707,7 +707,7 @@ export async function updateCloudCards(
               title: ev.title,
               content: ev.content || '',
               check: ev.check === 1,
-              is_potential_reminder: ev.isPotentialReminder ?? true,
+              is_potential_reminder: ev.isPotentialReminder ? 1 : 0,
               time: ev.time || now,
               update_time: now,
               special_key: ev.eventId,
@@ -1062,7 +1062,7 @@ export async function bulkAssignCollectionCloudCards(
             title: ev.title,
             content: ev.content || '',
             check: ev.check === 1,
-            is_potential_reminder: ev.isPotentialReminder ?? true,
+            is_potential_reminder: ev.isPotentialReminder ? 1 : 0,
             time: ev.time || now,
             update_time: now,
             special_key: ev.eventId,

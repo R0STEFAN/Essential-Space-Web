@@ -244,7 +244,7 @@ export default function DashboardPage() {
           return {
             ...c,
             events: c.events.map(e =>
-              e.eventId === eventId ? { ...e, check: e.check === 1 ? 0 : 1 } : e
+              e.eventId === eventId ? { ...e, check: e.check === 1 ? 0 : 1, isPotentialReminder: false } : e
             ),
           };
         }
@@ -258,7 +258,7 @@ export default function DashboardPage() {
         return {
           ...prev,
           events: prev.events.map(e =>
-            e.eventId === eventId ? { ...e, check: e.check === 1 ? 0 : 1 } : e
+            e.eventId === eventId ? { ...e, check: e.check === 1 ? 0 : 1, isPotentialReminder: false } : e
           ),
         };
       }
@@ -269,7 +269,7 @@ export default function DashboardPage() {
     const targetCard = allDbCards.find(c => c.cardId === cardId);
     if (targetCard && targetCard.events) {
       const updatedEvents = targetCard.events.map(e =>
-        e.eventId === eventId ? { ...e, check: e.check === 1 ? 0 : 1 } : e
+        e.eventId === eventId ? { ...e, check: e.check === 1 ? 0 : 1, isPotentialReminder: false } : e
       );
       await updateDbCard(cardId, { events: updatedEvents });
 
