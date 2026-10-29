@@ -549,7 +549,10 @@ export async function createCloudCard(params: {
         resource_mask: resourceMask,
         capture_from: 'web.essential.space',
       },
-      card_resources: cardResources,
+      card_resources: cardResources.map((r: any) => ({
+        ...r,
+        data: typeof r.data === 'string' ? r.data : '',
+      })),
       card_analysis: cardAnalysis,
       card_events: cardEvents,
     });
@@ -651,6 +654,13 @@ export async function updateCloudCards(
           if (c.summary || c.content) cr.cards.summary = c.summary || c.content;
           cr.cards.update_time = now;
           cr.cards.target_state = c.targetState ?? cr.cards.target_state ?? 0;
+
+          if (Array.isArray(cr.card_resources)) {
+            cr.card_resources = cr.card_resources.map((r: any) => ({
+              ...r,
+              data: typeof r.data === 'string' ? r.data : '',
+            }));
+          }
 
           // Update checklist items if present
           if (Array.isArray(cr.card_events) && c.events) {
@@ -921,6 +931,7 @@ export async function bulkDeleteCloudCards(
     const body = {
       payload,
       cipherKey,
+      cardIds,
       cards: cardIds.map(id => ({
         cardId: id,
         clientUpdateTime: now,

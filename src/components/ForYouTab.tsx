@@ -15,6 +15,8 @@ import {
   FileText,
   Image as ImageIcon,
   ListTodo,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type { Card, Collection } from '@/types';
 import { computeForYouData, type ForYouTask, type ForYouRecommendation, type ForYouData } from '@/lib/foryou';
@@ -49,6 +51,7 @@ export default function ForYouTab({
   const [taskFilter, setTaskFilter] = useState<'pending' | 'completed' | 'all'>('pending');
   const [selectedListId, setSelectedListId] = useState<string>('');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [isAiTasksExpanded, setIsAiTasksExpanded] = useState<boolean>(false);
 
   const computeForYou = useCallback(async () => {
     try {
@@ -367,10 +370,14 @@ export default function ForYouTab({
             <span className="text-nothing-gray/60">pending</span>
           </div>
           {suggestedTasks.length > 0 && (
-            <div className="px-3 py-1.5 rounded-xl bg-nothing-red/10 border border-nothing-red/30 flex items-center gap-1.5 text-nothing-red">
+            <button
+              onClick={() => setIsAiTasksExpanded(prev => !prev)}
+              className="px-3 py-1.5 rounded-xl bg-nothing-red/10 hover:bg-nothing-red/20 border border-nothing-red/30 flex items-center gap-1.5 text-nothing-red transition-colors cursor-pointer"
+            >
               <Sparkles size={12} />
               <span>{suggestedTasks.length} AI SUGGESTIONS</span>
-            </div>
+              {isAiTasksExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+            </button>
           )}
           {recommendations.length > 0 && (
             <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/20 flex items-center gap-1.5 text-white">
@@ -383,75 +390,6 @@ export default function ForYouTab({
 
       {/* 2. SECTION 1: Tasks & Reminders from All Notes */}
       <section className="space-y-4">
-        {/* AI Task Suggestions Box (Unconfirmed suggestions from Nothing AI) */}
-        {suggestedTasks.length > 0 && (
-          <div className="max-w-4xl mx-auto p-4 rounded-2xl bg-nothing-card/90 border border-nothing-red/40 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles size={14} className="text-nothing-red animate-pulse" />
-                <h4 className="font-dot text-xs text-white uppercase tracking-wider font-medium">
-                  AI TASK SUGGESTIONS ({suggestedTasks.length})
-                </h4>
-              </div>
-              <span className="text-[10px] font-mono text-nothing-gray">
-                Review and confirm before adding to tasks
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              {suggestedTasks.map(task => {
-                const parentCard = cards.find(c => c.cardId === task.cardId);
-                return (
-                  <div
-                    key={`sug_${task.cardId}_${task.eventId}`}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl bg-black/60 border border-nothing-border hover:border-nothing-red/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <Sparkles size={12} className="text-nothing-red/80 shrink-0" />
-                      <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
-                        <span className="text-xs font-mono text-white truncate font-medium">
-                          {task.title}
-                        </span>
-                        {task.content && task.content !== task.title && (
-                          <span className="text-[11px] font-mono text-nothing-gray truncate">
-                            {task.content}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                      {parentCard && (
-                        <button
-                          onClick={() => onOpenCardDetail(parentCard)}
-                          title="Open note"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap max-w-[140px]"
-                        >
-                          {getCardTypeIcon(task.cardType)}
-                          <span className="truncate">{task.cardTitle}</span>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleAcceptTaskSuggestion(task)}
-                        className="px-2.5 py-1 rounded-full bg-white hover:bg-neutral-200 text-black text-[10px] font-mono font-semibold transition-colors flex items-center gap-1"
-                      >
-                        <Check size={10} strokeWidth={3} />
-                        <span>ADD</span>
-                      </button>
-                      <button
-                        onClick={() => handleDismissTaskSuggestion(task)}
-                        title="Dismiss suggestion"
-                        className="p-1 rounded-full text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CheckSquare size={16} className="text-nothing-red" />
@@ -635,6 +573,99 @@ export default function ForYouTab({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* AI Task Suggestions Box - Placed BELOW active tasks, collapsed by default */}
+        {suggestedTasks.length > 0 && (
+          <div className="max-w-4xl mx-auto rounded-2xl bg-nothing-card/80 border border-nothing-red/30 transition-all overflow-hidden mt-6">
+            {/* Header row with EXPAND / COLLAPSE toggle */}
+            <div
+              onClick={() => setIsAiTasksExpanded(prev => !prev)}
+              className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.03] transition-colors select-none"
+            >
+              <div className="flex items-center gap-2.5">
+                <Sparkles size={14} className="text-nothing-red animate-pulse shrink-0" />
+                <h4 className="font-dot text-xs text-white uppercase tracking-wider font-medium">
+                  AI TASK SUGGESTIONS ({suggestedTasks.length})
+                </h4>
+                <span className="hidden sm:inline text-[10px] font-mono text-nothing-gray">
+                  • Review and confirm before adding to tasks
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsAiTasksExpanded(prev => !prev);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[10px] font-mono text-nothing-gray transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>{isAiTasksExpanded ? 'COLLAPSE' : 'EXPAND'}</span>
+                  {isAiTasksExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Suggestions list (only visible when expanded) */}
+            {isAiTasksExpanded && (
+              <div className="px-4 pb-4 pt-1 border-t border-nothing-border/40 space-y-2">
+                {suggestedTasks.map(task => {
+                  const parentCard = cards.find(c => c.cardId === task.cardId);
+                  return (
+                    <div
+                      key={`sug_${task.cardId}_${task.eventId}`}
+                      className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 p-3 rounded-xl bg-black/60 border border-nothing-border hover:border-nothing-red/40 transition-colors"
+                    >
+                      {/* Left: Sparkles + Title (full, not truncated) + Content */}
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        <Sparkles size={13} className="text-nothing-red/80 shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1 flex flex-col gap-1">
+                          <p className="text-xs font-mono text-white font-medium break-words leading-relaxed">
+                            {task.title}
+                          </p>
+                          {task.content && task.content !== task.title && (
+                            <p className="text-[11px] font-mono text-nothing-gray break-words leading-relaxed">
+                              {task.content}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Note pill + ADD + DISMISS */}
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pl-6 sm:pl-0">
+                        {parentCard && (
+                          <button
+                            onClick={() => onOpenCardDetail(parentCard)}
+                            title="Open note"
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap max-w-[150px]"
+                          >
+                            {getCardTypeIcon(task.cardType)}
+                            <span className="truncate">{task.cardTitle}</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleAcceptTaskSuggestion(task)}
+                          className="px-3 py-1 rounded-full bg-white hover:bg-neutral-200 text-black text-[10px] font-mono font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Check size={10} strokeWidth={3} />
+                          <span>ADD</span>
+                        </button>
+                        <button
+                          onClick={() => handleDismissTaskSuggestion(task)}
+                          title="Dismiss suggestion"
+                          className="p-1 rounded-full text-nothing-gray hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </section>
