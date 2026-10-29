@@ -14,8 +14,9 @@ import {
   Loader2,
   Trash2,
   Plus,
+  ExternalLink,
 } from 'lucide-react';
-import type { Collection, Card } from '@/types';
+import type { Collection, Card, CardLink } from '@/types';
 import {
   requestNothingAiAnalysis,
   requestAudioAiAnalysis,
@@ -24,6 +25,7 @@ import {
 import { convertToWebP } from '@/lib/image-optimizer';
 import { uploadMediaToGcs } from '@/lib/firebase-upload';
 import { useScrollLock } from '@/lib/useScrollLock';
+import { fetchLinkPreview, normalizeUrl } from '@/lib/link-preview';
 
 interface CreateNoteModalProps {
   isOpen: boolean;
@@ -49,6 +51,8 @@ export default function CreateNoteModal({
   const [tab, setTab] = useState<TabType>('NOTE');
   const [content, setContent] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
+  const [linkPreview, setLinkPreview] = useState<CardLink | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [selectedCollection, setSelectedCollection] = useState(activeCollectionId || '');
   const [useAi, setUseAi] = useState(true);
 
@@ -91,10 +95,37 @@ export default function CreateNoteModal({
     }
   }, [tab]);
 
+  // Debounced link preview fetching when entering a URL
+  useEffect(() => {
+    if (tab !== 'LINK') return;
+    const trimmed = linkUrl.trim();
+    if (!trimmed || trimmed.length < 4 || !trimmed.includes('.')) {
+      setLinkPreview(null);
+      setIsLoadingPreview(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsLoadingPreview(true);
+      try {
+        const meta = await fetchLinkPreview(trimmed);
+        setLinkPreview(meta);
+      } catch (err) {
+        console.warn('Failed to load link preview:', err);
+      } finally {
+        setIsLoadingPreview(false);
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [linkUrl, tab]);
+
   useEffect(() => {
     if (!isOpen) {
       setContent('');
       setLinkUrl('');
+      setLinkPreview(null);
+      setIsLoadingPreview(false);
       setImageFile(null);
       setImagePreview(null);
       setAudioBlob(null);
@@ -192,6 +223,22 @@ export default function CreateNoteModal({
       if (tab === 'LINK' && !linkUrl.trim()) {
         throw new Error('Please enter a valid URL');
       }
+
+      let normalizedLink = linkUrl.trim();
+      let activeMeta = linkPreview;
+      if (tab === 'LINK') {
+        normalizedLink = normalizeUrl(normalizedLink);
+        if (!activeMeta || activeMeta.url !== normalizedLink) {
+          setStatusText('Fetching link preview & OpenGraph metadata...');
+          try {
+            activeMeta = await fetchLinkPreview(normalizedLink);
+            setLinkPreview(activeMeta);
+          } catch {
+            // fallback handled in fetchLinkPreview
+          }
+        }
+      }
+
       if (tab === 'NOTE' && !content.trim() && !hasImage && !hasAudio) {
         throw new Error('Please enter note text or attach media');
       }
@@ -278,7 +325,14 @@ export default function CreateNoteModal({
           aiResult = await requestNothingAiAnalysis({
             token,
             promptType: 'SHARE_SHEET',
-            url: linkUrl,
+            url: normalizedLink,
+            linkPreviewMeta: activeMeta
+              ? {
+                  title: activeMeta.title,
+                  description: activeMeta.description,
+                  preview: activeMeta.preview,
+                }
+              : undefined,
             userText: content,
           });
         } else {
@@ -312,7 +366,7 @@ export default function CreateNoteModal({
         title:
           aiResult?.title ||
           (tab === 'LINK'
-            ? linkUrl
+            ? activeMeta?.title || normalizedLink
             : content.trim()
             ? content.trim().slice(0, 40)
             : hasAudio && hasImage
@@ -321,8 +375,12 @@ export default function CreateNoteModal({
             ? 'Voice Memo'
             : 'Photo Note'),
         content,
-        summary: aiResult?.summary || (content.trim() ? content.trim() : undefined),
-        imageUrl: finalImageUrl,
+        summary:
+          aiResult?.summary ||
+          (tab === 'LINK'
+            ? activeMeta?.description
+            : (content.trim() ? content.trim() : undefined)),
+        imageUrl: (tab === 'LINK' ? activeMeta?.preview : undefined) || finalImageUrl,
         cachedImageUrl: localDataUrl,
         imageGcsKey,
         collectionId: selectedCollection || undefined,
@@ -331,7 +389,8 @@ export default function CreateNoteModal({
         bulletPointsTitle: aiResult?.bulletPointsTitle,
         infoExtract: aiResult?.infoExtract,
         events: aiResult?.events,
-        linkUrl: tab === 'LINK' ? linkUrl : undefined,
+        linkUrl: tab === 'LINK' ? normalizedLink : undefined,
+        linkMeta: tab === 'LINK' ? activeMeta || undefined : undefined,
         audio: finalAudioUri
           ? {
               audioUri: finalAudioUri,
@@ -454,18 +513,101 @@ export default function CreateNoteModal({
 
           {/* Link URL input (for Link tab) */}
           {tab === 'LINK' && (
-            <div>
-              <label className="block text-[11px] font-mono text-nothing-gray uppercase mb-1.5">
-                Target Web URL
-              </label>
-              <input
-                type="url"
-                required
-                value={linkUrl}
-                onChange={e => setLinkUrl(e.target.value)}
-                placeholder="https://example.com/article"
-                className="w-full px-3.5 py-2 rounded-xl bg-black border border-nothing-border text-xs text-white placeholder:text-nothing-gray/50 focus:outline-none focus:border-white transition-colors font-mono"
-              />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-mono text-nothing-gray uppercase mb-1.5 flex items-center justify-between">
+                  <span>Target Web URL</span>
+                  {linkPreview && (
+                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                      <Check size={11} strokeWidth={3} />
+                      {linkPreview.domain}
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    required
+                    value={linkUrl}
+                    onChange={e => setLinkUrl(e.target.value)}
+                    placeholder="https://example.com/article"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-nothing-border text-xs text-white placeholder:text-nothing-gray/50 focus:outline-none focus:border-white transition-colors font-mono"
+                  />
+                  {isLoadingPreview && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 size={13} className="animate-spin text-nothing-red" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Live Preview Card */}
+              {isLoadingPreview && !linkPreview && (
+                <div className="p-3.5 rounded-xl bg-black/40 border border-dashed border-nothing-border/60 flex items-center gap-2.5 text-xs font-mono text-nothing-gray animate-pulse">
+                  <Loader2 size={14} className="animate-spin text-nothing-red shrink-0" />
+                  <span>Loading website preview & OpenGraph data...</span>
+                </div>
+              )}
+
+              {linkPreview && (
+                <div className="rounded-xl bg-[#151515] border border-nothing-border overflow-hidden p-3.5 space-y-2.5 transition-all animate-fadeIn">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-nothing-gray">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {linkPreview.favicon ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={linkPreview.favicon}
+                          alt=""
+                          className="w-4 h-4 rounded shrink-0 object-contain"
+                          onError={e => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <Bookmark size={13} className="text-nothing-red shrink-0" />
+                      )}
+                      <span className="truncate text-white font-medium">
+                        {linkPreview.siteName || linkPreview.domain}
+                      </span>
+                    </div>
+                    <a
+                      href={linkPreview.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-nothing-gray hover:text-white flex items-center gap-1 text-[10px]"
+                      title="Open Link"
+                    >
+                      <span>Visit</span>
+                      <ExternalLink size={10} />
+                    </a>
+                  </div>
+
+                  {linkPreview.preview && (
+                    <div className="w-full h-36 rounded-lg overflow-hidden bg-black relative border border-nothing-border/40">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={linkPreview.preview}
+                        alt=""
+                        className="w-full h-full object-cover object-top"
+                        onError={e => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="text-xs font-medium text-white line-clamp-1">
+                      {linkPreview.title}
+                    </h4>
+                    {linkPreview.description && (
+                      <p className="text-[11px] text-nothing-gray line-clamp-2 mt-0.5 leading-relaxed font-mono">
+                        {linkPreview.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

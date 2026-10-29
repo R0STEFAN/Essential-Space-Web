@@ -355,6 +355,8 @@ export async function createCloudCard(params: {
     title?: string;
     description?: string;
     domain?: string;
+    siteName?: string;
+    favicon?: string;
     preview?: string;
   };
   audio?: {
@@ -379,9 +381,9 @@ export async function createCloudCard(params: {
       cardId,
       userId: params.userId,
       type: params.type,
-      title: params.title || (params.type === 'LINK' ? params.linkUrl : 'New Note'),
+      title: params.title || (params.type === 'LINK' ? (params.linkMeta?.title || params.linkUrl) : 'New Note'),
       content: params.content || '',
-      summary: params.summary || params.content || undefined,
+      summary: params.summary || (params.type === 'LINK' ? params.linkMeta?.description : params.content) || undefined,
       imageUrl: params.imageUrl || params.linkMeta?.preview,
       cachedImageUrl: params.cachedImageUrl,
       collectionId: params.collectionId,
@@ -407,10 +409,12 @@ export async function createCloudCard(params: {
                   return '';
                 }
               })(),
+            siteName: params.linkMeta?.siteName,
+            favicon: params.linkMeta?.favicon,
             preview: params.linkMeta?.preview || params.imageUrl,
           }
         : undefined,
-      audio: params.audio || (params.content ? { transcript: params.content, duration: 45, speakerName: 'Speaker' } : undefined),
+      audio: params.audio || (params.content && params.type === 'AUDIO' ? { transcript: params.content, duration: 45, speakerName: 'Speaker' } : undefined),
     };
 
     // Build room database bundle for Nothing Phone CloudSyncWorker compatibility
@@ -443,6 +447,35 @@ export async function createCloudCard(params: {
         remote_region: 'europe-west3',
       });
     }
+    // Preserves user's saved link in card_resources (matching Nothing Android Room schema: raw_type 'LINK')
+    if (params.linkUrl) {
+      cardResources.push({
+        card_resource_id: generateUuid(),
+        raw_type: 'LINK',
+        data: params.linkUrl,
+        mime_type: 'text/plain',
+        is_primary: true,
+        metadata: JSON.stringify({
+          fav_icon: params.linkMeta?.favicon || '',
+          type: 'website',
+          title: params.linkMeta?.title || params.title || '',
+          description: params.linkMeta?.description || params.summary || '',
+          domain:
+            params.linkMeta?.domain ||
+            (() => {
+              try {
+                return new URL(params.linkUrl).hostname.replace(/^www\./, '');
+              } catch {
+                return '';
+              }
+            })(),
+          site_name: params.linkMeta?.siteName || '',
+          preview: params.linkMeta?.preview || params.imageUrl || '',
+        }),
+        create_time: now,
+        update_time: now,
+      });
+    }
     // Preserves user's written note/text in card_resources (matching Nothing Android Room schema: raw_type 'TEXT')
     if (params.content && params.content.trim()) {
       cardResources.push({
@@ -450,14 +483,14 @@ export async function createCloudCard(params: {
         raw_type: 'TEXT',
         data: params.content.trim(),
         mime_type: 'text/plain',
-        is_primary: true,
+        is_primary: !params.linkUrl,
         create_time: now,
         update_time: now,
       });
     }
 
     // Compute official Nothing Phone Room database resource_mask bitfield
-    // IMAGE=1, AUDIO=2, RECORDING=4, ATTACHMENT_IMAGE=8, ATTACHMENT_TEXT=16, NOTE_AUDIO=32, NOTE_TEXT=64, TEXT=128, CLIPPED_TEXT=256
+    // IMAGE=1, AUDIO=2, RECORDING=4, ATTACHMENT_IMAGE=8, ATTACHMENT_TEXT=16, NOTE_AUDIO=32, NOTE_TEXT=64, TEXT=128, CLIPPED_TEXT=256, LINK=512
     let resourceMask = 0;
     for (const r of cardResources) {
       switch (r.raw_type) {
@@ -488,6 +521,9 @@ export async function createCloudCard(params: {
         case 'CLIPPED_TEXT':
           resourceMask |= 256;
           break;
+        case 'LINK':
+          resourceMask |= 512;
+          break;
       }
     }
 
@@ -496,6 +532,9 @@ export async function createCloudCard(params: {
       newCard.type = 'TEXT';
     }
     if (newCard.type === 'AUDIO' && !params.audioGcsKey) {
+      newCard.type = 'TEXT';
+    }
+    if (newCard.type === 'LINK' && !params.linkUrl) {
       newCard.type = 'TEXT';
     }
 
@@ -549,7 +588,7 @@ export async function createCloudCard(params: {
         create_time: now,
         update_time: now,
         resource_mask: resourceMask,
-        capture_from: 'web.essential.space',
+        capture_from: newCard.type === 'LINK' ? 'share_sheet' : 'web.essential.space',
       },
       card_resources: cardResources.map((r: any) => ({
         ...r,
@@ -607,6 +646,7 @@ export async function createCloudCard(params: {
     }
 
     // Persist to local IndexedDB
+    newCard.rawClientRequestResponse = clientRequestResponse;
     await saveDbCards([newCard]);
 
     return { success: true, card: newCard };
@@ -662,6 +702,36 @@ export async function updateCloudCards(
               ...r,
               data: typeof r.data === 'string' ? r.data : '',
             }));
+
+            // Ensure LINK resource is present for LINK cards
+            if (c.type === 'LINK' && c.link?.url) {
+              const hasLink = cr.card_resources.some((r: any) => r.raw_type === 'LINK');
+              if (!hasLink) {
+                cr.card_resources.push({
+                  card_resource_id: generateUuid(),
+                  raw_type: 'LINK',
+                  data: c.link.url,
+                  mime_type: 'text/plain',
+                  is_primary: true,
+                  metadata: JSON.stringify({
+                    fav_icon: c.link.favicon || '',
+                    type: 'website',
+                    title: c.link.title || c.title || '',
+                    description: c.link.description || c.summary || '',
+                    domain: c.link.domain || '',
+                    site_name: c.link.siteName || '',
+                    preview: c.link.preview || c.imageUrl || '',
+                  }),
+                  create_time: c.createTime || now,
+                  update_time: now,
+                });
+              }
+              if (cr.cards) {
+                cr.cards.resource_mask = (cr.cards.resource_mask || 0) | 512;
+                cr.cards.type = 'LINK';
+                if (!cr.cards.capture_from) cr.cards.capture_from = 'share_sheet';
+              }
+            }
           }
 
           // Update checklist items if present
@@ -702,6 +772,42 @@ export async function updateCloudCards(
           }
         } else {
           // Construct baseline client_request_response
+          let resourceMask = 0;
+          const baselineResources: any[] = [];
+          if (c.type === 'LINK' && c.link?.url) {
+            baselineResources.push({
+              card_resource_id: generateUuid(),
+              raw_type: 'LINK',
+              data: c.link.url,
+              mime_type: 'text/plain',
+              is_primary: true,
+              metadata: JSON.stringify({
+                fav_icon: c.link.favicon || '',
+                type: 'website',
+                title: c.link.title || c.title || '',
+                description: c.link.description || c.summary || '',
+                domain: c.link.domain || '',
+                site_name: c.link.siteName || '',
+                preview: c.link.preview || c.imageUrl || '',
+              }),
+              create_time: c.createTime || now,
+              update_time: now,
+            });
+            resourceMask |= 512;
+          }
+          if (c.content && c.content.trim()) {
+            baselineResources.push({
+              card_resource_id: generateUuid(),
+              raw_type: 'TEXT',
+              data: c.content.trim(),
+              mime_type: 'text/plain',
+              is_primary: baselineResources.length === 0,
+              create_time: c.createTime || now,
+              update_time: now,
+            });
+            resourceMask |= 128;
+          }
+
           cr = {
             cards: {
               card_id: c.cardId,
@@ -710,9 +816,11 @@ export async function updateCloudCards(
               type: c.type,
               create_time: c.createTime || now,
               update_time: now,
+              resource_mask: resourceMask,
+              capture_from: c.type === 'LINK' ? 'share_sheet' : 'web.essential.space',
               target_state: c.targetState || 0,
             },
-            card_resources: [],
+            card_resources: baselineResources,
             card_analysis: [],
             card_events: (c.events || []).map(ev => ({
               type: 2,
