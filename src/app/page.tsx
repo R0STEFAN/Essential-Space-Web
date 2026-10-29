@@ -327,32 +327,40 @@ export default function DashboardPage() {
     setIsBulkProcessing(true);
     try {
       if (isTrash) {
-        // Hard delete
+        // Hard delete in cloud first if online
+        if (userToken) {
+          const res = await bulkHardDeleteCloudCards(userToken, ids);
+          if (!res.success) {
+            throw new Error(res.error || 'Failed to permanently delete notes from cloud');
+          }
+        }
         setAllDbCards(prev => prev.filter(c => !selectedCardIds.has(c.cardId)));
         for (const id of ids) {
           await deleteDbCard(id);
         }
-        if (userToken) {
-          await bulkHardDeleteCloudCards(userToken, ids);
-        }
         setSyncSuccess(`Permanently deleted: ${ids.length}`);
       } else {
         // Move to trash
+        if (userToken) {
+          const res = await bulkDeleteCloudCards(userToken, ids);
+          if (!res.success) {
+            throw new Error(res.error || 'Failed to move notes to trash in cloud');
+          }
+        }
         setAllDbCards(prev =>
           prev.map(c => (selectedCardIds.has(c.cardId) ? { ...c, targetState: 1 } : c))
         );
         for (const id of ids) {
           await updateDbCard(id, { targetState: 1 });
         }
-        if (userToken) {
-          await bulkDeleteCloudCards(userToken, ids);
-        }
         setSyncSuccess(`Moved to trash: ${ids.length}`);
       }
       setTimeout(() => setSyncSuccess(null), 3000);
       handleClearSelection();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed bulk delete:', err);
+      setSyncError(err?.message || 'Failed to delete notes');
+      setTimeout(() => setSyncError(null), 4000);
       loadLocalData();
     } finally {
       setIsBulkProcessing(false);
@@ -364,20 +372,25 @@ export default function DashboardPage() {
     const ids = Array.from(selectedCardIds);
     setIsBulkProcessing(true);
     try {
+      if (userToken) {
+        const res = await bulkRestoreCloudCards(userToken, ids);
+        if (!res.success) {
+          throw new Error(res.error || 'Failed to restore notes from cloud');
+        }
+      }
       setAllDbCards(prev =>
         prev.map(c => (selectedCardIds.has(c.cardId) ? { ...c, targetState: 0 } : c))
       );
       for (const id of ids) {
         await updateDbCard(id, { targetState: 0 });
       }
-      if (userToken) {
-        await bulkRestoreCloudCards(userToken, ids);
-      }
       setSyncSuccess(`Restored from trash: ${ids.length}`);
       setTimeout(() => setSyncSuccess(null), 3000);
       handleClearSelection();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed bulk restore:', err);
+      setSyncError(err?.message || 'Failed to restore notes');
+      setTimeout(() => setSyncError(null), 4000);
       loadLocalData();
     } finally {
       setIsBulkProcessing(false);

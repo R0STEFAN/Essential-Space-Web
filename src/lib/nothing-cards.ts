@@ -876,16 +876,22 @@ export async function setCardTrashState(
     const { aesKeyB64, cipherKey } = generateWriteCipherSession();
     const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
 
-    const body = {
-      payload,
-      cipherKey,
-      cards: [
-        {
-          cardId: card.cardId,
-          clientUpdateTime: now,
-        },
-      ],
-    };
+    const body = isTrash
+      ? {
+          payload,
+          cipherKey,
+          cards: [
+            {
+              cardId: card.cardId,
+              clientUpdateTime: now,
+            },
+          ],
+        }
+      : {
+          payload,
+          cipherKey,
+          cardIds: [card.cardId],
+        };
 
     const endpoint = isTrash ? 'storage/card/v1/delete' : 'storage/restore/v1/restore';
     const targetUrl = `${NOTHING_BASE_URL}/${endpoint}`;
@@ -966,17 +972,13 @@ export async function bulkRestoreCloudCards(
 ): Promise<{ success: boolean; error?: string }> {
   if (cardIds.length === 0) return { success: true };
   try {
-    const now = Date.now();
     const { aesKeyB64, cipherKey } = generateWriteCipherSession();
     const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
 
     const body = {
       payload,
       cipherKey,
-      cards: cardIds.map(id => ({
-        cardId: id,
-        clientUpdateTime: now,
-      })),
+      cardIds,
     };
 
     const targetUrl = `${NOTHING_BASE_URL}/storage/restore/v1/restore`;
@@ -1007,17 +1009,13 @@ export async function bulkHardDeleteCloudCards(
 ): Promise<{ success: boolean; error?: string }> {
   if (cardIds.length === 0) return { success: true };
   try {
-    const now = Date.now();
     const { aesKeyB64, cipherKey } = generateWriteCipherSession();
     const payload = encryptPayload(DEVICE_MODEL, aesKeyB64);
 
     const body = {
       payload,
       cipherKey,
-      cards: cardIds.map(id => ({
-        cardId: id,
-        clientUpdateTime: now,
-      })),
+      cardIds,
     };
 
     const targetUrl = `${NOTHING_BASE_URL}/storage/restore/v1/delete`;
