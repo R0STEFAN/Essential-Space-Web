@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, X, KeyRound, CheckSquare, RotateCcw, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, X, KeyRound, CheckSquare, RotateCcw, Trash2, ChevronDown } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FilterBar, { type TagCount } from '@/components/FilterBar';
 import CardGrid from '@/components/CardGrid';
@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const [userId, setUserId] = useState('');
   const [activeType, setActiveType] = useState('');
   const [activeCaptureFrom, setActiveCaptureFrom] = useState('');
+  const [isCapturesExpanded, setIsCapturesExpanded] = useState(false);
   const [activeCollection, setActiveCollection] = useState('');
   const [activeTag, setActiveTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -650,64 +651,87 @@ export default function DashboardPage() {
               }
             />
 
-            {/* Nothing OS "ЗАХОПЛЕННЯ" (Captures) section matching mobile app */}
+            {/* Nothing OS "CAPTURES" section (collapsible, collapsed by default) */}
             {!isTrash && captureSources.length > 0 && (
-              <div className="mb-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider font-semibold">
-                    ЗАХОПЛЕННЯ
-                  </h3>
+              <div className="mb-5 bg-nothing-card/40 border border-nothing-border/60 rounded-2xl p-3 sm:p-3.5 transition-all">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setIsCapturesExpanded(prev => !prev)}
+                    className="flex items-center gap-2 group select-none hover:text-white transition-colors"
+                  >
+                    <span className="font-dot text-xs text-nothing-gray group-hover:text-white uppercase tracking-wider font-semibold transition-colors">
+                      CAPTURES
+                    </span>
+                    <span className="text-[10px] font-mono text-nothing-gray/60">
+                      ({captureSources.reduce((acc, curr) => acc + curr.count, 0)})
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      className={`text-nothing-gray group-hover:text-white transition-transform duration-200 ${
+                        isCapturesExpanded ? 'rotate-180' : ''
+                      }`}
+                    />
+                    {!isCapturesExpanded && activeCaptureFrom && (
+                      <span className="ml-2 px-2.5 py-0.5 rounded-full bg-white text-black font-mono text-[10px] font-semibold shadow-sm">
+                        {getCaptureSourceLabel(activeCaptureFrom)}
+                      </span>
+                    )}
+                  </button>
+
                   {activeCaptureFrom && (
                     <button
                       type="button"
                       onClick={() => setActiveCaptureFrom('')}
-                      className="text-[10px] font-mono text-nothing-red hover:underline ml-1"
+                      className="text-[10px] font-mono text-nothing-red hover:underline"
                     >
-                      скинути
+                      Reset filter
                     </button>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  {/* "Усі" pill */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveCaptureFrom('')}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
-                      activeCaptureFrom === ''
-                        ? 'bg-white text-black font-semibold shadow-sm'
-                        : 'bg-[#1c1c1e] text-[#a0a0a0] hover:text-white hover:bg-[#252528] border border-transparent hover:border-white/10'
-                    }`}
-                  >
-                    <span>Усі</span>
-                  </button>
+                {isCapturesExpanded && (
+                  <div className="flex items-center gap-2 overflow-x-auto pt-3 pb-0.5 scrollbar-none">
+                    {/* "All" pill */}
+                    <button
+                      type="button"
+                      onClick={() => setActiveCaptureFrom('')}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
+                        activeCaptureFrom === ''
+                          ? 'bg-white text-black font-semibold shadow-sm'
+                          : 'bg-[#1c1c1e] text-[#a0a0a0] hover:text-white hover:bg-[#252528] border border-transparent hover:border-white/10'
+                      }`}
+                    >
+                      <span>All</span>
+                    </button>
 
-                  {/* Dynamic source pills */}
-                  {captureSources.map(src => {
-                    const isSelected = activeCaptureFrom === src.key;
-                    return (
-                      <button
-                        key={src.key}
-                        type="button"
-                        onClick={() => setActiveCaptureFrom(isSelected ? '' : src.key)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
-                          isSelected
-                            ? 'bg-white text-black font-semibold shadow-sm'
-                            : 'bg-[#1c1c1e] text-[#a0a0a0] hover:text-white hover:bg-[#252528] border border-transparent hover:border-white/10'
-                        }`}
-                      >
-                        <span>{src.label}</span>
-                        <span
-                          className={`text-[10px] ${
-                            isSelected ? 'text-black/75 font-semibold' : 'text-[#707070]'
+                    {/* Dynamic source pills */}
+                    {captureSources.map(src => {
+                      const isSelected = activeCaptureFrom === src.key;
+                      return (
+                        <button
+                          key={src.key}
+                          type="button"
+                          onClick={() => setActiveCaptureFrom(isSelected ? '' : src.key)}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
+                            isSelected
+                              ? 'bg-white text-black font-semibold shadow-sm'
+                              : 'bg-[#1c1c1e] text-[#a0a0a0] hover:text-white hover:bg-[#252528] border border-transparent hover:border-white/10'
                           }`}
                         >
-                          {src.count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                          <span>{src.label}</span>
+                          <span
+                            className={`text-[10px] ${
+                              isSelected ? 'text-black/75 font-semibold' : 'text-[#707070]'
+                            }`}
+                          >
+                            {src.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
