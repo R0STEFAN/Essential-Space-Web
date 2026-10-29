@@ -400,11 +400,15 @@ export default function CreateNoteModal({
       }
 
       // 5. Create Card in Nothing Cloud Storage & IndexedDB
+      // Assign official Nothing OS capture_from source
+      const targetCaptureFrom = tab === 'LINK' ? 'share_sheet' : (hasAudio ? 'recording' : 'note');
+
       setStatusText('Syncing new note to Nothing Cloud...');
       const createRes = await createCloudCard({
         token,
         userId,
         type: finalCardType,
+        captureFrom: targetCaptureFrom,
         title:
           aiResult?.title ||
           (tab === 'LINK'

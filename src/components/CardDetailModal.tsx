@@ -25,7 +25,7 @@ import {
   Maximize2,
   Trash2,
 } from 'lucide-react';
-import type { Card, Collection } from '@/types';
+import { getCaptureSourceLabel, type Card, type Collection } from '@/types';
 import { useScrollLock } from '@/lib/useScrollLock';
 import SelectCollectionModal from './SelectCollectionModal';
 import { updateDbCard } from '@/lib/db';
@@ -221,7 +221,7 @@ export default function CardDetailModal({
               ) : null}
               {card.captureFrom && (
                 <span className="px-2 py-0.5 rounded-full bg-black/50 border border-nothing-border/60 text-[10px] font-mono text-nothing-gray">
-                  via {card.captureFrom}
+                  {getCaptureSourceLabel(card.captureFrom)}
                 </span>
               )}
             </div>

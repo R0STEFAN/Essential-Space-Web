@@ -32,7 +32,7 @@ import {
   bulkHardDeleteCloudCards,
   bulkAssignCollectionCloudCards,
 } from '@/lib/nothing-cards';
-import type { Card, Collection } from '@/types';
+import { getCaptureSourceLabel, type Card, type Collection } from '@/types';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -43,6 +43,7 @@ export default function DashboardPage() {
   const [userToken, setUserToken] = useState('');
   const [userId, setUserId] = useState('');
   const [activeType, setActiveType] = useState('');
+  const [activeCaptureFrom, setActiveCaptureFrom] = useState('');
   const [activeCollection, setActiveCollection] = useState('');
   const [activeTag, setActiveTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,6 +130,13 @@ export default function DashboardPage() {
       );
     }
 
+    if (activeCaptureFrom) {
+      result = result.filter(c => {
+        const source = c.captureFrom || (c.type === 'LINK' ? 'share_sheet' : (c.type === 'AUDIO' ? 'recording' : 'note'));
+        return source === activeCaptureFrom;
+      });
+    }
+
     if (activeType) {
       const upper = activeType.toUpperCase();
       if (upper === 'AUDIO') {
@@ -159,7 +167,7 @@ export default function DashboardPage() {
 
     // Sort by createTime descending (latest first)
     return result.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
-  }, [allDbCards, isTrash, collections, activeCollection, activeType, activeTag, searchQuery, cardMatchesCollection]);
+  }, [allDbCards, isTrash, collections, activeCollection, activeCaptureFrom, activeType, activeTag, searchQuery, cardMatchesCollection]);
 
   // Compute collections with dynamic cardCount
   const collectionsWithCounts = useMemo(() => {
@@ -169,6 +177,41 @@ export default function DashboardPage() {
       cardCount: activeCards.filter(c => cardMatchesCollection(c, col)).length,
     }));
   }, [allDbCards, collections, cardMatchesCollection]);
+
+  // Compute capture sources (Захоплення) with counts matching Nothing OS
+  const captureSources = useMemo(() => {
+    const pool = allDbCards.filter(c => (isTrash ? c.targetState === 1 : c.targetState === 0));
+    const counts: Record<string, number> = {};
+
+    for (const c of pool) {
+      if (activeCollection) {
+        const selectedCol = collections.find(col => col.collectionId === activeCollection);
+        if (selectedCol && !cardMatchesCollection(c, selectedCol)) {
+          continue;
+        }
+      }
+      const source = c.captureFrom || (c.type === 'LINK' ? 'share_sheet' : (c.type === 'AUDIO' ? 'recording' : 'note'));
+      counts[source] = (counts[source] || 0) + 1;
+    }
+
+    const preferredOrder = ['clipboard', 'note', 'share_sheet', 'recording', 'screenshot', 'camera'];
+    const keys = Object.keys(counts);
+
+    keys.sort((a, b) => {
+      const idxA = preferredOrder.indexOf(a);
+      const idxB = preferredOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return counts[b] - counts[a];
+    });
+
+    return keys.map(key => ({
+      key,
+      count: counts[key],
+      label: getCaptureSourceLabel(key),
+    }));
+  }, [allDbCards, isTrash, activeCollection, collections, cardMatchesCollection]);
 
   // Compute tags dynamically across current active/trash view
   const computedTags = useMemo<TagCount[]>(() => {
@@ -607,10 +650,77 @@ export default function DashboardPage() {
               }
             />
 
+            {/* Nothing OS "ЗАХОПЛЕННЯ" (Captures) section matching mobile app */}
+            {!isTrash && captureSources.length > 0 && (
+              <div className="mb-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider font-semibold">
+                    ЗАХОПЛЕННЯ
+                  </h3>
+                  {activeCaptureFrom && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveCaptureFrom('')}
+                      className="text-[10px] font-mono text-nothing-red hover:underline ml-1"
+                    >
+                      скинути
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {/* "Усі" pill */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveCaptureFrom('')}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
+                      activeCaptureFrom === ''
+                        ? 'bg-white text-black font-semibold shadow-sm'
+                        : 'bg-[#1c1c1e] text-[#a0a0a0] hover:text-white hover:bg-[#252528] border border-transparent hover:border-white/10'
+                    }`}
+                  >
+                    <span>Усі</span>
+                  </button>
+
+                  {/* Dynamic source pills */}
+                  {captureSources.map(src => {
+                    const isSelected = activeCaptureFrom === src.key;
+                    return (
+                      <button
+                        key={src.key}
+                        type="button"
+                        onClick={() => setActiveCaptureFrom(isSelected ? '' : src.key)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
+                          isSelected
+                            ? 'bg-white text-black font-semibold shadow-sm'
+                            : 'bg-[#1c1c1e] text-[#a0a0a0] hover:text-white hover:bg-[#252528] border border-transparent hover:border-white/10'
+                        }`}
+                      >
+                        <span>{src.label}</span>
+                        <span
+                          className={`text-[10px] ${
+                            isSelected ? 'text-black/75 font-semibold' : 'text-[#707070]'
+                          }`}
+                        >
+                          {src.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="mb-4 flex items-center justify-between text-xs font-mono text-nothing-gray">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-dot">
-                  {isTrash ? 'BIN / TRASH' : activeType ? `${activeType} CARDS` : 'ALL NOTES'}
+                  {isTrash
+                    ? 'BIN / TRASH'
+                    : activeCaptureFrom
+                      ? `${getCaptureSourceLabel(activeCaptureFrom).toUpperCase()} CARDS`
+                      : activeType
+                        ? `${activeType} CARDS`
+                        : 'ALL NOTES'}
                 </span>
                 {activeTag && (
                   <>

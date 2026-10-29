@@ -366,10 +366,14 @@ export async function createCloudCard(params: {
     duration?: number;
   };
   audioGcsKey?: string;
+  captureFrom?: string;
 }): Promise<{ success: boolean; card?: Card; error?: string }> {
   try {
     const cardId = generateUuid();
     const now = Date.now();
+    const targetCaptureFrom =
+      params.captureFrom ||
+      (params.type === 'LINK' ? 'share_sheet' : (params.type === 'AUDIO' ? 'recording' : 'note'));
     const targetCollectionIds = (params.collectionIds && params.collectionIds.length > 0)
       ? params.collectionIds
       : (params.collectionId ? [params.collectionId] : []);
@@ -392,6 +396,7 @@ export async function createCloudCard(params: {
       cachedImageUrl: params.cachedImageUrl,
       collectionId: targetCollectionIds[0] || params.collectionId,
       collectionIds: targetCollectionIds,
+      captureFrom: targetCaptureFrom,
       tags: params.tags,
       bulletPoints: params.bulletPoints,
       bulletPointsTitle: params.bulletPointsTitle,
@@ -593,7 +598,7 @@ export async function createCloudCard(params: {
         create_time: now,
         update_time: now,
         resource_mask: resourceMask,
-        capture_from: newCard.type === 'LINK' ? 'share_sheet' : 'web.essential.space',
+        capture_from: targetCaptureFrom,
       },
       card_resources: cardResources.map((r: any) => ({
         ...r,
@@ -708,6 +713,11 @@ export async function updateCloudCards(
           if (c.summary || c.content) cr.cards.summary = c.summary || c.content;
           cr.cards.update_time = now;
           cr.cards.target_state = c.targetState ?? cr.cards.target_state ?? 0;
+          if (c.captureFrom) {
+            cr.cards.capture_from = c.captureFrom;
+          } else if (!cr.cards.capture_from) {
+            cr.cards.capture_from = c.type === 'LINK' ? 'share_sheet' : (c.type === 'AUDIO' ? 'recording' : 'note');
+          }
 
           if (Array.isArray(cr.card_resources)) {
             cr.card_resources = cr.card_resources.map((r: any) => ({
@@ -831,7 +841,7 @@ export async function updateCloudCards(
               create_time: c.createTime || now,
               update_time: now,
               resource_mask: resourceMask,
-              capture_from: c.type === 'LINK' ? 'share_sheet' : 'web.essential.space',
+              capture_from: c.captureFrom || (c.type === 'LINK' ? 'share_sheet' : (c.type === 'AUDIO' ? 'recording' : 'note')),
               target_state: c.targetState || 0,
             },
             card_resources: baselineResources,

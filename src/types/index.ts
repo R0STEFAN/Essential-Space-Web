@@ -116,3 +116,19 @@ export interface SyncResult {
   lastSyncTime: number;
   error?: string;
 }
+
+export const CAPTURE_SOURCE_LABELS: Record<string, { uk: string; en: string }> = {
+  clipboard: { uk: 'Буфер обміну', en: 'Clipboard' },
+  note: { uk: 'Примітка', en: 'Note' },
+  share_sheet: { uk: 'share_sheet', en: 'share_sheet' },
+  recording: { uk: 'Запис', en: 'Recording' },
+  call_recording: { uk: 'Запис виклику', en: 'Call Recording' },
+  screenshot: { uk: 'Знімок екрана', en: 'Screenshot' },
+  camera: { uk: 'Камера', en: 'Camera' },
+  'web.essential.space': { uk: 'Веб', en: 'Web' },
+};
+
+export function getCaptureSourceLabel(source?: string): string {
+  if (!source) return 'Примітка';
+  return CAPTURE_SOURCE_LABELS[source]?.uk || source;
+}
