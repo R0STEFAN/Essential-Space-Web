@@ -97,12 +97,37 @@ export async function getDbCards(options?: {
 }
 
 /**
- * Save or bulk update cards in IndexedDB
+ * Save or bulk update cards in IndexedDB.
+ * If replaceAll is true (used during cloud sync), cards in local DB that
+ * are not present in cloud and not pending in syncQueue are removed.
  */
-export async function saveDbCards(cards: Card[]): Promise<void> {
-  if (!isBrowser() || cards.length === 0) return;
+export async function saveDbCards(cards: Card[], replaceAll = false): Promise<void> {
+  if (!isBrowser()) return;
   try {
-    await db.cards.bulkPut(cards);
+    if (replaceAll) {
+      const cloudIds = new Set(cards.map(c => c.cardId));
+      const localCards = await db.cards.toArray();
+      const syncQueueItems = await db.syncQueue.toArray().catch(() => []);
+      const pendingCreateIds = new Set(
+        syncQueueItems.filter(i => i.action === 'CREATE_CARD').map(i => i.id)
+      );
+
+      const toDeleteIds = localCards
+        .map(c => c.cardId)
+        .filter(id => !cloudIds.has(id) && !pendingCreateIds.has(id));
+
+      await db.transaction('rw', db.cards, async () => {
+        if (toDeleteIds.length > 0) {
+          await db.cards.bulkDelete(toDeleteIds);
+        }
+        if (cards.length > 0) {
+          await db.cards.bulkPut(cards);
+        }
+      });
+    } else {
+      if (cards.length === 0) return;
+      await db.cards.bulkPut(cards);
+    }
   } catch (err) {
     console.error('Failed to save cards to IndexedDB:', err);
   }
@@ -146,12 +171,69 @@ export async function getDbCollections(): Promise<Collection[]> {
 }
 
 /**
- * Save or bulk update collections in IndexedDB
+ * Save or bulk update collections in IndexedDB.
+ * If replaceAll is true (used during cloud sync), any collections in local DB that
+ * are not in cloud are deleted, and references to them on cards are cleaned up.
  */
-export async function saveDbCollections(collections: Collection[]): Promise<void> {
-  if (!isBrowser() || collections.length === 0) return;
+export async function saveDbCollections(
+  collections: Collection[],
+  replaceAll = false
+): Promise<void> {
+  if (!isBrowser()) return;
   try {
-    await db.collections.bulkPut(collections);
+    if (replaceAll) {
+      const cloudIds = new Set(collections.map(c => c.collectionId));
+      const localCols = await db.collections.toArray();
+      const toDeleteIds = localCols
+        .map(c => c.collectionId)
+        .filter(id => !cloudIds.has(id));
+
+      await db.transaction('rw', [db.collections, db.cards], async () => {
+        if (toDeleteIds.length > 0) {
+          await db.collections.bulkDelete(toDeleteIds);
+
+          // Clean up dangling references from cards
+          const toDeleteSet = new Set(toDeleteIds);
+          const allCards = await db.cards.toArray();
+          const cardsToUpdate: Card[] = [];
+
+          for (const card of allCards) {
+            let modified = false;
+            let newColId = card.collectionId;
+            let newColIds = card.collectionIds;
+
+            if (card.collectionId && toDeleteSet.has(card.collectionId)) {
+              newColId = undefined;
+              modified = true;
+            }
+
+            if (card.collectionIds && card.collectionIds.some(id => toDeleteSet.has(id))) {
+              newColIds = card.collectionIds.filter(id => !toDeleteSet.has(id));
+              modified = true;
+            }
+
+            if (modified) {
+              cardsToUpdate.push({
+                ...card,
+                collectionId: newColId,
+                collectionIds: newColIds,
+              });
+            }
+          }
+
+          if (cardsToUpdate.length > 0) {
+            await db.cards.bulkPut(cardsToUpdate);
+          }
+        }
+
+        if (collections.length > 0) {
+          await db.collections.bulkPut(collections);
+        }
+      });
+    } else {
+      if (collections.length === 0) return;
+      await db.collections.bulkPut(collections);
+    }
   } catch (err) {
     console.error('Failed to save collections to IndexedDB:', err);
   }

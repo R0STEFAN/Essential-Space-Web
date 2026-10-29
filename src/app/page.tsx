@@ -85,6 +85,9 @@ export default function DashboardPage() {
       const dbCollections = await getDbCollections();
       setAllDbCards(dbCards);
       setCollections(dbCollections);
+      setActiveCollection(prev =>
+        prev && !dbCollections.some(c => c.collectionId === prev) ? '' : prev
+      );
       setIsLoading(false);
     } catch (err) {
       console.error('Failed to load local IndexedDB data:', err);

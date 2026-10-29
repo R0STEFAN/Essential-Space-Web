@@ -464,6 +464,7 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
 
   // 5. Fetch collections
   let mappedCollections: Collection[] = [];
+  let collectionsFetched = false;
   try {
     const collRes = await nothingFetch(`${NOTHING_BASE_URL}/storage/collection/v1/list`, {
       method: 'POST',
@@ -481,24 +482,37 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
         color: rc.color || '#FFFFFF',
         updateTime: rc.updateTime || Date.now(),
       }));
+      collectionsFetched = true;
     }
   } catch (collErr) {
     console.warn('Failed to fetch collections:', collErr);
   }
 
-  // Attach collectionName to cards
+  // Attach collectionName & collectionNames to cards
   if (mappedCollections.length > 0) {
     const collMap = new Map(mappedCollections.map(c => [c.collectionId, c.name]));
     for (const card of mappedCards) {
-      if (card.collectionId && collMap.has(card.collectionId)) {
-        card.collectionName = collMap.get(card.collectionId);
+      if (card.collectionIds && card.collectionIds.length > 0) {
+        card.collectionNames = card.collectionIds
+          .map(id => collMap.get(id))
+          .filter((n): n is string => Boolean(n));
+        card.collectionName = card.collectionNames.join(', ');
+      } else if (card.collectionId && collMap.has(card.collectionId)) {
+        const colName = collMap.get(card.collectionId);
+        if (colName) {
+          card.collectionName = colName;
+          card.collectionNames = [colName];
+          card.collectionIds = [card.collectionId];
+        }
       }
     }
   }
 
-  // 6. Save directly to IndexedDB
-  await saveDbCards(mappedCards);
-  await saveDbCollections(mappedCollections);
+  // 6. Save directly to IndexedDB with reconciliation (purges deleted collections & cards)
+  await saveDbCards(mappedCards, true);
+  if (collectionsFetched) {
+    await saveDbCollections(mappedCollections, true);
+  }
   await setDbMeta('lastSyncTime', Date.now());
   await setDbMeta('cardsCount', mappedCards.length);
 
