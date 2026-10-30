@@ -5,7 +5,7 @@ export interface LanguageOption {
 }
 
 export const SUPPORTED_LANGUAGES: LanguageOption[] = [
-  { code: 'auto', name: 'Auto-Detect', nativeName: 'Автовизначення' },
+  { code: 'auto', name: 'Auto-Detect', nativeName: 'Auto-Detect' },
   { code: 'uk', name: 'Ukrainian', nativeName: 'Українська' },
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'pl', name: 'Polish', nativeName: 'Polski' },

@@ -238,7 +238,7 @@ export default function SelectCollectionModal({
               className="w-full py-1.5 px-3 rounded-xl border border-dashed border-nothing-border/60 hover:border-white/40 text-xs font-mono text-nothing-gray hover:text-white flex items-center justify-center gap-1.5 transition-colors"
             >
               <FolderPlus size={13} className="text-nothing-red" />
-              <span>+ Create new collection</span>
+              <span>Create new collection</span>
             </button>
           )}
         </div>

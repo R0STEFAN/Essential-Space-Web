@@ -219,14 +219,14 @@ export default function Navbar({
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="truncate">
-                            {item.nativeName}
+                            {item.name}
                             {item.nativeName !== item.name && (
                               <span
                                 className={`text-[11px] ml-1.5 ${
                                   isSelected ? 'text-black/60 font-normal' : 'text-nothing-gray'
                                 }`}
                               >
-                                ({item.name})
+                                ({item.nativeName})
                               </span>
                             )}
                           </span>
@@ -340,7 +340,7 @@ export default function Navbar({
                   className="w-full py-2.5 px-3 rounded-xl bg-nothing-red/10 hover:bg-nothing-red text-nothing-red hover:text-white border border-nothing-red/30 hover:border-nothing-red transition-all font-mono text-xs flex items-center justify-center gap-2 group cursor-pointer shadow-sm font-medium"
                 >
                   <LogOut size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                  <span>Sign Out / Вийти</span>
+                  <span>Sign Out</span>
                 </button>
               </div>
             )}

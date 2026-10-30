@@ -381,8 +381,8 @@ export default function CardDetailModal({
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
                     {card.audio?.audioUri
-                      ? 'Розшифровка / Full Transcription'
-                      : 'Розшифровка / Full Transcription'}
+                      ? 'Full Transcription'
+                      : 'Full Transcription'}
                   </span>
                   <button
                     type="button"

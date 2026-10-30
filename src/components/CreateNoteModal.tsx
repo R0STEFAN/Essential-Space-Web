@@ -857,7 +857,7 @@ export default function CreateNoteModal({
                     className="text-[10px] text-nothing-red hover:underline flex items-center gap-0.5 font-mono"
                   >
                     <Plus size={11} />
-                    <span>+ New Collection</span>
+                    <span>New Collection</span>
                   </button>
                 )}
               </div>

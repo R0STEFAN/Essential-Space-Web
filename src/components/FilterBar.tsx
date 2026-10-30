@@ -153,7 +153,7 @@ export default function FilterBar({
                     className="w-full px-3 py-2 rounded-lg text-xs font-mono text-nothing-red hover:bg-nothing-red/10 transition-all flex items-center gap-2 border-b border-nothing-border/40 mb-1"
                   >
                     <FolderPlus size={13} />
-                    <span>+ New Collection</span>
+                    <span>New Collection</span>
                   </button>
                 )}
 
