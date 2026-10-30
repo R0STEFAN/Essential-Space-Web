@@ -36,6 +36,7 @@ interface CreateNoteModalProps {
   activeCollectionId?: string;
   token: string;
   userId: string;
+  aiLanguage?: string;
   onCardCreated: (card: Card) => void;
   onCollectionCreated?: (col: Collection) => void;
 }
@@ -49,6 +50,7 @@ export default function CreateNoteModal({
   activeCollectionId,
   token,
   userId,
+  aiLanguage = 'uk',
   onCardCreated,
   onCollectionCreated,
 }: CreateNoteModalProps) {
@@ -351,6 +353,7 @@ export default function CreateNoteModal({
             imageS3FileKey: imageGcsKey, // Attached image passed directly to Gemini 2.0 Flash!
             audioDurationMs: recordingDuration * 1000,
             userText: content,
+            language: aiLanguage,
           });
         } else if (hasImage && imageGcsKey) {
           // Photo note
@@ -360,6 +363,7 @@ export default function CreateNoteModal({
             promptType: 'IMG',
             userText: content,
             s3FileKey: imageGcsKey,
+            language: aiLanguage,
           });
         } else if (tab === 'LINK') {
           // Link note
@@ -376,6 +380,7 @@ export default function CreateNoteModal({
                 }
               : undefined,
             userText: content,
+            language: aiLanguage,
           });
         } else {
           // Pure text note
@@ -384,6 +389,7 @@ export default function CreateNoteModal({
             token,
             promptType: 'TEXT',
             userText: content,
+            language: aiLanguage,
           });
         }
       }

@@ -33,6 +33,7 @@ import {
   bulkAssignCollectionCloudCards,
 } from '@/lib/nothing-cards';
 import { getCaptureSourceLabel, type Card, type Collection } from '@/types';
+import { getSavedAiLanguage, saveAiLanguage } from '@/lib/languages';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -40,6 +41,16 @@ export default function DashboardPage() {
   const [allDbCards, setAllDbCards] = useState<Card[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [userEmail, setUserEmail] = useState('');
+  const [aiLanguage, setAiLanguage] = useState<string>('uk');
+
+  useEffect(() => {
+    setAiLanguage(getSavedAiLanguage());
+  }, []);
+
+  const handleLanguageChange = (newLang: string) => {
+    setAiLanguage(newLang);
+    saveAiLanguage(newLang);
+  };
   const [userToken, setUserToken] = useState('');
   const [userId, setUserId] = useState('');
   const [activeType, setActiveType] = useState('');
@@ -574,6 +585,8 @@ export default function DashboardPage() {
         onSync={() => handleSync(false)}
         onLogout={handleLogout}
         onOpenCreateNote={() => setIsCreateNoteOpen(true)}
+        currentLanguage={aiLanguage}
+        onSelectLanguage={handleLanguageChange}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
@@ -927,6 +940,7 @@ export default function DashboardPage() {
           activeCollectionId={activeCollection}
           token={userToken}
           userId={userId}
+          aiLanguage={aiLanguage}
           onCardCreated={newCard => {
             setAllDbCards(prev => [newCard, ...prev]);
             loadLocalData();

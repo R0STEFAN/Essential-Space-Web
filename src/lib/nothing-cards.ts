@@ -51,7 +51,10 @@ export async function requestNothingAiAnalysis(params: {
   try {
     const lang = params.language || 'uk';
     const timeStr = formatAiTimestamp();
-    const promptUserContent = `Current Time: ${timeStr}, Output Language: ${lang}, Request: ${params.userText || ''}`;
+    const outputLangDirective = (lang === 'auto' || lang === 'auto-detect')
+      ? 'Output Language: auto-detect (match source language)'
+      : `Output Language: ${lang}`;
+    const promptUserContent = `Current Time: ${timeStr}, ${outputLangDirective}, Request: ${params.userText || ''}`;
 
     const body = {
       aiType: 1,
@@ -220,7 +223,7 @@ export async function requestAudioAiAnalysis(params: {
       payload,
       cipherKey,
       location: 'AD',
-      language: lang,
+      language: (lang === 'auto' || lang === 'auto-detect') ? 'auto' : lang,
       startRecordingTime: startTimeIso,
     };
 
