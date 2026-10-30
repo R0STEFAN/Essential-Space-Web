@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, X, KeyRound, CheckSquare, RotateCcw, Trash2, ChevronDown } from 'lucide-react';
+import { AlertCircle, CheckCircle2, X, KeyRound, CheckSquare, RotateCcw, Trash2, ChevronDown, ArrowDownWideNarrow, ArrowUpNarrowWide } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import FilterBar, { type TagCount } from '@/components/FilterBar';
 import CardGrid from '@/components/CardGrid';
@@ -59,6 +59,26 @@ export default function DashboardPage() {
   const [activeCollection, setActiveCollection] = useState('');
   const [activeTag, setActiveTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('essential_space_sort_order');
+      if (saved === 'asc' || saved === 'desc') {
+        setSortOrder(saved);
+      }
+    } catch {}
+  }, []);
+
+  const handleToggleSort = () => {
+    setSortOrder(prev => {
+      const next = prev === 'desc' ? 'asc' : 'desc';
+      try {
+        localStorage.setItem('essential_space_sort_order', next);
+      } catch {}
+      return next;
+    });
+  };
   const [isTrash, setIsTrash] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -180,9 +200,13 @@ export default function DashboardPage() {
       });
     }
 
-    // Sort by createTime descending (latest first)
-    return result.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
-  }, [allDbCards, isTrash, collections, activeCollection, activeCaptureFrom, activeType, activeTag, searchQuery, cardMatchesCollection]);
+    // Sort by createTime (desc = latest first, asc = oldest first)
+    return result.sort((a, b) => {
+      const timeA = a.createTime || 0;
+      const timeB = b.createTime || 0;
+      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+  }, [allDbCards, isTrash, collections, activeCollection, activeCaptureFrom, activeType, activeTag, searchQuery, cardMatchesCollection, sortOrder]);
 
   // Compute collections with dynamic cardCount
   const collectionsWithCounts = useMemo(() => {
@@ -802,9 +826,19 @@ export default function DashboardPage() {
                 </button>
 
                 {filteredCards.length > 0 && (
-                  <span className="text-[11px] text-nothing-gray/70 hidden sm:inline">
-                    Sorted by date (latest first)
-                  </span>
+                  <button
+                    type="button"
+                    onClick={handleToggleSort}
+                    title={sortOrder === 'desc' ? 'Sort: Oldest first' : 'Sort: Latest first'}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-nothing-border bg-[#181818] hover:bg-nothing-hover hover:border-nothing-gray/60 text-xs font-mono text-nothing-light hover:text-white transition-all cursor-pointer select-none"
+                  >
+                    {sortOrder === 'desc' ? (
+                      <ArrowDownWideNarrow size={13} className="text-nothing-red shrink-0" />
+                    ) : (
+                      <ArrowUpNarrowWide size={13} className="text-nothing-red shrink-0" />
+                    )}
+                    <span>{sortOrder === 'desc' ? 'Latest first' : 'Oldest first'}</span>
+                  </button>
                 )}
               </div>
             </div>
