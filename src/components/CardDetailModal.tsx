@@ -227,7 +227,7 @@ export default function CardDetailModal({
                 </span>
               ) : null}
               {card.captureFrom && (
-                <span className="px-2 py-0.5 rounded-full bg-black/50 border border-nothing-border/60 text-[10px] font-mono text-nothing-gray">
+                <span className="px-2 py-0.5 rounded-full bg-black/50 border border-nothing-border/60 text-[11px] font-mono text-nothing-gray">
                   {getCaptureSourceLabel(card.captureFrom)}
                 </span>
               )}
@@ -262,7 +262,7 @@ export default function CardDetailModal({
                     {card.speakers.map((sp, i) => (
                       <span
                         key={i}
-                        className="w-6 h-6 rounded-full bg-nothing-light text-black font-dot text-[10px] flex items-center justify-center border border-[#1A1A1A] font-bold"
+                        className="w-6 h-6 rounded-full bg-nothing-light text-black font-dot text-[11px] flex items-center justify-center border border-[#1A1A1A] font-bold"
                       >
                         S{i + 1}
                       </span>
@@ -585,7 +585,7 @@ export default function CardDetailModal({
                           {ev.title}
                         </p>
                         {isSuggestion && !isDone && (
-                          <span className="px-1.5 py-0.5 rounded bg-nothing-red/15 text-nothing-red text-[9px] font-mono tracking-wider font-semibold">
+                          <span className="px-1.5 py-0.5 rounded bg-nothing-red/15 text-nothing-red text-[11px] font-mono tracking-wider font-semibold">
                             AI SUGGESTION
                           </span>
                         )}

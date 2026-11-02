@@ -358,20 +358,20 @@ export default function ForYouTab({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-nothing-red animate-pulse" />
             <h2 className="font-dot text-lg font-semibold text-white tracking-wider">
-              FOR YOU // OVERVIEW
+              FOR YOU
             </h2>
           </div>
-          <p className="text-xs font-mono text-nothing-gray mt-1">
+          <p className="text-xs text-nothing-gray mt-1">
             Intelligent collection recommendations and aggregated tasks from your Nothing captures
           </p>
         </div>
 
         {/* Quick KPI stats */}
-        <div className="flex items-center gap-2 font-mono text-xs">
+        <div className="flex items-center gap-2 text-xs">
           <div className="px-3 py-1.5 rounded-xl bg-nothing-card border border-nothing-border flex items-center gap-2">
             <span className="text-nothing-gray">TASKS:</span>
-            <span className="text-white font-semibold">{pendingCount}</span>
-            <span className="text-nothing-gray/60">pending</span>
+            <span className="text-white font-semibold font-mono">{pendingCount}</span>
+            <span className="text-nothing-gray/70">pending</span>
           </div>
           {suggestedTasks.length > 0 && (
             <button
@@ -379,14 +379,14 @@ export default function ForYouTab({
               className="px-3 py-1.5 rounded-xl bg-nothing-red/10 hover:bg-nothing-red/20 border border-nothing-red/30 flex items-center gap-1.5 text-nothing-red transition-colors cursor-pointer"
             >
               <Sparkles size={12} />
-              <span>{suggestedTasks.length} AI SUGGESTIONS</span>
+              <span className="font-medium">{suggestedTasks.length} AI SUGGESTIONS</span>
               {isAiTasksExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
             </button>
           )}
           {recommendations.length > 0 && (
             <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/20 flex items-center gap-1.5 text-white">
               <FolderPlus size={12} />
-              <span>{recommendations.length} COLLECTIONS</span>
+              <span className="font-medium">{recommendations.length} COLLECTIONS</span>
             </div>
           )}
         </div>
@@ -400,7 +400,7 @@ export default function ForYouTab({
             <h3 className="font-dot text-sm tracking-wider text-white uppercase font-medium">
               TASKS & REMINDERS FROM ALL NOTES
             </h3>
-            <span className="px-2 py-0.5 rounded-full bg-nothing-card border border-nothing-border text-[11px] font-mono text-nothing-gray">
+            <span className="px-2 py-0.5 rounded-full bg-nothing-card border border-nothing-border text-[11px] text-nothing-gray">
               {pendingCount} pending
             </span>
           </div>
@@ -443,7 +443,7 @@ export default function ForYouTab({
         {/* List / Categories Selector (Only show pills for lists that have UNCOMPLETED tasks) */}
         {activeSourceLists.length > 0 && (
           <div className="max-w-4xl mx-auto flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none">
-            <span className="text-[10px] font-mono text-nothing-gray uppercase shrink-0 mr-1 flex items-center gap-1">
+            <span className="text-[11px] text-nothing-gray uppercase shrink-0 mr-1 flex items-center gap-1">
               <ListTodo size={12} className="text-nothing-red" />
               <span>LISTS:</span>
             </span>
@@ -474,7 +474,7 @@ export default function ForYouTab({
                   {getCardTypeIcon(list.type)}
                   <span className="truncate max-w-[160px]">{list.title}</span>
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                    className={`text-[11px] px-1.5 py-0.2 rounded-full font-semibold ${
                       isSelected
                         ? 'bg-black text-white'
                         : 'bg-nothing-border/60 text-nothing-gray'
@@ -554,8 +554,8 @@ export default function ForYouTab({
                   {/* Right part: Meta badges (Time + Parent Note pill) */}
                   <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pl-8 sm:pl-0">
                     {formattedTime && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-red/10 border border-nothing-red/30 text-[10px] font-mono text-nothing-red whitespace-nowrap">
-                        <Clock size={10} />
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-red/10 border border-nothing-red/30 text-[11px] font-mono text-nothing-red whitespace-nowrap">
+                        <Clock size={11} />
                         <span>{formattedTime}</span>
                       </span>
                     )}
@@ -564,13 +564,13 @@ export default function ForYouTab({
                       <button
                         onClick={() => onOpenCardDetail(parentCard)}
                         title="Open parent note"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[11px] font-mono text-nothing-gray transition-colors whitespace-nowrap"
                       >
                         {getCardTypeIcon(task.cardType)}
                         <span className="truncate max-w-[120px] sm:max-w-[160px]">
                           {task.cardTitle}
                         </span>
-                        <ExternalLink size={9} />
+                        <ExternalLink size={10} />
                       </button>
                     )}
                   </div>
@@ -593,7 +593,7 @@ export default function ForYouTab({
                 <h4 className="font-dot text-xs text-white uppercase tracking-wider font-medium">
                   AI TASK SUGGESTIONS ({suggestedTasks.length})
                 </h4>
-                <span className="hidden sm:inline text-[10px] font-mono text-nothing-gray">
+                <span className="hidden sm:inline text-[11px] font-mono text-nothing-gray">
                   • Review and confirm before adding to tasks
                 </span>
               </div>
@@ -605,7 +605,7 @@ export default function ForYouTab({
                     e.stopPropagation();
                     setIsAiTasksExpanded(prev => !prev);
                   }}
-                  className="px-2.5 py-1 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[10px] font-mono text-nothing-gray transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-2.5 py-1 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[11px] font-mono text-nothing-gray transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{isAiTasksExpanded ? 'COLLAPSE' : 'EXPAND'}</span>
                   {isAiTasksExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -644,7 +644,7 @@ export default function ForYouTab({
                           <button
                             onClick={() => onOpenCardDetail(parentCard)}
                             title="Open note"
-                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black text-[10px] font-mono text-nothing-gray transition-colors whitespace-nowrap max-w-[150px]"
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black text-[11px] font-mono text-nothing-gray transition-colors whitespace-nowrap max-w-[150px]"
                           >
                             {getCardTypeIcon(task.cardType)}
                             <span className="truncate">{task.cardTitle}</span>
@@ -652,9 +652,9 @@ export default function ForYouTab({
                         )}
                         <button
                           onClick={() => handleAcceptTaskSuggestion(task)}
-                          className="px-3 py-1 rounded-full bg-white hover:bg-neutral-200 text-black text-[10px] font-mono font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1 rounded-full bg-white hover:bg-neutral-200 text-black text-[11px] font-mono font-semibold transition-colors flex items-center gap-1 cursor-pointer"
                         >
-                          <Check size={10} strokeWidth={3} />
+                          <Check size={11} strokeWidth={3} />
                           <span>ADD</span>
                         </button>
                         <button
@@ -720,8 +720,8 @@ export default function ForYouTab({
                 >
                   {/* Top Bar: Badge & Dismiss */}
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-red/15 border border-nothing-red/30 text-[10px] font-mono text-nothing-red uppercase tracking-wider">
-                      <Sparkles size={10} />
+                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-red/15 border border-nothing-red/30 text-[11px] font-mono text-nothing-red uppercase tracking-wider">
+                      <Sparkles size={11} />
                       <span>{isCreate ? 'NEW COLLECTION' : 'ADD TO EXISTING'}</span>
                     </div>
 
@@ -791,12 +791,12 @@ export default function ForYouTab({
                           {/* Content Overlay */}
                           <div className="relative z-10 p-2 flex flex-col justify-between h-full">
                             <div className="flex items-center justify-between">
-                              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-sm text-nothing-gray border border-white/10 shadow-sm">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-mono px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-sm text-nothing-gray border border-white/10 shadow-sm">
                                 {getCardTypeIcon(prevCard.type)}
                                 <span className="tracking-wider">{prevCard.type}</span>
                               </span>
                             </div>
-                            <p className="text-[10px] font-mono text-white/95 font-medium truncate drop-shadow-md">
+                            <p className="text-[11px] font-mono text-white/95 font-medium truncate drop-shadow-md">
                               {prevCard.title || 'Untitled Note'}
                             </p>
                           </div>

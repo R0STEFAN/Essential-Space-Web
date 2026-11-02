@@ -550,10 +550,10 @@ export default function CreateNoteModal({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-nothing-red animate-pulse" />
             <h3 className="font-dot text-sm text-white uppercase tracking-wider font-semibold">
-              NEW CAPTURE // NOTHING SPACE
+              NEW CAPTURE
             </h3>
             {isVoiceAndPhoto && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-red/20 border border-nothing-red/40 text-[10px] font-mono text-nothing-red">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-red/20 border border-nothing-red/40 text-[11px] font-medium text-nothing-red">
                 VOICE + PHOTO
               </span>
             )}
@@ -561,14 +561,14 @@ export default function CreateNoteModal({
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1 rounded-lg text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-4 p-2 bg-black/40 border-b border-nothing-border/40 gap-1 text-xs font-mono">
+        <div className="grid grid-cols-4 p-2 bg-black/40 border-b border-nothing-border/40 gap-1 text-xs font-medium">
           <button
             type="button"
             onClick={() => setTab('NOTE')}
@@ -634,7 +634,7 @@ export default function CreateNoteModal({
                 <label className="block text-[11px] font-mono text-nothing-gray uppercase mb-1.5 flex items-center justify-between">
                   <span>Target Web URL</span>
                   {linkPreview && (
-                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                    <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
                       <Check size={11} strokeWidth={3} />
                       {linkPreview.domain}
                     </span>
@@ -690,11 +690,11 @@ export default function CreateNoteModal({
                       href={linkPreview.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-nothing-gray hover:text-white flex items-center gap-1 text-[10px]"
+                      className="text-nothing-gray hover:text-white flex items-center gap-1 text-[11px]"
                       title="Open Link"
                     >
                       <span>Visit</span>
-                      <ExternalLink size={10} />
+                      <ExternalLink size={11} />
                     </a>
                   </div>
 
@@ -731,11 +731,11 @@ export default function CreateNoteModal({
           {(tab === 'IMAGE' || showImageAttachment) && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-mono text-nothing-gray uppercase flex items-center gap-1.5">
+                <label className="text-xs text-nothing-gray uppercase flex items-center gap-1.5">
                   <ImageIcon size={12} className="text-amber-400" />
                   <span>Photo / Screenshot Attachment</span>
                   {isPastedFromClipboard && (
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-mono border border-emerald-500/30">
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[11px] font-medium border border-emerald-500/30">
                       FROM CLIPBOARD
                     </span>
                   )}
@@ -744,9 +744,9 @@ export default function CreateNoteModal({
                   <button
                     type="button"
                     onClick={removeImage}
-                    className="text-[10px] font-mono text-nothing-red hover:underline flex items-center gap-1"
+                    className="text-xs text-nothing-red hover:underline flex items-center gap-1 py-1 px-1.5"
                   >
-                    <Trash2 size={10} />
+                    <Trash2 size={11} />
                     <span>Remove photo</span>
                   </button>
                 )}
@@ -782,16 +782,16 @@ export default function CreateNoteModal({
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 text-xs font-mono text-white transition-opacity">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 text-xs text-white transition-opacity">
                       <span>Click to replace photo</span>
-                      <span className="text-[10px] text-nothing-gray">or paste new image (Ctrl+V)</span>
+                      <span className="text-[11px] text-nothing-gray">or paste new image (Ctrl+V)</span>
                     </div>
                   </>
                 ) : (
                   <div className="flex flex-col items-center gap-1.5 text-nothing-gray text-center px-4">
-                    <Upload size={20} className={isDraggingOver ? 'text-white animate-bounce' : 'text-nothing-red'} />
-                    <span className="text-xs font-mono text-white/90">Click, drag, or paste image (Ctrl+V)</span>
-                    <span className="text-[10px] font-mono text-nothing-gray/60">
+                    <Upload size={20} className={`transition-all duration-300 ${isDraggingOver ? 'text-white scale-125' : 'text-nothing-red'}`} />
+                    <span className="text-xs text-white/90">Click, drag, or paste image (Ctrl+V)</span>
+                    <span className="text-[11px] text-nothing-gray">
                       Screenshots & files auto-compressed to WebP
                     </span>
                   </div>
@@ -810,7 +810,7 @@ export default function CreateNoteModal({
           {(tab === 'VOICE' || showVoiceAttachment) && (
             <div className="p-3.5 rounded-xl bg-black border border-nothing-border space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[11px] font-mono text-nothing-gray uppercase">
+                <div className="flex items-center gap-1.5 text-xs text-nothing-gray uppercase">
                   <Mic size={12} className="text-nothing-red" />
                   <span>Voice Memo Recording</span>
                 </div>
@@ -818,9 +818,9 @@ export default function CreateNoteModal({
                   <button
                     type="button"
                     onClick={removeAudio}
-                    className="text-[10px] font-mono text-nothing-red hover:underline flex items-center gap-1"
+                    className="text-xs text-nothing-red hover:underline flex items-center gap-1 py-1 px-1.5"
                   >
-                    <Trash2 size={10} />
+                    <Trash2 size={11} />
                     <span>Remove voice</span>
                   </button>
                 )}
@@ -860,7 +860,7 @@ export default function CreateNoteModal({
               </div>
 
               {audioBlob && !isRecording && (
-                <p className="text-[10px] font-mono text-emerald-400">
+                <p className="text-[11px] font-mono text-emerald-400">
                   ✓ Voice recording ready ({formatDuration(recordingDuration)})
                 </p>
               )}
@@ -869,12 +869,12 @@ export default function CreateNoteModal({
 
           {/* Quick Attachment Toggles (Allows combining Photo + Voice in any mode!) */}
           <div className="flex items-center gap-2 pt-1">
-            <span className="text-[10px] font-mono text-nothing-gray uppercase">Attachments:</span>
+            <span className="text-xs text-nothing-gray uppercase">Attachments:</span>
             {!showImageAttachment && tab !== 'IMAGE' && (
               <button
                 type="button"
                 onClick={() => setShowImageAttachment(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-hover border border-nothing-border text-[11px] font-mono text-nothing-gray hover:text-white hover:border-white/30 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-hover border border-nothing-border text-xs text-nothing-gray hover:text-white hover:border-white/30 transition-colors"
               >
                 <Plus size={11} />
                 <ImageIcon size={11} className="text-amber-400" />
@@ -886,7 +886,7 @@ export default function CreateNoteModal({
               <button
                 type="button"
                 onClick={() => setShowVoiceAttachment(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-hover border border-nothing-border text-[11px] font-mono text-nothing-gray hover:text-white hover:border-white/30 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-hover border border-nothing-border text-xs text-nothing-gray hover:text-white hover:border-white/30 transition-colors"
               >
                 <Plus size={11} />
                 <Mic size={11} className="text-nothing-red" />
@@ -897,7 +897,7 @@ export default function CreateNoteModal({
 
           {/* Note content / instructions textarea */}
           <div>
-            <label className="block text-[11px] font-mono text-nothing-gray uppercase mb-1.5">
+            <label className="block text-xs text-nothing-gray uppercase mb-1.5">
               {tab === 'LINK'
                 ? 'Optional notes or context'
                 : isVoiceAndPhoto
@@ -924,18 +924,18 @@ export default function CreateNoteModal({
                   ? 'Type thoughts, or paste screenshot (Ctrl+V)...'
                   : 'Add any extra context or instructions for Nothing AI...'
               }
-              className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-nothing-border text-xs text-white placeholder:text-nothing-gray/50 focus:outline-none focus:border-white transition-colors font-mono resize-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-nothing-border text-xs text-white placeholder:text-nothing-gray/70 focus:outline-none focus:border-white transition-colors resize-none"
             />
           </div>
 
           {/* Collections Multi-Select Section */}
           <div className="pt-3 border-t border-nothing-border/40 space-y-2.5">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-[11px] text-nothing-gray uppercase flex items-center gap-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-xs text-nothing-gray uppercase flex items-center gap-1.5">
                 <Folder size={12} className="text-nothing-red" />
                 <span>Collections</span>
                 {selectedCollectionIds.length > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-nothing-red/20 text-nothing-red text-[10px] font-semibold">
+                  <span className="px-1.5 py-0.5 rounded-full bg-nothing-red/20 text-nothing-red text-[11px] font-semibold">
                     {selectedCollectionIds.length}
                   </span>
                 )}
@@ -946,7 +946,7 @@ export default function CreateNoteModal({
                   <button
                     type="button"
                     onClick={() => setSelectedCollectionIds([])}
-                    className="text-[10px] text-nothing-gray hover:text-white underline font-mono"
+                    className="text-xs text-nothing-gray hover:text-white underline p-0.5"
                   >
                     Clear
                   </button>
@@ -955,7 +955,7 @@ export default function CreateNoteModal({
                   <button
                     type="button"
                     onClick={() => setShowColInput(true)}
-                    className="text-[10px] text-nothing-red hover:underline flex items-center gap-0.5 font-mono"
+                    className="text-xs text-nothing-red hover:underline flex items-center gap-0.5 p-0.5"
                   >
                     <Plus size={11} />
                     <span>New Collection</span>
@@ -1002,7 +1002,7 @@ export default function CreateNoteModal({
               </div>
             )}
             {createColError && (
-              <p className="text-[10px] font-mono text-nothing-red">{createColError}</p>
+              <p className="text-[11px] font-mono text-nothing-red">{createColError}</p>
             )}
 
             {/* Multi-Select Collection Chips */}

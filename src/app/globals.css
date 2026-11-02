@@ -30,11 +30,32 @@
   color-scheme: dark;
 }
 
+/* Nothing OS Browser Surface Styling */
+::selection {
+  background-color: #D71921;
+  color: #FFFFFF;
+}
+
+input, textarea, [contenteditable="true"] {
+  caret-color: #D71921;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
 body {
   background-color: #000000;
-  color: #E6E6E6;
+  color: #F2F2F2;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
+}
+
+/* Authentic Nothing OS Dot-Matrix Grid Background */
+.bg-nothing-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 /* Custom Nothing OS Scrollbar */

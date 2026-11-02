@@ -103,7 +103,7 @@ export default function AudioCard({
             )}
             <span className="font-dot">{card.imageUrl ? 'VOICE + PHOTO' : 'VOICE MEMO'}</span>
             {card.collectionName && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[10px]">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
                 {card.collectionName}
               </span>
             )}
@@ -117,7 +117,7 @@ export default function AudioCard({
                   onToggleSelect?.(card.cardId);
                 }}
                 title="Select note"
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-nothing-gray hover:text-white"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded text-nothing-gray hover:text-white"
               >
                 <Square size={13} />
               </button>
@@ -204,7 +204,7 @@ export default function AudioCard({
                     }
                   )}
                 </div>
-                <div className="flex justify-between text-[10px] text-nothing-gray font-mono mt-1">
+                <div className="flex justify-between text-[11px] text-nothing-gray font-mono mt-1">
                   <span>{formatTime(currentTime)}</span>
                   <span>{formatTime(duration)}</span>
                 </div>
@@ -216,7 +216,7 @@ export default function AudioCard({
         {/* Compact Transcript Preview */}
         {card.audio?.transcript && (
           <div className="bg-nothing-card/90 rounded-lg p-2.5 text-xs text-nothing-gray leading-relaxed font-sans border border-nothing-border/40 mb-3 line-clamp-2">
-            <span className="text-white/80 font-mono text-[10px] uppercase mr-1.5">
+            <span className="text-white/80 font-mono text-[11px] uppercase mr-1.5">
               Transcript:
             </span>
             {card.audio.transcript}
@@ -241,19 +241,19 @@ export default function AudioCard({
                   key={idx}
                   type="button"
                   onClick={() => onSelectTag?.(isSelected ? '' : tag)}
-                  className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-0.5 rounded-full border transition-all ${
+                  className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all ${
                     isSelected
                       ? 'bg-nothing-red text-white border-nothing-red'
                       : 'bg-nothing-hover border-nothing-border/60 text-nothing-gray hover:text-white'
                   }`}
                 >
-                  <Tag size={9} />
+                  <Tag size={11} />
                   <span>{tag}</span>
                 </button>
               );
             })}
             {card.tags.length > 4 && (
-              <span className="text-[10px] font-mono text-nothing-gray px-1.5 py-0.5">
+              <span className="text-[11px] text-nothing-gray px-1.5 py-0.5">
                 +{card.tags.length - 4}
               </span>
             )}

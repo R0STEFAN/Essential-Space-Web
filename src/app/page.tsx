@@ -703,7 +703,7 @@ export default function DashboardPage() {
                     <span className="font-dot text-xs text-nothing-gray group-hover:text-white uppercase tracking-wider font-semibold transition-colors">
                       CAPTURES
                     </span>
-                    <span className="text-[10px] font-mono text-nothing-gray/60">
+                    <span className="text-[11px] font-mono text-nothing-gray/60">
                       ({captureSources.reduce((acc, curr) => acc + curr.count, 0)})
                     </span>
                     <ChevronDown
@@ -713,7 +713,7 @@ export default function DashboardPage() {
                       }`}
                     />
                     {!isCapturesExpanded && activeCaptureFrom && (
-                      <span className="ml-2 px-2.5 py-0.5 rounded-full bg-white text-black font-mono text-[10px] font-semibold shadow-sm">
+                      <span className="ml-2 px-2.5 py-0.5 rounded-full bg-white text-black font-mono text-[11px] font-semibold shadow-sm">
                         {getCaptureSourceLabel(activeCaptureFrom)}
                       </span>
                     )}
@@ -723,7 +723,7 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       onClick={() => setActiveCaptureFrom('')}
-                      className="text-[10px] font-mono text-nothing-red hover:underline"
+                      className="text-[11px] font-mono text-nothing-red hover:underline"
                     >
                       Reset filter
                     </button>
@@ -761,7 +761,7 @@ export default function DashboardPage() {
                         >
                           <span>{src.label}</span>
                           <span
-                            className={`text-[10px] ${
+                            className={`text-[11px] ${
                               isSelected ? 'text-black/75 font-semibold' : 'text-[#707070]'
                             }`}
                           >

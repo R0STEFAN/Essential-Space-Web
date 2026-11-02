@@ -49,7 +49,7 @@ export default function TextCard({
     >
       <div>
         {/* Header */}
-        <div className="flex items-center justify-between text-xs text-nothing-gray font-mono mb-2">
+        <div className="flex items-center justify-between text-xs text-nothing-gray mb-2">
           <div className="flex items-center gap-2">
             {isSelectMode ? (
               <button
@@ -58,13 +58,13 @@ export default function TextCard({
                   e.stopPropagation();
                   onToggleSelect?.(card.cardId);
                 }}
-                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${
                   isSelected
                     ? 'bg-nothing-red border-nothing-red text-white'
                     : 'border-nothing-gray/60 hover:border-white bg-black/40'
                 }`}
               >
-                {isSelected && <Check size={11} strokeWidth={3} />}
+                {isSelected && <Check size={12} strokeWidth={3} />}
               </button>
             ) : (
               <span className="p-1 rounded bg-nothing-red/20 text-nothing-red">
@@ -73,7 +73,7 @@ export default function TextCard({
             )}
             <span className="font-dot">{isClipped ? 'CLIPPED NOTE' : 'FREEFORM'}</span>
             {card.collectionName && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[10px]">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
                 {card.collectionName}
               </span>
             )}
@@ -88,14 +88,14 @@ export default function TextCard({
                     onToggleSelect?.(card.cardId);
                   }}
                   title="Select note"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-nothing-gray hover:text-white"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-nothing-gray hover:text-white"
                 >
                   <Square size={13} />
                 </button>
                 <button
                   onClick={copyContent}
                   title="Copy Note"
-                  className="text-nothing-gray hover:text-white p-1 rounded hover:bg-nothing-hover transition-colors"
+                  className="text-nothing-gray hover:text-white p-1.5 rounded hover:bg-nothing-hover transition-colors"
                 >
                   {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                 </button>
@@ -125,13 +125,13 @@ export default function TextCard({
                   key={idx}
                   type="button"
                   onClick={() => onSelectTag?.(isSelected ? '' : tag)}
-                  className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-0.5 rounded-full border transition-all ${
+                  className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all ${
                     isSelected
                       ? 'bg-nothing-red text-white border-nothing-red'
                       : 'bg-nothing-hover border-nothing-border/60 text-nothing-gray hover:text-white hover:border-nothing-gray/50'
                   }`}
                 >
-                  <Tag size={9} />
+                  <Tag size={10} />
                   <span>{tag}</span>
                 </button>
               );
@@ -140,8 +140,8 @@ export default function TextCard({
         )}
       </div>
 
-      <div className="mt-5 pt-2 border-t border-nothing-border/30 flex items-center justify-between text-[11px] text-nothing-gray font-mono">
-        <span>{new Date(card.createTime).toLocaleDateString()}</span>
+      <div className="mt-5 pt-2 border-t border-nothing-border/30 flex items-center justify-between text-xs text-nothing-gray">
+        <span className="font-mono text-[11px]">{new Date(card.createTime).toLocaleDateString()}</span>
         <span className="text-nothing-light group-hover:text-nothing-red flex items-center gap-1 transition-colors">
           <span>Full Report</span>
           <Maximize2 size={11} />

@@ -97,7 +97,7 @@ export default function ImageCard({
               {card.audio?.audioUri ? 'CAPTURE + VOICE' : 'SCREENSHOT / CAPTURE'}
             </span>
             {card.collectionName && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[10px]">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
                 {card.collectionName}
               </span>
             )}
@@ -111,7 +111,7 @@ export default function ImageCard({
                   onToggleSelect?.(card.cardId);
                 }}
                 title="Select note"
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-nothing-gray hover:text-white"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded text-nothing-gray hover:text-white"
               >
                 <Square size={13} />
               </button>
@@ -153,7 +153,7 @@ export default function ImageCard({
 
         {/* User Note Text if present and distinct from AI summary */}
         {card.content && card.summary && card.content !== card.summary && (
-          <p className="text-xs text-white/90 font-mono mb-2 line-clamp-2 bg-white/5 px-2.5 py-1.5 rounded-lg border border-nothing-border/50">
+          <p className="text-xs text-white/90 mb-2 line-clamp-2 bg-white/5 px-2.5 py-1.5 rounded-lg border border-nothing-border/50">
             {card.content}
           </p>
         )}
@@ -211,7 +211,7 @@ export default function ImageCard({
                     }
                   )}
                 </div>
-                <div className="flex justify-between text-[10px] text-nothing-gray font-mono mt-0.5">
+                <div className="flex justify-between text-[11px] text-nothing-gray font-mono mt-0.5">
                   <span>{formatTime(currentTime)}</span>
                   <span>{formatTime(duration)}</span>
                 </div>
@@ -246,19 +246,19 @@ export default function ImageCard({
                   key={idx}
                   type="button"
                   onClick={() => onSelectTag?.(isSelected ? '' : tag)}
-                  className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-0.5 rounded-full border transition-all ${
+                  className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all ${
                     isSelected
                       ? 'bg-nothing-red text-white border-nothing-red'
                       : 'bg-nothing-hover border-nothing-border/60 text-nothing-gray hover:text-white'
                   }`}
                 >
-                  <Tag size={9} />
+                  <Tag size={11} />
                   <span>{tag}</span>
                 </button>
               );
             })}
             {card.tags.length > 4 && (
-              <span className="text-[10px] font-mono text-nothing-gray px-1.5 py-0.5">
+              <span className="text-[11px] text-nothing-gray px-1.5 py-0.5">
                 +{card.tags.length - 4}
               </span>
             )}

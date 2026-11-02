@@ -18,9 +18,10 @@ const config: Config = {
           border: '#26262A',
           red: '#D71921',
           'red-hover': '#B8141B',
-          gray: '#86868B',
-          muted: '#86868B',
-          light: '#E6E6E6',
+          gray: '#A1A1A6',
+          'gray-dim': '#707075',
+          muted: '#8E8E93',
+          light: '#F2F2F2',
         },
       },
       fontFamily: {

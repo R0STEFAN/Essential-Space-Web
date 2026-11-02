@@ -65,7 +65,7 @@ export default function TodoCard({
             )}
             <span className="font-dot">CHECKLIST</span>
             {card.collectionName && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[10px]">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
                 {card.collectionName}
               </span>
             )}
@@ -79,7 +79,7 @@ export default function TodoCard({
                   onToggleSelect?.(card.cardId);
                 }}
                 title="Select note"
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-nothing-gray hover:text-white"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded text-nothing-gray hover:text-white"
               >
                 <Square size={13} />
               </button>
@@ -136,8 +136,8 @@ export default function TodoCard({
                     {event.title}
                   </p>
                   {event.time && (
-                    <div className="flex items-center gap-1 text-[10px] text-nothing-gray font-mono mt-1">
-                      <Calendar size={10} />
+                    <div className="flex items-center gap-1 text-[11px] text-nothing-gray font-mono mt-1">
+                      <Calendar size={11} />
                       <span>{new Date(event.time).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
                     </div>
                   )}

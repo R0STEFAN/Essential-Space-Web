@@ -100,10 +100,10 @@ export default function Navbar({
           <img src="/icon.svg" alt="Essential Space Icon" className="w-7 h-7" />
           <div className="flex flex-col">
             <span className="font-dot text-sm tracking-wider font-semibold text-white">
-              ESSENTIAL SPACE // WEB
+              ESSENTIAL SPACE
             </span>
-            <span className="text-[10px] font-mono text-nothing-gray hidden sm:inline">
-              NOTHING OS SYNC SERVICE
+            <span className="text-[11px] text-nothing-gray hidden sm:inline">
+              NOTHING OS SYNC
             </span>
           </div>
         </div>
@@ -136,7 +136,7 @@ export default function Navbar({
         </nav>
 
         {/* Right Section: Language Dropdown, Capture, Sync, Account Avatar */}
-        <div className="flex items-center gap-2 sm:gap-2.5 font-mono text-xs">
+        <div className="flex items-center gap-2 sm:gap-2.5 text-xs">
           {/* Language Dropdown with Search (Replaces former session timer) */}
           <div className="relative" ref={langRef}>
             <button
@@ -146,14 +146,14 @@ export default function Navbar({
                 setIsAccountOpen(false);
               }}
               title="Default AI Summary & Transcription Language"
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono transition-all select-none ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all select-none ${
                 isLangOpen
                   ? 'bg-white text-black border-white font-semibold'
                   : 'bg-nothing-card hover:bg-nothing-hover border-nothing-border text-nothing-light hover:text-white hover:border-white/30'
               }`}
             >
               <Globe size={13} className={isLangOpen ? 'text-nothing-red' : 'text-nothing-red'} />
-              <span className="font-semibold uppercase tracking-wider text-[11px]">
+              <span className="font-semibold uppercase tracking-wider text-xs">
                 {selectedLang.code === 'auto' ? 'AUTO' : selectedLang.code.toUpperCase()}
               </span>
               <ChevronDown
@@ -168,10 +168,10 @@ export default function Navbar({
             {isLangOpen && (
               <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-[#141414]/95 border border-white/20 shadow-2xl p-2.5 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
                 <div className="px-2 pt-1 pb-2 border-b border-nothing-border/50">
-                  <span className="font-dot text-[10px] text-nothing-gray uppercase tracking-wider block">
+                  <span className="font-dot text-[11px] text-nothing-gray uppercase tracking-wider block">
                     AI SUMMARY & TRANSCRIPT LANGUAGE
                   </span>
-                  <span className="text-[11px] font-mono text-nothing-light">
+                  <span className="text-xs text-nothing-light">
                     Default language for all AI insights
                   </span>
                 </div>
@@ -185,7 +185,7 @@ export default function Navbar({
                     value={langSearch}
                     onChange={e => setLangSearch(e.target.value)}
                     placeholder="Search language..."
-                    className="w-full bg-black/80 border border-nothing-border rounded-xl pl-8 pr-7 py-1.5 text-xs font-mono text-white placeholder-nothing-gray focus:outline-none focus:border-white/40 transition-colors"
+                    className="w-full bg-black/80 border border-nothing-border rounded-xl pl-8 pr-7 py-1.5 text-xs text-white placeholder:text-nothing-gray/70 focus:outline-none focus:border-white/40 transition-colors"
                   />
                   {langSearch && (
                     <button
@@ -211,7 +211,7 @@ export default function Navbar({
                           setIsLangOpen(false);
                           setLangSearch('');
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono transition-all text-left group ${
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all text-left group ${
                           isSelected
                             ? 'bg-white text-black font-semibold shadow-sm'
                             : 'text-nothing-light hover:text-white hover:bg-white/10'
@@ -234,7 +234,7 @@ export default function Navbar({
 
                         <div className="flex items-center gap-2 shrink-0 ml-2">
                           <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-mono uppercase ${
+                            className={`px-1.5 py-0.5 rounded text-[11px] font-mono uppercase ${
                               isSelected
                                 ? 'bg-black/10 text-black font-bold'
                                 : 'bg-black/50 text-nothing-gray border border-nothing-border/60'
@@ -314,7 +314,7 @@ export default function Navbar({
                     {userInitial}
                   </div>
 
-                  <span className="font-dot text-[10px] text-nothing-red uppercase tracking-widest font-semibold">
+                  <span className="font-dot text-[11px] text-nothing-red uppercase tracking-widest font-semibold">
                     NOTHING ACCOUNT
                   </span>
 

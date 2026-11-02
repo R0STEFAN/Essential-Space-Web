@@ -122,7 +122,7 @@ export default function FilterBar({
                     />
                     <span className="truncate text-white font-medium">{selectedCol.name}</span>
                     {selectedCol.cardCount !== undefined && selectedCol.cardCount > 0 && (
-                      <span className="text-[10px] text-nothing-gray font-mono flex-shrink-0">
+                      <span className="text-[11px] text-nothing-gray font-mono flex-shrink-0">
                         ({selectedCol.cardCount})
                       </span>
                     )}
@@ -188,7 +188,7 @@ export default function FilterBar({
 
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             {col.cardCount !== undefined && col.cardCount > 0 && (
-                              <span className="text-[10px] text-nothing-gray">
+                              <span className="text-[11px] text-nothing-gray font-mono">
                                 {col.cardCount}
                               </span>
                             )}
@@ -232,7 +232,7 @@ export default function FilterBar({
                 : 'bg-nothing-card/80 text-nothing-gray hover:text-white border-nothing-border/70'
             }`}
           >
-            <Tag size={10} />
+            <Tag size={11} />
             <span>All Tags</span>
           </button>
 
@@ -249,10 +249,10 @@ export default function FilterBar({
                     : 'bg-nothing-hover/70 text-nothing-gray hover:text-white hover:border-nothing-gray/50 border-nothing-border/60'
                 }`}
               >
-                <Tag size={10} />
+                <Tag size={11} />
                 <span>{t.name}</span>
                 <span
-                  className={`text-[9px] ${
+                  className={`text-[11px] ${
                     isSelected ? 'text-white/80' : 'text-nothing-gray/60'
                   }`}
                 >

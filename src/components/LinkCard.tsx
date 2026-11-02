@@ -98,7 +98,7 @@ export default function LinkCard({
               )}
               <span className="font-dot">LINK / BOOKMARK</span>
               {card.collectionName && (
-                <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[10px]">
+                <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
                   {card.collectionName}
                 </span>
               )}
@@ -112,7 +112,7 @@ export default function LinkCard({
                     onToggleSelect?.(card.cardId);
                   }}
                   title="Select note"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-nothing-gray hover:text-white"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded text-nothing-gray hover:text-white"
                 >
                   <Square size={13} />
                 </button>
@@ -184,13 +184,13 @@ export default function LinkCard({
                     key={idx}
                     type="button"
                     onClick={() => onSelectTag?.(isSelected ? '' : tag)}
-                    className={`inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-0.5 rounded-full border transition-all ${
+                    className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all ${
                       isSelected
                         ? 'bg-nothing-red text-white border-nothing-red'
                         : 'bg-nothing-hover border-nothing-border/60 text-nothing-gray hover:text-white'
                     }`}
                   >
-                    <Tag size={9} />
+                    <Tag size={11} />
                     <span>{tag}</span>
                   </button>
                 );

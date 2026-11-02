@@ -279,9 +279,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-black text-white">
-      {/* Decorative Background Elements */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-nothing-red/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+      {/* Subtle Nothing OS Dot Grid Background */}
+      <div className="absolute inset-0 bg-nothing-grid pointer-events-none opacity-40" />
 
       <div className="w-full max-w-md bg-nothing-dark border border-nothing-border rounded-3xl p-8 relative z-10 shadow-2xl">
         {/* Header */}
@@ -293,7 +292,7 @@ export default function LoginPage() {
           <h1 className="font-dot text-2xl tracking-wider uppercase text-white mb-1">
             ESSENTIAL SPACE
           </h1>
-          <p className="text-xs font-mono text-nothing-gray tracking-widest uppercase">
+          <p className="text-xs text-nothing-gray tracking-wider uppercase">
             NOTHING OS CLOUD SYNC
           </p>
         </div>
@@ -302,7 +301,7 @@ export default function LoginPage() {
         {savedAccount && (
           <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-mono text-green-400 uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs text-green-400 uppercase tracking-wider font-semibold">
                 <UserCheck className="w-4 h-4" />
                 <span>SAVED SESSION</span>
               </div>
@@ -312,7 +311,7 @@ export default function LoginPage() {
                   await clearDbAuth();
                   setSavedAccount(null);
                 }}
-                className="text-[10px] font-mono text-nothing-gray hover:text-white transition-colors"
+                className="text-xs text-nothing-gray hover:text-white transition-colors py-1 px-2 -mr-2"
               >
                 Sign out
               </button>
@@ -339,7 +338,7 @@ export default function LoginPage() {
               setActiveTab('email');
               setError(null);
             }}
-            className={`py-2.5 px-3 rounded-lg text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+            className={`py-2.5 px-3 rounded-lg text-xs uppercase tracking-wider font-medium transition-all flex items-center justify-center gap-2 ${
               activeTab === 'email'
                 ? 'bg-nothing-red text-white shadow'
                 : 'text-nothing-gray hover:text-white'
@@ -354,7 +353,7 @@ export default function LoginPage() {
               setActiveTab('token');
               setError(null);
             }}
-            className={`py-2.5 px-3 rounded-lg text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+            className={`py-2.5 px-3 rounded-lg text-xs uppercase tracking-wider font-medium transition-all flex items-center justify-center gap-2 ${
               activeTab === 'token'
                 ? 'bg-nothing-red text-white shadow'
                 : 'text-nothing-gray hover:text-white'
@@ -367,7 +366,7 @@ export default function LoginPage() {
 
         {/* Error Banner */}
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-nothing-red/10 border border-nothing-red/30 text-nothing-red text-xs font-mono leading-relaxed">
+          <div className="mb-4 p-3 rounded-xl bg-nothing-red/10 border border-nothing-red/30 text-nothing-red text-xs leading-relaxed">
             [ERROR]: {error}
           </div>
         )}
@@ -422,13 +421,13 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="p-3 bg-white/5 border border-white/10 rounded-xl space-y-1 text-[11px] font-mono text-nothing-gray">
-                  <div className="text-white font-medium flex items-center gap-1.5">
+                <div className="p-3 bg-white/5 border border-white/10 rounded-xl space-y-1 text-xs text-nothing-gray">
+                  <div className="text-white font-medium flex items-center gap-1.5 text-xs">
                     <ShieldCheck className="w-3.5 h-3.5 text-nothing-red" />
                     <span>Zero-Knowledge Sign In</span>
                   </div>
-                  <p className="text-[10px] text-nothing-gray leading-relaxed">
-                    If Nothing restricts cloud IP logins, switch to the <span className="text-white">TOKEN</span> tab to authenticate directly.
+                  <p className="text-[11px] text-nothing-gray leading-relaxed">
+                    If Nothing restricts cloud IP logins, switch to the <span className="text-white font-medium">TOKEN</span> tab to authenticate directly.
                   </p>
                 </div>
 
@@ -528,7 +527,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => pasteFromClipboard(setToken)}
-                  className="text-[10px] font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
+                  className="text-[11px] font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
                 >
                   <Copy className="w-3 h-3" />
                   <span>PASTE CLIPBOARD</span>
@@ -566,7 +565,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => pasteFromClipboard(setRefreshToken)}
-                      className="text-[10px] font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
+                      className="text-[11px] font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
                     >
                       <Copy className="w-3 h-3" />
                       <span>PASTE CLIPBOARD</span>
@@ -588,7 +587,7 @@ export default function LoginPage() {
                 <Sparkles className="w-3.5 h-3.5 text-nothing-red" />
                 <span>How to get your token:</span>
               </div>
-              <ol className="list-decimal list-inside space-y-1 text-[10px] text-nothing-gray/80 pl-1 leading-relaxed">
+              <ol className="list-decimal list-inside space-y-1 text-[11px] text-nothing-gray/80 pl-1 leading-relaxed">
                 <li>Sign in at <span className="text-white">account.nothing.tech</span>.</li>
                 <li>Press <span className="text-white">F12</span> → <span className="text-white">Application</span> → <span className="text-white">Local Storage</span>.</li>
                 <li>Copy <code className="text-white">nothingAuth_account-app-web_accessToken</code>.</li>
