@@ -28,6 +28,7 @@ import { convertToWebP } from '@/lib/image-optimizer';
 import { uploadMediaToGcs } from '@/lib/firebase-upload';
 import { useScrollLock } from '@/lib/useScrollLock';
 import { fetchLinkPreview, normalizeUrl } from '@/lib/link-preview';
+import { extractImageFromDataTransfer } from '@/lib/clipboard';
 
 interface CreateNoteModalProps {
   isOpen: boolean;
@@ -78,6 +79,13 @@ export default function CreateNoteModal({
   // Image upload state
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isPastedFromClipboard, setIsPastedFromClipboard] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const imagePreviewRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    imagePreviewRef.current = imagePreview;
+  }, [imagePreview]);
 
   // Audio recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -170,8 +178,13 @@ export default function CreateNoteModal({
       setShowColInput(false);
       setNewColName('');
       setCreateColError(null);
+      if (imagePreviewRef.current) {
+        URL.revokeObjectURL(imagePreviewRef.current);
+      }
       setImageFile(null);
       setImagePreview(null);
+      setIsPastedFromClipboard(false);
+      setIsDraggingOver(false);
       setAudioBlob(null);
       setIsRecording(false);
       setRecordingDuration(0);
@@ -181,24 +194,65 @@ export default function CreateNoteModal({
       setError(null);
       if (timerRef.current) clearInterval(timerRef.current);
     }
+  }, [isOpen, activeCollectionId]);
+
+  // Clean up object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreviewRef.current) {
+        URL.revokeObjectURL(imagePreviewRef.current);
+      }
+    };
+  }, []);
+
+  // Handle image assignment with memory cleanup
+  const applyImage = (file: File, fromClipboard = false) => {
+    if (imagePreviewRef.current) {
+      URL.revokeObjectURL(imagePreviewRef.current);
+    }
+    const url = URL.createObjectURL(file);
+    setImageFile(file);
+    setImagePreview(url);
+    setShowImageAttachment(true);
+    setIsPastedFromClipboard(fromClipboard);
+  };
+
+  // Global paste handler while modal is open (intercepts screenshots and pasted images)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleWindowPaste = (e: ClipboardEvent) => {
+      const imgFile = extractImageFromDataTransfer(e.clipboardData);
+      if (imgFile) {
+        e.preventDefault();
+        applyImage(imgFile, true);
+      }
+    };
+
+    window.addEventListener('paste', handleWindowPaste);
+    return () => {
+      window.removeEventListener('paste', handleWindowPaste);
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  // Handle image selection
+  // Handle image selection via file dialog
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
-      const url = URL.createObjectURL(file);
-      setImagePreview(url);
-      setShowImageAttachment(true);
+      applyImage(file, false);
     }
+    e.target.value = '';
   };
 
   const removeImage = () => {
+    if (imagePreviewRef.current) {
+      URL.revokeObjectURL(imagePreviewRef.current);
+    }
     setImageFile(null);
     setImagePreview(null);
+    setIsPastedFromClipboard(false);
     if (tab !== 'IMAGE') {
       setShowImageAttachment(false);
     }
@@ -407,7 +461,14 @@ export default function CreateNoteModal({
 
       // 5. Create Card in Nothing Cloud Storage & IndexedDB
       // Assign official Nothing OS capture_from source
-      const targetCaptureFrom = tab === 'LINK' ? 'share_sheet' : (hasAudio ? 'recording' : 'note');
+      const targetCaptureFrom =
+        tab === 'LINK'
+          ? 'share_sheet'
+          : hasAudio
+          ? 'recording'
+          : isPastedFromClipboard
+          ? 'clipboard'
+          : 'note';
 
       setStatusText('Syncing new note to Nothing Cloud...');
       const createRes = await createCloudCard({
@@ -425,6 +486,8 @@ export default function CreateNoteModal({
             ? 'Voice + Photo Memo'
             : hasAudio
             ? 'Voice Memo'
+            : isPastedFromClipboard
+            ? 'Clipboard Image'
             : 'Photo Note'),
         content,
         summary:
@@ -668,9 +731,14 @@ export default function CreateNoteModal({
           {(tab === 'IMAGE' || showImageAttachment) && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-mono text-nothing-gray uppercase flex items-center gap-1">
+                <label className="text-[11px] font-mono text-nothing-gray uppercase flex items-center gap-1.5">
                   <ImageIcon size={12} className="text-amber-400" />
                   <span>Photo / Screenshot Attachment</span>
+                  {isPastedFromClipboard && (
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-mono border border-emerald-500/30">
+                      FROM CLIPBOARD
+                    </span>
+                  )}
                 </label>
                 {imageFile && (
                   <button
@@ -684,21 +752,47 @@ export default function CreateNoteModal({
                 )}
               </div>
 
-              <label className="relative flex flex-col items-center justify-center w-full h-36 rounded-xl border border-dashed border-nothing-border hover:border-white/50 cursor-pointer bg-black/40 overflow-hidden group transition-colors">
+              <label
+                onDragOver={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingOver(true);
+                }}
+                onDragLeave={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingOver(false);
+                }}
+                onDrop={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingOver(false);
+                  const dropped = extractImageFromDataTransfer(e.dataTransfer);
+                  if (dropped) {
+                    applyImage(dropped, false);
+                  }
+                }}
+                className={`relative flex flex-col items-center justify-center w-full h-36 rounded-xl border border-dashed cursor-pointer overflow-hidden group transition-all ${
+                  isDraggingOver
+                    ? 'border-nothing-red bg-nothing-red/10 scale-[1.01]'
+                    : 'border-nothing-border hover:border-white/50 bg-black/40'
+                }`}
+              >
                 {imagePreview ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-mono text-white transition-opacity">
-                      Click to replace photo
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 text-xs font-mono text-white transition-opacity">
+                      <span>Click to replace photo</span>
+                      <span className="text-[10px] text-nothing-gray">or paste new image (Ctrl+V)</span>
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center gap-1.5 text-nothing-gray">
-                    <Upload size={20} className="text-nothing-red" />
-                    <span className="text-xs font-mono">Click or drag image here</span>
+                  <div className="flex flex-col items-center gap-1.5 text-nothing-gray text-center px-4">
+                    <Upload size={20} className={isDraggingOver ? 'text-white animate-bounce' : 'text-nothing-red'} />
+                    <span className="text-xs font-mono text-white/90">Click, drag, or paste image (Ctrl+V)</span>
                     <span className="text-[10px] font-mono text-nothing-gray/60">
-                      Auto-compressed to WebP before upload
+                      Screenshots & files auto-compressed to WebP
                     </span>
                   </div>
                 )}
@@ -816,11 +910,18 @@ export default function CreateNoteModal({
               rows={3}
               value={content}
               onChange={e => setContent(e.target.value)}
+              onPaste={e => {
+                const imgFile = extractImageFromDataTransfer(e.clipboardData);
+                if (imgFile) {
+                  e.preventDefault();
+                  applyImage(imgFile, true);
+                }
+              }}
               placeholder={
                 isVoiceAndPhoto
                   ? 'Add any extra notes or questions about this photo and voice memo...'
                   : tab === 'NOTE'
-                  ? 'Type your thoughts, meeting notes, shopping items, or action checklist...'
+                  ? 'Type thoughts, or paste screenshot (Ctrl+V)...'
                   : 'Add any extra context or instructions for Nothing AI...'
               }
               className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-nothing-border text-xs text-white placeholder:text-nothing-gray/50 focus:outline-none focus:border-white transition-colors font-mono resize-none"
