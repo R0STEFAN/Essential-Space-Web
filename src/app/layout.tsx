@@ -24,7 +24,7 @@ const ndotOriginal = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'ESSENTIAL SPACE // WEB',
+  title: 'ESSENTIAL SPACE - WEB',
   description: 'Self-hosted web dashboard for Nothing OS Essential Space notes, audio transcriptions, and tasks.',
   icons: {
     icon: [
