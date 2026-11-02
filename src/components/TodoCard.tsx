@@ -50,7 +50,7 @@ export default function TodoCard({
                   e.stopPropagation();
                   onToggleSelect?.(card.cardId);
                 }}
-                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                   isSelected
                     ? 'bg-nothing-red border-nothing-red text-white'
                     : 'border-nothing-gray/60 hover:border-white bg-black/40'
@@ -59,9 +59,20 @@ export default function TodoCard({
                 {isSelected && <Check size={11} strokeWidth={3} />}
               </button>
             ) : (
-              <span className={`p-1 rounded ${allDone ? 'bg-green-500/20 text-green-400' : 'bg-nothing-red/20 text-nothing-red'}`}>
-                {allDone ? <CheckCircle2 size={14} /> : <CheckSquare size={14} />}
-              </span>
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  onToggleSelect?.(card.cardId);
+                }}
+                title="Select note"
+                className="relative w-5 h-5 flex items-center justify-center flex-shrink-0"
+              >
+                <span className={`p-0.5 rounded transition-opacity group-hover:opacity-0 ${allDone ? 'bg-green-500/20 text-green-400' : 'bg-nothing-red/20 text-nothing-red'}`}>
+                  {allDone ? <CheckCircle2 size={13} /> : <CheckSquare size={13} />}
+                </span>
+                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-white bg-black/40 opacity-0 group-hover:opacity-100 transition-all" />
+              </button>
             )}
             <span className="font-dot">CHECKLIST</span>
             {card.collectionName && (
@@ -71,19 +82,6 @@ export default function TodoCard({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {!isSelectMode && (
-              <button
-                type="button"
-                onClick={e => {
-                  e.stopPropagation();
-                  onToggleSelect?.(card.cardId);
-                }}
-                title="Select note"
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded text-nothing-gray hover:text-white"
-              >
-                <Square size={13} />
-              </button>
-            )}
             <span className="font-mono text-[11px] text-nothing-light font-medium">
               {completedCount}/{totalCount}
             </span>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Play, Pause, Mic, Tag, Sparkles, Maximize2, Check, Square } from 'lucide-react';
+import { Play, Pause, Mic, Tag, Sparkles, Maximize2, Check } from 'lucide-react';
 import type { Card } from '@/types';
 
 export default function AudioCard({
@@ -88,7 +88,7 @@ export default function AudioCard({
                   e.stopPropagation();
                   onToggleSelect?.(card.cardId);
                 }}
-                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                   isSelected
                     ? 'bg-nothing-red border-nothing-red text-white'
                     : 'border-nothing-gray/60 hover:border-white bg-black/40'
@@ -97,9 +97,20 @@ export default function AudioCard({
                 {isSelected && <Check size={11} strokeWidth={3} />}
               </button>
             ) : (
-              <span className="p-1 rounded bg-nothing-red/20 text-nothing-red">
-                <Mic size={14} />
-              </span>
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  onToggleSelect?.(card.cardId);
+                }}
+                title="Select note"
+                className="relative w-5 h-5 flex items-center justify-center flex-shrink-0"
+              >
+                <span className="p-0.5 rounded bg-nothing-red/20 text-nothing-red transition-opacity group-hover:opacity-0">
+                  <Mic size={13} />
+                </span>
+                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-white bg-black/40 opacity-0 group-hover:opacity-100 transition-all" />
+              </button>
             )}
             <span className="font-dot">{card.imageUrl ? 'VOICE + PHOTO' : 'VOICE MEMO'}</span>
             {card.collectionName && (
@@ -109,19 +120,6 @@ export default function AudioCard({
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            {!isSelectMode && (
-              <button
-                type="button"
-                onClick={e => {
-                  e.stopPropagation();
-                  onToggleSelect?.(card.cardId);
-                }}
-                title="Select note"
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded text-nothing-gray hover:text-white"
-              >
-                <Square size={13} />
-              </button>
-            )}
             <span className="text-[11px]">
               {new Date(card.createTime).toLocaleTimeString([], {
                 hour: '2-digit',

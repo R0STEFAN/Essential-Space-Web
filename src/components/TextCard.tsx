@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Copy, Check, Scissors, Tag, Maximize2, Square } from 'lucide-react';
+import { FileText, Copy, Check, Scissors, Tag, Maximize2 } from 'lucide-react';
 import type { Card } from '@/types';
 
 export default function TextCard({
@@ -58,18 +58,29 @@ export default function TextCard({
                   e.stopPropagation();
                   onToggleSelect?.(card.cardId);
                 }}
-                className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${
+                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                   isSelected
                     ? 'bg-nothing-red border-nothing-red text-white'
                     : 'border-nothing-gray/60 hover:border-white bg-black/40'
                 }`}
               >
-                {isSelected && <Check size={12} strokeWidth={3} />}
+                {isSelected && <Check size={11} strokeWidth={3} />}
               </button>
             ) : (
-              <span className="p-1 rounded bg-nothing-red/20 text-nothing-red">
-                {isClipped ? <Scissors size={14} /> : <FileText size={14} />}
-              </span>
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  onToggleSelect?.(card.cardId);
+                }}
+                title="Select note"
+                className="relative w-5 h-5 flex items-center justify-center flex-shrink-0"
+              >
+                <span className="p-0.5 rounded bg-nothing-red/20 text-nothing-red transition-opacity group-hover:opacity-0">
+                  {isClipped ? <Scissors size={13} /> : <FileText size={13} />}
+                </span>
+                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-white bg-black/40 opacity-0 group-hover:opacity-100 transition-all" />
+              </button>
             )}
             <span className="font-dot">{isClipped ? 'CLIPPED NOTE' : 'FREEFORM'}</span>
             {card.collectionName && (
@@ -80,26 +91,13 @@ export default function TextCard({
           </div>
           <div className="flex items-center gap-1">
             {!isSelectMode && (
-              <>
-                <button
-                  type="button"
-                  onClick={e => {
-                    e.stopPropagation();
-                    onToggleSelect?.(card.cardId);
-                  }}
-                  title="Select note"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-nothing-gray hover:text-white"
-                >
-                  <Square size={13} />
-                </button>
-                <button
-                  onClick={copyContent}
-                  title="Copy Note"
-                  className="text-nothing-gray hover:text-white p-1.5 rounded hover:bg-nothing-hover transition-colors"
-                >
-                  {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                </button>
-              </>
+              <button
+                onClick={copyContent}
+                title="Copy Note"
+                className="text-nothing-gray hover:text-white p-1.5 rounded hover:bg-nothing-hover transition-colors"
+              >
+                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+              </button>
             )}
           </div>
         </div>
