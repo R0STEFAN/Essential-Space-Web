@@ -119,14 +119,6 @@ export default function AudioCard({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px]">
-              {new Date(card.createTime).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
-          </div>
         </div>
 
         {/* Optional attached image capture */}
@@ -260,7 +252,13 @@ export default function AudioCard({
       </div>
 
       <div className="mt-4 pt-2 border-t border-nothing-border/30 flex items-center justify-between text-[11px] text-nothing-gray font-mono">
-        <span>{new Date(card.createTime).toLocaleDateString()}</span>
+        <span>
+          {new Date(card.createTime).toLocaleDateString()}{' '}
+          {new Date(card.createTime).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
         <span className="text-nothing-light group-hover:text-nothing-red flex items-center gap-1 transition-colors">
           <span>Full Report</span>
           <Maximize2 size={11} />

@@ -112,9 +112,6 @@ export default function ImageCard({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px]">{new Date(card.createTime).toLocaleDateString()}</span>
-          </div>
         </div>
 
         {/* Image preview */}
@@ -265,6 +262,7 @@ export default function ImageCard({
 
       <div className="mt-4 pt-2 border-t border-nothing-border/30 flex items-center justify-between text-[11px] text-nothing-gray font-mono">
         <span>
+          {new Date(card.createTime).toLocaleDateString()}{' '}
           {new Date(card.createTime).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',

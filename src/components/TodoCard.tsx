@@ -147,7 +147,13 @@ export default function TodoCard({
       </div>
 
       <div className="mt-4 pt-2 border-t border-nothing-border/30 flex items-center justify-between text-[11px] text-nothing-gray font-mono">
-        <span>{new Date(card.createTime).toLocaleDateString()}</span>
+        <span>
+          {new Date(card.createTime).toLocaleDateString()}{' '}
+          {new Date(card.createTime).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
         <span className="text-nothing-gray/70">Nothing OS Task Card</span>
       </div>
     </div>

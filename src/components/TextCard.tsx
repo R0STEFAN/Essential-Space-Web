@@ -138,8 +138,14 @@ export default function TextCard({
         )}
       </div>
 
-      <div className="mt-5 pt-2 border-t border-nothing-border/30 flex items-center justify-between text-xs text-nothing-gray">
-        <span className="font-mono text-[11px]">{new Date(card.createTime).toLocaleDateString()}</span>
+      <div className="mt-5 pt-2 border-t border-nothing-border/30 flex items-center justify-between text-[11px] text-nothing-gray font-mono">
+        <span>
+          {new Date(card.createTime).toLocaleDateString()}{' '}
+          {new Date(card.createTime).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
         <span className="text-nothing-light group-hover:text-nothing-red flex items-center gap-1 transition-colors">
           <span>Full Report</span>
           <Maximize2 size={11} />
