@@ -147,18 +147,22 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
       }
     }
 
-    // 2. Validate Bot Token & Chat ID (support common aliases)
-    const botToken =
-      env.TELEGRAM_BOT_TOKEN ||
-      (env as any).BOT_TOKEN ||
-      (env as any).TELEGRAM_TOKEN ||
-      (env as any).TG_BOT_TOKEN;
+    // 2. Validate Bot Token & Chat ID (support common aliases & case-insensitivity)
+    const findEnv = (obj: any, ...candidates: string[]) => {
+      if (!obj) return undefined;
+      for (const c of candidates) {
+        if (obj[c]) return String(obj[c]);
+        for (const k of Object.keys(obj)) {
+          if (k.toLowerCase() === c.toLowerCase() && obj[k]) {
+            return String(obj[k]);
+          }
+        }
+      }
+      return undefined;
+    };
 
-    const chatId =
-      env.TELEGRAM_CHAT_ID ||
-      (env as any).CHAT_ID ||
-      (env as any).TELEGRAM_CHANNEL_ID ||
-      (env as any).TG_CHAT_ID;
+    const botToken = findEnv(env, 'TELEGRAM_BOT_TOKEN', 'BOT_TOKEN', 'TELEGRAM_TOKEN', 'TG_BOT_TOKEN');
+    const chatId = findEnv(env, 'TELEGRAM_CHAT_ID', 'CHAT_ID', 'TELEGRAM_CHANNEL_ID', 'TG_CHAT_ID');
 
     if (!botToken || !chatId) {
       const missing: string[] = [];
