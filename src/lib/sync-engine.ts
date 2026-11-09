@@ -125,7 +125,6 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
     );
 
   const mappedCards: Card[] = rawCardItems.map((raw, idx) => {
-    const cardId = raw.cardId || `card_${idx}_${Date.now()}`;
     let inner: any = {};
     try {
       if (typeof raw.client_request_response === 'string') {
@@ -138,6 +137,13 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
     }
 
     const cardInfo = inner.cards || {};
+    const cardId =
+      raw.cardId ||
+      raw.card_id ||
+      cardInfo.card_id ||
+      cardInfo.cardId ||
+      raw.id ||
+      (cardInfo.create_time ? `card_${cardInfo.create_time}_${idx}` : `card_${idx}`);
     const resources: any[] = Array.isArray(inner.card_resources) ? inner.card_resources : [];
     const analysis: any[] = Array.isArray(inner.card_analysis) ? inner.card_analysis : [];
     const speakers: any[] = Array.isArray(inner.meeting_speakers) ? inner.meeting_speakers : [];
@@ -565,6 +571,8 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
 
         const unsentCards = forTelegramCards.filter(c => !sentIds.has(c.cardId));
 
+        const allSentArray = Array.from(sentIds);
+
         if (unsentCards.length > 0) {
           // Immediately mark unsentCards as in-flight / sent to prevent race conditions
           for (const c of unsentCards) {
@@ -581,26 +589,38 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
             body: JSON.stringify({
               userId: user.uuid,
               cards: unsentCards,
+              alreadySentIds: allSentArray,
             }),
           })
             .then(async res => {
               const data: any = await res.json().catch(() => ({}));
-              if (!res.ok || !data?.success) {
-                if (Array.isArray(data?.results)) {
-                  for (const r of data.results) {
-                    if (r.status === 'error') {
-                      sentIds.delete(r.cardId);
-                    }
+              if (Array.isArray(data?.results)) {
+                for (const r of data.results) {
+                  if (r.status === 'published' || r.status === 'skipped') {
+                    sentIds.add(r.cardId);
+                  } else if (r.status === 'error') {
+                    sentIds.delete(r.cardId);
                   }
-                  try {
-                    localStorage.setItem(LOCAL_TG_SENT_KEY, JSON.stringify(Array.from(sentIds)));
-                  } catch {}
                 }
+                try {
+                  localStorage.setItem(LOCAL_TG_SENT_KEY, JSON.stringify(Array.from(sentIds)));
+                } catch {}
               }
             })
             .catch(err => {
               console.warn('[Telegram Sync] Background hook failed:', err);
             });
+        } else if (allSentArray.length > 0) {
+          // Seed existing sent IDs into Cloudflare KV so other devices stay in sync
+          fetch('/api/sync-telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.uuid,
+              cards: [],
+              alreadySentIds: allSentArray,
+            }),
+          }).catch(() => {});
         }
       }
     }

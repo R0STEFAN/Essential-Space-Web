@@ -3,6 +3,7 @@ import type { Env } from '../types';
 interface TelegramSyncPayload {
   userId: string;
   cards: any[];
+  alreadySentIds?: string[];
 }
 
 const CORS_HEADERS = {
@@ -14,6 +15,14 @@ const CORS_HEADERS = {
 
 // In-memory cache to guarantee deduplication even if KV namespace is not yet bound
 const publishedMemorySet = new Set<string>();
+
+function getCardFingerprint(card: any): string {
+  const title = String(card.title || '').trim().toLowerCase();
+  const summary = String(card.summary || card.content || '').slice(0, 60).trim().toLowerCase();
+  const time = String(card.createTime || '');
+  return `fp_${title}_${time}_${summary}`;
+}
+
 
 function escapeHtml(str: string): string {
   if (!str) return '';
@@ -180,6 +189,29 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
       );
     }
 
+    // Pre-seed known sent IDs from client into memory and KV (cross-device sync)
+    const alreadySentIds: string[] = Array.isArray(body?.alreadySentIds) ? body.alreadySentIds : [];
+    if (alreadySentIds.length > 0) {
+      for (const id of alreadySentIds) {
+        if (typeof id === 'string' && id) {
+          publishedMemorySet.add(id);
+          if (env.TELEGRAM_POSTS_KV) {
+            try {
+              const existing = await env.TELEGRAM_POSTS_KV.get(`tg_sent_${id}`);
+              if (!existing) {
+                await env.TELEGRAM_POSTS_KV.put(
+                  `tg_sent_${id}`,
+                  JSON.stringify({ seeded: true, timestamp: Date.now() })
+                );
+              }
+            } catch (kvErr) {
+              console.warn('[Telegram Sync] KV seed error:', kvErr);
+            }
+          }
+        }
+      }
+    }
+
     if (!Array.isArray(cards) || cards.length === 0) {
       return new Response(JSON.stringify({ success: true, processed: 0 }), {
         status: 200,
@@ -194,9 +226,10 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
     for (const card of cards) {
       if (!card.cardId) continue;
       const kvKey = `tg_sent_${card.cardId}`;
+      const fpKey = `tg_fp_${getCardFingerprint(card)}`;
 
-      // In-memory deduplication check
-      if (publishedMemorySet.has(card.cardId)) {
+      // In-memory deduplication check (cardId + fingerprint)
+      if (publishedMemorySet.has(card.cardId) || publishedMemorySet.has(fpKey)) {
         results.push({ cardId: card.cardId, status: 'skipped' });
         continue;
       }
@@ -205,8 +238,10 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
       if (env.TELEGRAM_POSTS_KV) {
         try {
           const existing = await env.TELEGRAM_POSTS_KV.get(kvKey);
-          if (existing) {
+          const existingFp = existing ? null : await env.TELEGRAM_POSTS_KV.get(fpKey);
+          if (existing || existingFp) {
             publishedMemorySet.add(card.cardId);
+            publishedMemorySet.add(fpKey);
             results.push({ cardId: card.cardId, status: 'skipped' });
             continue;
           }
@@ -289,17 +324,18 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
 
         // Remember in memory
         publishedMemorySet.add(card.cardId);
+        publishedMemorySet.add(fpKey);
 
-        // Record in KV as published
+        // Record in KV as published (both by cardId and content fingerprint)
         if (env.TELEGRAM_POSTS_KV) {
           try {
-            await env.TELEGRAM_POSTS_KV.put(
-              kvKey,
-              JSON.stringify({
-                messageId,
-                publishedAt: Date.now(),
-              })
-            );
+            const metaStr = JSON.stringify({
+              messageId,
+              title: card.title,
+              publishedAt: Date.now(),
+            });
+            await env.TELEGRAM_POSTS_KV.put(kvKey, metaStr);
+            await env.TELEGRAM_POSTS_KV.put(fpKey, metaStr);
           } catch (kvPutErr) {
             console.warn(`[Telegram Sync] KV write error for ${kvKey}:`, kvPutErr);
           }

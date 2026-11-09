@@ -343,7 +343,6 @@ export async function syncUserData(user: NothingUser): Promise<SyncResult> {
       );
 
     const mappedCards: Card[] = rawCardItems.map((raw, idx) => {
-      const cardId = raw.cardId || `card_${idx}_${Date.now()}`;
       let inner: any = {};
       try {
         if (typeof raw.client_request_response === 'string') {
@@ -356,6 +355,13 @@ export async function syncUserData(user: NothingUser): Promise<SyncResult> {
       }
 
       const cardInfo = inner.cards || {};
+      const cardId =
+        raw.cardId ||
+        raw.card_id ||
+        cardInfo.card_id ||
+        cardInfo.cardId ||
+        raw.id ||
+        (cardInfo.create_time ? `card_${cardInfo.create_time}_${idx}` : `card_${idx}`);
       const resources: any[] = Array.isArray(inner.card_resources) ? inner.card_resources : [];
       const analysis: any[] = Array.isArray(inner.card_analysis) ? inner.card_analysis : [];
       const speakers: any[] = Array.isArray(inner.meeting_speakers) ? inner.meeting_speakers : [];
