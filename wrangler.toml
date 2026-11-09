@@ -9,3 +9,7 @@ binding = "ASSETS"
 not_found_handling = "single-page-application"
 
 [previews]
+
+[[kv_namespaces]]
+binding = "TELEGRAM_POSTS_KV"
+id = "276e2b132ad841c2a0991aa6a9a3130e"
