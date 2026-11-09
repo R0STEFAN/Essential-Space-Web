@@ -28,14 +28,28 @@ function sanitizeHashtag(name: string): string {
 function formatCardPost(card: any): string {
   const parts: string[] = [];
 
-  // Title
-  if (card.title) {
-    parts.push(`<b>${escapeHtml(card.title)}</b>`);
+  // Domain detection for Link cards
+  let domain = card.link?.domain || card.link?.siteName;
+  if (!domain && card.link?.url) {
+    try {
+      domain = new URL(card.link.url).hostname.replace(/^www\./, '');
+    } catch {}
   }
 
-  // Summary (Quote block)
+  // Title
+  const mainTitle = card.title || card.link?.title;
+  if (mainTitle) {
+    parts.push(`<b>${escapeHtml(mainTitle)}</b>`);
+  }
+
+  // Domain badge (for Link cards)
+  if (domain) {
+    parts.push(`🌐 <i>${escapeHtml(domain)}</i>`);
+  }
+
+  // AI Summary (Styled Quote block)
   if (card.summary) {
-    parts.push(`<blockquote>${escapeHtml(card.summary)}</blockquote>`);
+    parts.push(`<blockquote>💡 <b>AI Summary:</b>\n${escapeHtml(card.summary)}</blockquote>`);
   }
 
   // Bullet points
@@ -49,9 +63,10 @@ function formatCardPost(card: any): string {
     parts.push(escapeHtml(card.content));
   }
 
-  // Link URL
+  // Direct Link Button/URL
   if (card.link?.url) {
-    parts.push(`🔗 <a href="${escapeHtml(card.link.url)}">${escapeHtml(card.link.title || card.link.url)}</a>`);
+    const linkTitle = card.link.title || domain || 'Open Link';
+    parts.push(`🔗 <a href="${escapeHtml(card.link.url)}">${escapeHtml(linkTitle)}</a>`);
   }
 
   // Checklist events
@@ -172,25 +187,26 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
     }
 
     const postText = formatCardPost(card);
+    const previewImg = card.imageUrl || card.link?.preview;
 
     try {
       let sendRes: Response;
 
-      // Handle Card with Image
-      if (card.imageUrl && /^https?:\/\//i.test(card.imageUrl)) {
+      // 1. Handle Card with Image / Link Preview Image
+      if (previewImg && /^https?:\/\//i.test(previewImg)) {
         const caption = postText.slice(0, 1024);
         sendRes = await fetch(`${tgApiBase}/sendPhoto`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            photo: card.imageUrl,
+            photo: previewImg,
             caption,
             parse_mode: 'HTML',
           }),
         });
 
-        // If caption was truncated, follow up with the rest of the text
+        // If full caption exceeded 1024 characters, follow up with the remainder
         if (postText.length > 1024) {
           await fetch(`${tgApiBase}/sendMessage`, {
             method: 'POST',
@@ -203,7 +219,7 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
           });
         }
       } else if (card.audio?.audioUri && /^https?:\/\//i.test(card.audio.audioUri)) {
-        // Handle Voice / Audio Card
+        // 2. Handle Voice / Audio Card
         const caption = postText.slice(0, 1024);
         sendRes = await fetch(`${tgApiBase}/sendAudio`, {
           method: 'POST',
@@ -217,7 +233,7 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
           }),
         });
       } else {
-        // Handle Standard Text Note / Link Note
+        // 3. Handle Standard Text / Link Note (with Telegram rich link preview)
         sendRes = await fetch(`${tgApiBase}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -225,7 +241,11 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
             chat_id: chatId,
             text: postText.slice(0, 4096),
             parse_mode: 'HTML',
-            disable_web_page_preview: false,
+            link_preview_options: {
+              is_disabled: false,
+              prefer_large_media: true,
+              show_above_text: false,
+            },
           }),
         });
       }
