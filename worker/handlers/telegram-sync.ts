@@ -47,9 +47,9 @@ function formatCardPost(card: any): string {
     parts.push(`🌐 <i>${escapeHtml(domain)}</i>`);
   }
 
-  // AI Summary (Styled Quote block)
+  // Summary (Styled Quote block)
   if (card.summary) {
-    parts.push(`<blockquote>💡 <b>AI Summary:</b>\n${escapeHtml(card.summary)}</blockquote>`);
+    parts.push(`<blockquote>💡 <b>Summary:</b>\n${escapeHtml(card.summary)}</blockquote>`);
   }
 
   // Bullet points
