@@ -1,4 +1,4 @@
-interface Env {}
+import type { Env } from '../types';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -504,15 +504,7 @@ function isOtpAction(action: any): boolean {
   );
 }
 
-export const onRequestOptions = async (): Promise<Response> => {
-  return new Response(null, {
-    status: 204,
-    headers: CORS_HEADERS,
-  });
-};
-
-export const onRequest = async (context: { request: Request; env: Env }): Promise<Response> => {
-  const req = context.request;
+export async function handleAuthLogin(req: Request, _env: Env): Promise<Response> {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
@@ -659,4 +651,4 @@ export const onRequest = async (context: { request: Request; env: Env }): Promis
       { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
     );
   }
-};
+}

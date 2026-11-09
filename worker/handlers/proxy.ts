@@ -1,4 +1,4 @@
-interface Env {}
+import type { Env } from '../types';
 
 const ALLOWED_HOSTS = new Set([
   'essential-space.nothingtech.link',
@@ -15,15 +15,14 @@ const CORS_HEADERS = {
   'Access-Control-Max-Age': '86400',
 };
 
-export const onRequestOptions = async (): Promise<Response> => {
-  return new Response(null, {
-    status: 204,
-    headers: CORS_HEADERS,
-  });
-};
+export async function handleProxy(req: Request, _env: Env): Promise<Response> {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: CORS_HEADERS,
+    });
+  }
 
-export const onRequest = async (context: { request: Request; env: Env }): Promise<Response> => {
-  const req = context.request;
   const url = new URL(req.url);
   const targetUrl = url.searchParams.get('url') || req.headers.get('x-target-url');
 
@@ -94,4 +93,4 @@ export const onRequest = async (context: { request: Request; env: Env }): Promis
       { status: 502, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
     );
   }
-};
+}

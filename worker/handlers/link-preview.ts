@@ -1,17 +1,10 @@
-interface Env {}
+import type { Env } from '../types';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Accept',
   'Access-Control-Max-Age': '86400',
-};
-
-export const onRequestOptions = async (): Promise<Response> => {
-  return new Response(null, {
-    status: 204,
-    headers: CORS_HEADERS,
-  });
 };
 
 function resolveUrl(relativeOrAbsolute: string, baseUrl: string): string {
@@ -66,8 +59,14 @@ function extractFavicon(html: string, baseUrl: string): string {
   }
 }
 
-export const onRequest = async (context: { request: Request; env: Env }): Promise<Response> => {
-  const req = context.request;
+export async function handleLinkPreview(req: Request, _env: Env): Promise<Response> {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: CORS_HEADERS,
+    });
+  }
+
   const url = new URL(req.url);
   let targetUrl = url.searchParams.get('url');
 
@@ -193,4 +192,4 @@ export const onRequest = async (context: { request: Request; env: Env }): Promis
       },
     });
   }
-};
+}
