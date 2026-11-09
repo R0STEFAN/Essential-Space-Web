@@ -6,6 +6,7 @@ export interface Env {
     get: (key: string) => Promise<string | null>;
     put: (key: string, value: string) => Promise<void>;
     delete: (key: string) => Promise<void>;
+    list: (options?: { limit?: number; prefix?: string }) => Promise<{ keys: Array<{ name: string }> }>;
   };
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;

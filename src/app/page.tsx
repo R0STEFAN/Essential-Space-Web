@@ -575,6 +575,16 @@ export default function DashboardPage() {
       if (userToken) {
         const targetCards = allDbCards.filter(c => selectedCardIds.has(c.cardId));
         await bulkAssignCollectionCloudCards(userToken, targetCards, collectionIds);
+        // Instantly trigger background sync if assigned to Telegram collection
+        const isTgCol = (name?: string) => {
+          if (!name) return false;
+          const n = name.trim().toLowerCase();
+          return n === 'for telegram' || n === 'telegram' || n === 'для телеграм' || n === 'для телеграму' || n.startsWith('tg ') || n.endsWith(' tg');
+        };
+        const hasTg = collections.some(col => isTgCol(col.name) && collectionIds.includes(col.collectionId));
+        if (hasTg) {
+          handleSync(true);
+        }
       }
       setSyncSuccess(
         collectionIds.length > 0
@@ -978,6 +988,21 @@ export default function DashboardPage() {
           onCardCreated={newCard => {
             setAllDbCards(prev => [newCard, ...prev]);
             loadLocalData();
+            // Instantly trigger background sync if created in Telegram collection
+            const isTgCol = (name?: string) => {
+              if (!name) return false;
+              const n = name.trim().toLowerCase();
+              return n === 'for telegram' || n === 'telegram' || n === 'для телеграм' || n === 'для телеграму' || n.startsWith('tg ') || n.endsWith(' tg');
+            };
+            const hasTg = collections.some(
+              col =>
+                isTgCol(col.name) &&
+                (newCard.collectionId === col.collectionId ||
+                  (newCard.collectionIds && newCard.collectionIds.includes(col.collectionId)))
+            );
+            if (hasTg) {
+              handleSync(true);
+            }
           }}
           onCollectionCreated={savedCol => {
             setCollections(prev => [...prev, savedCol]);
