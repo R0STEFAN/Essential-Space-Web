@@ -12,6 +12,9 @@ const CORS_HEADERS = {
   'Access-Control-Max-Age': '86400',
 };
 
+// In-memory cache to guarantee deduplication even if KV namespace is not yet bound
+const publishedMemorySet = new Set<string>();
+
 function escapeHtml(str: string): string {
   if (!str) return '';
   return String(str)
@@ -192,11 +195,18 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
       if (!card.cardId) continue;
       const kvKey = `tg_sent_${card.cardId}`;
 
+      // In-memory deduplication check
+      if (publishedMemorySet.has(card.cardId)) {
+        results.push({ cardId: card.cardId, status: 'skipped' });
+        continue;
+      }
+
       // Check if already published in Cloudflare KV
       if (env.TELEGRAM_POSTS_KV) {
         try {
           const existing = await env.TELEGRAM_POSTS_KV.get(kvKey);
           if (existing) {
+            publishedMemorySet.add(card.cardId);
             results.push({ cardId: card.cardId, status: 'skipped' });
             continue;
           }
@@ -276,6 +286,9 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
         }
 
         const messageId = resData.result?.message_id;
+
+        // Remember in memory
+        publishedMemorySet.add(card.cardId);
 
         // Record in KV as published
         if (env.TELEGRAM_POSTS_KV) {

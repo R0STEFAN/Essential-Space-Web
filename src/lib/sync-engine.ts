@@ -553,17 +553,55 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
       );
 
       if (forTelegramCards.length > 0) {
-        // Fire-and-forget background sync to Cloudflare Worker
-        fetch('/api/sync-telegram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.uuid,
-            cards: forTelegramCards,
-          }),
-        }).catch(err => {
-          console.warn('[Telegram Sync] Background hook failed:', err);
-        });
+        // Client-side sent tracking to guarantee NO duplicate calls
+        const LOCAL_TG_SENT_KEY = 'essential_space_tg_sent_card_ids';
+        let sentIds: Set<string> = new Set();
+        try {
+          const stored = localStorage.getItem(LOCAL_TG_SENT_KEY);
+          if (stored) {
+            sentIds = new Set(JSON.parse(stored));
+          }
+        } catch {}
+
+        const unsentCards = forTelegramCards.filter(c => !sentIds.has(c.cardId));
+
+        if (unsentCards.length > 0) {
+          // Immediately mark unsentCards as in-flight / sent to prevent race conditions
+          for (const c of unsentCards) {
+            sentIds.add(c.cardId);
+          }
+          try {
+            localStorage.setItem(LOCAL_TG_SENT_KEY, JSON.stringify(Array.from(sentIds)));
+          } catch {}
+
+          // Fire-and-forget background sync to Cloudflare Worker
+          fetch('/api/sync-telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.uuid,
+              cards: unsentCards,
+            }),
+          })
+            .then(async res => {
+              const data: any = await res.json().catch(() => ({}));
+              if (!res.ok || !data?.success) {
+                if (Array.isArray(data?.results)) {
+                  for (const r of data.results) {
+                    if (r.status === 'error') {
+                      sentIds.delete(r.cardId);
+                    }
+                  }
+                  try {
+                    localStorage.setItem(LOCAL_TG_SENT_KEY, JSON.stringify(Array.from(sentIds)));
+                  } catch {}
+                }
+              }
+            })
+            .catch(err => {
+              console.warn('[Telegram Sync] Background hook failed:', err);
+            });
+        }
       }
     }
   } catch (tgErr) {
