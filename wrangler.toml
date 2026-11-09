@@ -7,3 +7,5 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./out"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+
+[previews]
