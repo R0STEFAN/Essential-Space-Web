@@ -80,6 +80,22 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
         }
       }
     }
+    try {
+      let inner: any = {};
+      if (typeof item.client_request_response === 'string') {
+        inner = JSON.parse(item.client_request_response);
+      } else if (item.client_request_response) {
+        inner = item.client_request_response;
+      }
+      if (Array.isArray(inner.card_resources)) {
+        for (const r of inner.card_resources) {
+          if (r.remote_gcsKey && !seenKeys.has(r.remote_gcsKey)) {
+            seenKeys.add(r.remote_gcsKey);
+            filesToSign.push({ region: r.remote_region || 'europe-west3', gcsKey: r.remote_gcsKey });
+          }
+        }
+      }
+    } catch {}
   }
 
   // 3. Request signed GCS URLs for all media files in one batch call
@@ -549,32 +565,42 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
         .map(c => c.collectionId)
     );
 
-    if (tgColIds.size > 0) {
-      const forTelegramCards = mappedCards.filter(
+    const forTelegramCards = mappedCards.filter(
+      c =>
+        c.targetState === 0 &&
+        ((c.collectionId && tgColIds.has(c.collectionId)) ||
+          (c.collectionIds && c.collectionIds.some(id => tgColIds.has(id))))
+    );
+
+    // Cards not belonging to Telegram collection -> tell Cloudflare to forget them from KV
+    const nonTelegramCardIds = mappedCards
+      .filter(
         c =>
           c.targetState === 0 &&
-          ((c.collectionId && tgColIds.has(c.collectionId)) ||
+          !((c.collectionId && tgColIds.has(c.collectionId)) ||
             (c.collectionIds && c.collectionIds.some(id => tgColIds.has(id))))
-      );
+      )
+      .map(c => c.cardId)
+      .filter(Boolean);
 
-      if (forTelegramCards.length > 0) {
-        // Clear any old obsolete local tracking so Cloudflare KV is the single source of truth
-        try {
-          localStorage.removeItem('essential_space_tg_sent_card_ids');
-        } catch {}
+    if (forTelegramCards.length > 0 || nonTelegramCardIds.length > 0) {
+      // Clear any old obsolete local tracking so Cloudflare KV is the single source of truth
+      try {
+        localStorage.removeItem('essential_space_tg_sent_card_ids');
+      } catch {}
 
-        // Fire-and-forget background sync to Cloudflare Worker (KV guarantees global deduplication)
-        fetch('/api/sync-telegram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.uuid,
-            cards: forTelegramCards,
-          }),
-        }).catch(err => {
-          console.warn('[Telegram Sync] Background hook failed:', err);
-        });
-      }
+      // Fire-and-forget background sync to Cloudflare Worker (KV handles deduplication & cleanup)
+      fetch('/api/sync-telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uuid,
+          cards: forTelegramCards,
+          unassignedCardIds: nonTelegramCardIds,
+        }),
+      }).catch(err => {
+        console.warn('[Telegram Sync] Background hook failed:', err);
+      });
     }
   } catch (tgErr) {
     console.warn('[Telegram Sync] Hook evaluation error:', tgErr);

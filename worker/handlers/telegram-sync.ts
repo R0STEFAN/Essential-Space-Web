@@ -2,20 +2,21 @@ import type { Env } from '../types';
 
 interface TelegramSyncPayload {
   userId: string;
-  cards: any[];
+  cards?: any[];
   alreadySentIds?: string[];
+  unpublishCardIds?: string[];
+  unassignedCardIds?: string[];
 }
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Accept',
   'Access-Control-Max-Age': '86400',
 };
 
-// In-memory cache to guarantee deduplication even if KV namespace is not yet bound
+// In-memory cache to guarantee deduplication even across rapid concurrent requests
 const publishedMemorySet = new Set<string>();
-
 
 function sanitizeKvKey(key: string): string {
   if (!key) return '';
@@ -32,7 +33,6 @@ function getCardFingerprint(card: any): string {
   const time = String(card.createTime || '');
   return `fp_${title}_${time}_${summary}`;
 }
-
 
 function escapeHtml(str: string): string {
   if (!str) return '';
@@ -80,8 +80,16 @@ function formatCardPost(card: any): string {
     parts.push(bullets);
   }
 
-  // Content or transcript (if distinct from summary)
-  if (card.content && card.content !== card.summary) {
+  // Voice memo transcription (if present)
+  const transcript =
+    card.audio?.transcript ||
+    (card.type === 'AUDIO' && card.content !== card.summary ? card.content : undefined);
+  if (transcript && transcript !== card.summary) {
+    parts.push(`🎙️ <b>Транскрипція:</b>\n<i>${escapeHtml(transcript)}</i>`);
+  }
+
+  // Content or additional notes (if distinct from summary & transcript)
+  if (card.content && card.content !== card.summary && card.content !== transcript) {
     parts.push(escapeHtml(card.content));
   }
 
@@ -107,6 +115,7 @@ function formatCardPost(card: any): string {
       const lower = cName.trim().toLowerCase();
       if (
         lower === 'for telegram' ||
+        lower === 'for telegrm' ||
         lower === 'telegram' ||
         lower === 'для телеграм' ||
         lower === 'для телеграму' ||
@@ -139,6 +148,7 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
 
+  // Diagnostic endpoint to check KV state & contents
   if (req.method === 'GET') {
     let kvKeys: string[] = [];
     let kvCount = 0;
@@ -169,6 +179,52 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
         status: 200,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       }
+    );
+  }
+
+  // Explicit DELETE endpoint: remove published record from KV to allow republishing
+  if (req.method === 'DELETE') {
+    const url = new URL(req.url);
+    const cardId = url.searchParams.get('cardId');
+    if (!cardId) {
+      return new Response(JSON.stringify({ error: 'Missing cardId parameter' }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const cleanId = sanitizeKvKey(cardId);
+    const kvKey = `tg_sent_${cleanId}`;
+    let deletedFpKey: string | null = null;
+
+    publishedMemorySet.delete(cleanId);
+
+    if (env.TELEGRAM_POSTS_KV) {
+      try {
+        const raw = await env.TELEGRAM_POSTS_KV.get(kvKey);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed.fpKey) {
+              deletedFpKey = parsed.fpKey;
+              await env.TELEGRAM_POSTS_KV.delete(parsed.fpKey);
+              publishedMemorySet.delete(parsed.fpKey);
+            }
+          } catch {}
+        }
+        await env.TELEGRAM_POSTS_KV.delete(kvKey);
+      } catch (delErr: any) {
+        console.warn(`[Telegram Sync] Failed to delete ${kvKey} from KV:`, delErr);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        forgottenCardId: cardId,
+        forgottenFpKey: deletedFpKey,
+      }),
+      { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
     );
   }
 
@@ -232,7 +288,38 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
       );
     }
 
-    // Pre-seed known sent IDs from client into memory and KV (cross-device sync)
+    // 3. Forget unassigned cards (removed from Telegram collection) so they can be republished if re-added
+    const toForget: string[] = [
+      ...(Array.isArray(body?.unpublishCardIds) ? body.unpublishCardIds : []),
+      ...(Array.isArray(body?.unassignedCardIds) ? body.unassignedCardIds : []),
+    ];
+
+    if (toForget.length > 0 && env.TELEGRAM_POSTS_KV) {
+      for (const rawId of toForget) {
+        if (!rawId) continue;
+        const cleanId = sanitizeKvKey(rawId);
+        if (!cleanId) continue;
+        const kvKey = `tg_sent_${cleanId}`;
+        try {
+          const raw = await env.TELEGRAM_POSTS_KV.get(kvKey);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed.fpKey) {
+                await env.TELEGRAM_POSTS_KV.delete(parsed.fpKey);
+                publishedMemorySet.delete(parsed.fpKey);
+              }
+            } catch {}
+            await env.TELEGRAM_POSTS_KV.delete(kvKey);
+            publishedMemorySet.delete(cleanId);
+          }
+        } catch (delErr) {
+          console.warn(`[Telegram Sync] Error forgetting card ${cleanId}:`, delErr);
+        }
+      }
+    }
+
+    // 4. Pre-seed known sent IDs from client into memory and KV (cross-device sync)
     const alreadySentIds: string[] = Array.isArray(body?.alreadySentIds) ? body.alreadySentIds : [];
     if (alreadySentIds.length > 0) {
       for (const rawId of alreadySentIds) {
@@ -301,10 +388,37 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
       const postText = formatCardPost(card);
       const previewImg = card.imageUrl || card.link?.preview;
 
+      // Attempt to download the audio recording if present (e.g. from Nothing Cloud GCS)
+      let audioBlob: Blob | null = null;
+      let audioFilename = 'voice_note.wav';
+      if (card.audio?.audioUri && /^https?:\/\//i.test(card.audio.audioUri)) {
+        try {
+          const audioFetch = await fetch(card.audio.audioUri);
+          if (audioFetch.ok) {
+            const audioBuffer = await audioFetch.arrayBuffer();
+            const mimeType = audioFetch.headers.get('content-type') || 'audio/wav';
+            audioBlob = new Blob([audioBuffer], { type: mimeType });
+
+            const ext = card.audio.audioUri.toLowerCase().includes('.mp3')
+              ? 'mp3'
+              : card.audio.audioUri.toLowerCase().includes('.m4a')
+              ? 'm4a'
+              : card.audio.audioUri.toLowerCase().includes('.ogg')
+              ? 'ogg'
+              : 'wav';
+            const cleanTitle = sanitizeKvKey(card.title || 'voice_memo').slice(0, 30);
+            audioFilename = `${cleanTitle || 'voice_memo'}.${ext}`;
+          }
+        } catch (audioDlErr) {
+          console.warn(`[Telegram Sync] Could not fetch audio binary for ${card.cardId}:`, audioDlErr);
+        }
+      }
+
       try {
         let sendRes: Response;
+        let sentMessageId: number | undefined;
 
-        // 1. Handle Card with Image / Link Preview Image
+        // CASE 1: Note has an Image (or Link Preview)
         if (previewImg && /^https?:\/\//i.test(previewImg)) {
           const caption = postText.slice(0, 1024);
           sendRes = await fetch(`${tgApiBase}/sendPhoto`, {
@@ -317,8 +431,13 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
               parse_mode: 'HTML',
             }),
           });
+          const photoData: any = await sendRes.json().catch(() => ({}));
+          if (!sendRes.ok || !photoData.ok) {
+            throw new Error(photoData.description || `Telegram API error (${sendRes.status})`);
+          }
+          sentMessageId = photoData.result?.message_id;
 
-          // If full caption exceeded 1024 characters, follow up with the remainder
+          // If text exceeded 1024 chars, send remainder
           if (postText.length > 1024) {
             await fetch(`${tgApiBase}/sendMessage`, {
               method: 'POST',
@@ -330,22 +449,78 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
               }),
             });
           }
-        } else if (card.audio?.audioUri && /^https?:\/\//i.test(card.audio.audioUri)) {
-          // 2. Handle Voice / Audio Card
-          const caption = postText.slice(0, 1024);
-          sendRes = await fetch(`${tgApiBase}/sendAudio`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: targetChatId,
-              audio: card.audio.audioUri,
-              title: card.title || 'Voice Note',
-              caption,
-              parse_mode: 'HTML',
-            }),
-          });
+
+          // If note ALSO has an audio file, send it as a follow-up
+          if (audioBlob) {
+            try {
+              const fd = new FormData();
+              fd.append('chat_id', targetChatId);
+              fd.append('audio', audioBlob, audioFilename);
+              if (card.title) fd.append('title', card.title.slice(0, 64));
+              if (card.audio?.duration) {
+                fd.append('duration', String(Math.round(card.audio.duration)));
+              }
+              await fetch(`${tgApiBase}/sendAudio`, { method: 'POST', body: fd });
+            } catch (extraAudioErr) {
+              console.warn('[Telegram Sync] Follow-up audio sending error:', extraAudioErr);
+            }
+          }
+        } else if (audioBlob) {
+          // CASE 2: Note has an Audio recording (Voice Note / Audio File)
+          try {
+            const caption = postText.slice(0, 1024);
+            const fd = new FormData();
+            fd.append('chat_id', targetChatId);
+            fd.append('audio', audioBlob, audioFilename);
+            if (card.title) fd.append('title', card.title.slice(0, 64));
+            fd.append('caption', caption);
+            fd.append('parse_mode', 'HTML');
+            if (card.audio?.duration) {
+              fd.append('duration', String(Math.round(card.audio.duration)));
+            }
+
+            sendRes = await fetch(`${tgApiBase}/sendAudio`, {
+              method: 'POST',
+              body: fd,
+            });
+            const audioData: any = await sendRes.json().catch(() => ({}));
+            if (!sendRes.ok || !audioData.ok) {
+              throw new Error(audioData.description || `sendAudio failed (${sendRes.status})`);
+            }
+            sentMessageId = audioData.result?.message_id;
+
+            // If text exceeded 1024 chars, send remainder
+            if (postText.length > 1024) {
+              await fetch(`${tgApiBase}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: targetChatId,
+                  text: postText.slice(1024, 5120),
+                  parse_mode: 'HTML',
+                }),
+              });
+            }
+          } catch (audioSendErr: any) {
+            console.warn('[Telegram Sync] sendAudio failed, falling back to text message:', audioSendErr?.message || audioSendErr);
+            // Fallback: send as text message with full transcription
+            sendRes = await fetch(`${tgApiBase}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: targetChatId,
+                text: postText.slice(0, 4096),
+                parse_mode: 'HTML',
+              }),
+            });
+            const textData: any = await sendRes.json().catch(() => ({}));
+            if (!sendRes.ok || !textData.ok) {
+              throw new Error(textData.description || `Telegram API error (${sendRes.status})`);
+            }
+            sentMessageId = textData.result?.message_id;
+          }
         } else {
-          // 3. Handle Standard Text / Link Note (with Telegram rich link preview)
+          // CASE 3: Standard Text / Link Note
           sendRes = await fetch(`${tgApiBase}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -360,15 +535,12 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
               },
             }),
           });
+          const msgData: any = await sendRes.json().catch(() => ({}));
+          if (!sendRes.ok || !msgData.ok) {
+            throw new Error(msgData.description || `Telegram API error (${sendRes.status})`);
+          }
+          sentMessageId = msgData.result?.message_id;
         }
-
-        const resData: any = await sendRes.json().catch(() => ({}));
-
-        if (!sendRes.ok || !resData.ok) {
-          throw new Error(resData.description || `Telegram API error (${sendRes.status})`);
-        }
-
-        const messageId = resData.result?.message_id;
 
         // Remember in memory
         publishedMemorySet.add(cleanCardId);
@@ -377,9 +549,10 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
         // Record in KV as published (both by cardId and content fingerprint)
         if (env.TELEGRAM_POSTS_KV) {
           const metaStr = JSON.stringify({
-            messageId,
+            messageId: sentMessageId,
             title: card.title,
             publishedAt: Date.now(),
+            fpKey: fpKey || undefined,
           });
           try {
             await env.TELEGRAM_POSTS_KV.put(kvKey, metaStr);
@@ -395,7 +568,7 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
           }
         }
 
-        results.push({ cardId: card.cardId, status: 'published', messageId });
+        results.push({ cardId: card.cardId, status: 'published', messageId: sentMessageId });
       } catch (sendErr: any) {
         console.error(`[Telegram Sync] Failed to send card ${card.cardId}:`, sendErr);
         results.push({ cardId: card.cardId, status: 'error', error: sendErr?.message });
