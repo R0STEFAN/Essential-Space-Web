@@ -522,6 +522,54 @@ export async function syncNothingCloud(user: NothingUser): Promise<SyncResult> {
   await setDbMeta('lastSyncTime', Date.now());
   await setDbMeta('cardsCount', mappedCards.length);
 
+  // 7. Silent Telegram Publishing Hook
+  // Detect if any active cards belong to a Telegram publication collection
+  try {
+    const isTelegramCollectionName = (name?: string) => {
+      if (!name) return false;
+      const n = name.trim().toLowerCase();
+      return (
+        n === 'for telegram' ||
+        n === 'telegram' ||
+        n === 'для телеграм' ||
+        n === 'для телеграму' ||
+        n.startsWith('tg ') ||
+        n.endsWith(' tg')
+      );
+    };
+
+    const tgColIds = new Set(
+      mappedCollections
+        .filter(c => isTelegramCollectionName(c.name))
+        .map(c => c.collectionId)
+    );
+
+    if (tgColIds.size > 0) {
+      const forTelegramCards = mappedCards.filter(
+        c =>
+          c.targetState === 0 &&
+          ((c.collectionId && tgColIds.has(c.collectionId)) ||
+            (c.collectionIds && c.collectionIds.some(id => tgColIds.has(id))))
+      );
+
+      if (forTelegramCards.length > 0) {
+        // Fire-and-forget background sync to Cloudflare Worker
+        fetch('/api/sync-telegram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uuid,
+            cards: forTelegramCards,
+          }),
+        }).catch(err => {
+          console.warn('[Telegram Sync] Background hook failed:', err);
+        });
+      }
+    }
+  } catch (tgErr) {
+    console.warn('[Telegram Sync] Hook evaluation error:', tgErr);
+  }
+
   return {
     success: true,
     cardsCount: mappedCards.length,
