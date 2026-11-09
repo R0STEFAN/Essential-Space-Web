@@ -124,164 +124,189 @@ export async function handleTelegramSync(req: Request, env: Env): Promise<Respon
     });
   }
 
-  let body: TelegramSyncPayload;
   try {
-    body = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    });
-  }
+    let body: TelegramSyncPayload;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
 
-  const { userId, cards } = body;
+    const { userId, cards } = body;
 
-  // 1. Authorize: Check if userId matches configured allowed Nothing User ID
-  if (env.TELEGRAM_ALLOWED_USER_ID && env.TELEGRAM_ALLOWED_USER_ID.trim()) {
-    if (userId !== env.TELEGRAM_ALLOWED_USER_ID.trim()) {
+    // 1. Authorize: Check if userId matches configured allowed Nothing User ID
+    if (env.TELEGRAM_ALLOWED_USER_ID && env.TELEGRAM_ALLOWED_USER_ID.trim()) {
+      if (userId !== env.TELEGRAM_ALLOWED_USER_ID.trim()) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: unauthorized Nothing account.' }),
+          { status: 403, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // 2. Validate Bot Token & Chat ID (support common aliases)
+    const botToken =
+      env.TELEGRAM_BOT_TOKEN ||
+      (env as any).BOT_TOKEN ||
+      (env as any).TELEGRAM_TOKEN ||
+      (env as any).TG_BOT_TOKEN;
+
+    const chatId =
+      env.TELEGRAM_CHAT_ID ||
+      (env as any).CHAT_ID ||
+      (env as any).TELEGRAM_CHANNEL_ID ||
+      (env as any).TG_CHAT_ID;
+
+    if (!botToken || !chatId) {
+      const missing: string[] = [];
+      if (!botToken) missing.push('TELEGRAM_BOT_TOKEN');
+      if (!chatId) missing.push('TELEGRAM_CHAT_ID');
+      console.error(`[Telegram Sync] Missing environment variables in Cloudflare: ${missing.join(', ')}`);
       return new Response(
-        JSON.stringify({ error: 'Forbidden: unauthorized Nothing account.' }),
-        { status: 403, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: `Telegram Bot credentials missing in Cloudflare environment: ${missing.join(', ')}. Please add them under Worker Settings -> Variables and Secrets.`,
+        }),
+        { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
       );
     }
-  }
 
-  // 2. Validate Bot Token & Chat ID
-  const botToken = env.TELEGRAM_BOT_TOKEN;
-  const chatId = env.TELEGRAM_CHAT_ID;
+    if (!Array.isArray(cards) || cards.length === 0) {
+      return new Response(JSON.stringify({ success: true, processed: 0 }), {
+        status: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
 
-  if (!botToken || !chatId) {
+    const tgApiBase = `https://api.telegram.org/bot${botToken.trim()}`;
+    const targetChatId = chatId.trim();
+    const results: Array<{ cardId: string; status: 'published' | 'skipped' | 'error'; messageId?: number; error?: string }> = [];
+
+    for (const card of cards) {
+      if (!card.cardId) continue;
+      const kvKey = `tg_sent_${card.cardId}`;
+
+      // Check if already published in Cloudflare KV
+      if (env.TELEGRAM_POSTS_KV) {
+        try {
+          const existing = await env.TELEGRAM_POSTS_KV.get(kvKey);
+          if (existing) {
+            results.push({ cardId: card.cardId, status: 'skipped' });
+            continue;
+          }
+        } catch (kvErr) {
+          console.warn(`[Telegram Sync] KV read error for ${kvKey}:`, kvErr);
+        }
+      }
+
+      const postText = formatCardPost(card);
+      const previewImg = card.imageUrl || card.link?.preview;
+
+      try {
+        let sendRes: Response;
+
+        // 1. Handle Card with Image / Link Preview Image
+        if (previewImg && /^https?:\/\//i.test(previewImg)) {
+          const caption = postText.slice(0, 1024);
+          sendRes = await fetch(`${tgApiBase}/sendPhoto`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: targetChatId,
+              photo: previewImg,
+              caption,
+              parse_mode: 'HTML',
+            }),
+          });
+
+          // If full caption exceeded 1024 characters, follow up with the remainder
+          if (postText.length > 1024) {
+            await fetch(`${tgApiBase}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: targetChatId,
+                text: postText.slice(1024, 5120),
+                parse_mode: 'HTML',
+              }),
+            });
+          }
+        } else if (card.audio?.audioUri && /^https?:\/\//i.test(card.audio.audioUri)) {
+          // 2. Handle Voice / Audio Card
+          const caption = postText.slice(0, 1024);
+          sendRes = await fetch(`${tgApiBase}/sendAudio`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: targetChatId,
+              audio: card.audio.audioUri,
+              title: card.title || 'Voice Note',
+              caption,
+              parse_mode: 'HTML',
+            }),
+          });
+        } else {
+          // 3. Handle Standard Text / Link Note (with Telegram rich link preview)
+          sendRes = await fetch(`${tgApiBase}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: targetChatId,
+              text: postText.slice(0, 4096),
+              parse_mode: 'HTML',
+              link_preview_options: {
+                is_disabled: false,
+                prefer_large_media: true,
+                show_above_text: false,
+              },
+            }),
+          });
+        }
+
+        const resData: any = await sendRes.json().catch(() => ({}));
+
+        if (!sendRes.ok || !resData.ok) {
+          throw new Error(resData.description || `Telegram API error (${sendRes.status})`);
+        }
+
+        const messageId = resData.result?.message_id;
+
+        // Record in KV as published
+        if (env.TELEGRAM_POSTS_KV) {
+          try {
+            await env.TELEGRAM_POSTS_KV.put(
+              kvKey,
+              JSON.stringify({
+                messageId,
+                publishedAt: Date.now(),
+              })
+            );
+          } catch (kvPutErr) {
+            console.warn(`[Telegram Sync] KV write error for ${kvKey}:`, kvPutErr);
+          }
+        }
+
+        results.push({ cardId: card.cardId, status: 'published', messageId });
+      } catch (sendErr: any) {
+        console.error(`[Telegram Sync] Failed to send card ${card.cardId}:`, sendErr);
+        results.push({ cardId: card.cardId, status: 'error', error: sendErr?.message });
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true, results }), {
+      status: 200,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
+  } catch (fatalErr: any) {
+    console.error('[Telegram Sync] Fatal error in handler:', fatalErr);
     return new Response(
       JSON.stringify({
-        error: 'Telegram Bot credentials not configured in Cloudflare. Please set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID.',
+        error: fatalErr?.message || 'Internal Server Error in Telegram Sync',
+        stack: fatalErr?.stack,
       }),
       { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
     );
   }
-
-  if (!Array.isArray(cards) || cards.length === 0) {
-    return new Response(JSON.stringify({ success: true, processed: 0 }), {
-      status: 200,
-      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-    });
-  }
-
-  const tgApiBase = `https://api.telegram.org/bot${botToken}`;
-  const results: Array<{ cardId: string; status: 'published' | 'skipped' | 'error'; messageId?: number; error?: string }> = [];
-
-  for (const card of cards) {
-    if (!card.cardId) continue;
-    const kvKey = `tg_sent_${card.cardId}`;
-
-    // Check if already published in Cloudflare KV
-    if (env.TELEGRAM_POSTS_KV) {
-      try {
-        const existing = await env.TELEGRAM_POSTS_KV.get(kvKey);
-        if (existing) {
-          results.push({ cardId: card.cardId, status: 'skipped' });
-          continue;
-        }
-      } catch (kvErr) {
-        console.warn(`[Telegram Sync] KV read error for ${kvKey}:`, kvErr);
-      }
-    }
-
-    const postText = formatCardPost(card);
-    const previewImg = card.imageUrl || card.link?.preview;
-
-    try {
-      let sendRes: Response;
-
-      // 1. Handle Card with Image / Link Preview Image
-      if (previewImg && /^https?:\/\//i.test(previewImg)) {
-        const caption = postText.slice(0, 1024);
-        sendRes = await fetch(`${tgApiBase}/sendPhoto`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            photo: previewImg,
-            caption,
-            parse_mode: 'HTML',
-          }),
-        });
-
-        // If full caption exceeded 1024 characters, follow up with the remainder
-        if (postText.length > 1024) {
-          await fetch(`${tgApiBase}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: chatId,
-              text: postText.slice(1024, 5120),
-              parse_mode: 'HTML',
-            }),
-          });
-        }
-      } else if (card.audio?.audioUri && /^https?:\/\//i.test(card.audio.audioUri)) {
-        // 2. Handle Voice / Audio Card
-        const caption = postText.slice(0, 1024);
-        sendRes = await fetch(`${tgApiBase}/sendAudio`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            audio: card.audio.audioUri,
-            title: card.title || 'Voice Note',
-            caption,
-            parse_mode: 'HTML',
-          }),
-        });
-      } else {
-        // 3. Handle Standard Text / Link Note (with Telegram rich link preview)
-        sendRes = await fetch(`${tgApiBase}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: postText.slice(0, 4096),
-            parse_mode: 'HTML',
-            link_preview_options: {
-              is_disabled: false,
-              prefer_large_media: true,
-              show_above_text: false,
-            },
-          }),
-        });
-      }
-
-      const resData: any = await sendRes.json().catch(() => ({}));
-
-      if (!sendRes.ok || !resData.ok) {
-        throw new Error(resData.description || `Telegram API error (${sendRes.status})`);
-      }
-
-      const messageId = resData.result?.message_id;
-
-      // Record in KV as published
-      if (env.TELEGRAM_POSTS_KV) {
-        try {
-          await env.TELEGRAM_POSTS_KV.put(
-            kvKey,
-            JSON.stringify({
-              messageId,
-              publishedAt: Date.now(),
-            })
-          );
-        } catch (kvPutErr) {
-          console.warn(`[Telegram Sync] KV write error for ${kvKey}:`, kvPutErr);
-        }
-      }
-
-      results.push({ cardId: card.cardId, status: 'published', messageId });
-    } catch (sendErr: any) {
-      console.error(`[Telegram Sync] Failed to send card ${card.cardId}:`, sendErr);
-      results.push({ cardId: card.cardId, status: 'error', error: sendErr?.message });
-    }
-  }
-
-  return new Response(JSON.stringify({ success: true, results }), {
-    status: 200,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
 }
