@@ -462,6 +462,41 @@ export async function createCloudCard(params: {
     }
     // Preserves user's saved link in card_resources (matching Nothing Android Room schema: raw_type 'LINK')
     if (params.linkUrl) {
+      const parsedDomain = (() => {
+        try {
+          return new URL(params.linkUrl).hostname.replace(/^www\./, '');
+        } catch {
+          return '';
+        }
+      })();
+
+      // Prevent bare domain or URL from replacing a high-quality Nothing AI title
+      const isGenericDomainTitle =
+        !params.linkMeta?.title ||
+        params.linkMeta.title === params.linkMeta.domain ||
+        params.linkMeta.title === parsedDomain ||
+        params.linkMeta.title === params.linkUrl;
+
+      const resolvedTitle = isGenericDomainTitle && params.title
+        ? params.title
+        : (params.linkMeta?.title || params.title || params.linkUrl);
+
+      const isGenericUrlDesc =
+        !params.linkMeta?.description ||
+        params.linkMeta.description === params.linkUrl;
+
+      const resolvedDesc = isGenericUrlDesc && params.summary
+        ? params.summary
+        : (params.linkMeta?.description || params.summary || '');
+
+      let resolvedPreview = params.linkMeta?.preview || params.imageUrl || '';
+      if (!resolvedPreview && params.linkUrl) {
+        const gh = params.linkUrl.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/?#]+)/i);
+        if (gh && gh[2] && !['features', 'pricing', 'about', 'enterprise'].includes(gh[1])) {
+          resolvedPreview = `https://opengraph.githubassets.com/1/${gh[1]}/${gh[2]}`;
+        }
+      }
+
       cardResources.push({
         card_resource_id: generateUuid(),
         raw_type: 'LINK',
@@ -469,21 +504,13 @@ export async function createCloudCard(params: {
         mime_type: 'text/plain',
         is_primary: true,
         metadata: JSON.stringify({
-          fav_icon: params.linkMeta?.favicon || '',
+          fav_icon: params.linkMeta?.favicon || `https://www.google.com/s2/favicons?domain=${parsedDomain}&sz=128`,
           type: 'website',
-          title: params.linkMeta?.title || params.title || '',
-          description: params.linkMeta?.description || params.summary || '',
-          domain:
-            params.linkMeta?.domain ||
-            (() => {
-              try {
-                return new URL(params.linkUrl).hostname.replace(/^www\./, '');
-              } catch {
-                return '';
-              }
-            })(),
-          site_name: params.linkMeta?.siteName || '',
-          preview: params.linkMeta?.preview || params.imageUrl || '',
+          title: resolvedTitle,
+          description: resolvedDesc,
+          domain: params.linkMeta?.domain || parsedDomain,
+          site_name: params.linkMeta?.siteName || parsedDomain,
+          preview: resolvedPreview,
         }),
         create_time: now,
         update_time: now,

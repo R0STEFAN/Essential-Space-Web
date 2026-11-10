@@ -25,13 +25,56 @@ export function extractDomain(url: string): string {
 }
 
 /**
+ * Fast platform-specific OpenGraph image heuristics
+ */
+function getPlatformPreviewHeuristic(url: string): { preview?: string; favicon?: string } {
+  try {
+    const u = new URL(normalizeUrl(url));
+    const host = u.hostname.replace(/^www\./i, '').toLowerCase();
+
+    if (host === 'github.com') {
+      const parts = u.pathname.split('/').filter(Boolean);
+      if (parts.length >= 2 && !['features', 'pricing', 'about', 'enterprise', 'topics', 'trending', 'collections'].includes(parts[0])) {
+        return {
+          preview: `https://opengraph.githubassets.com/1/${parts[0]}/${parts[1]}`,
+          favicon: 'https://github.githubassets.com/favicons/favicon.svg',
+        };
+      }
+      return { favicon: 'https://github.githubassets.com/favicons/favicon.svg' };
+    }
+
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      const v = u.searchParams.get('v');
+      if (v) {
+        return {
+          preview: `https://i.ytimg.com/vi/${v}/hqdefault.jpg`,
+          favicon: 'https://www.youtube.com/s/desktop/favicon.ico',
+        };
+      }
+    }
+
+    if (host === 'youtu.be') {
+      const v = u.pathname.replace(/^\//, '').split('/')[0];
+      if (v) {
+        return {
+          preview: `https://i.ytimg.com/vi/${v}/hqdefault.jpg`,
+          favicon: 'https://www.youtube.com/s/desktop/favicon.ico',
+        };
+      }
+    }
+  } catch {}
+  return {};
+}
+
+/**
  * Fetches rich OpenGraph metadata for a URL (title, description, preview image, favicon, domain, siteName)
- * Features cascading fallbacks (Cloudflare API -> Microlink -> Google Favicon / Heuristics)
+ * Cascading hierarchy: Edge Cloudflare Worker (/api/link-preview) -> Client Microlink -> Heuristics -> Domain fallback
  */
 export async function fetchLinkPreview(rawUrl: string): Promise<CardLink> {
   const url = normalizeUrl(rawUrl);
   const domain = extractDomain(url) || url;
-  const defaultFavicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  const platform = getPlatformPreviewHeuristic(url);
+  const defaultFavicon = platform.favicon || `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
 
   // Baseline fallback
   const fallback: CardLink = {
@@ -41,7 +84,7 @@ export async function fetchLinkPreview(rawUrl: string): Promise<CardLink> {
     domain,
     siteName: domain,
     favicon: defaultFavicon,
-    preview: undefined,
+    preview: platform.preview,
   };
 
   if (!url || !/^https?:\/\/[a-z0-9.-]+\.[a-z]{2,}/i.test(url)) {
@@ -57,12 +100,16 @@ export async function fetchLinkPreview(rawUrl: string): Promise<CardLink> {
 
     if (res.ok) {
       const data = await res.json();
-      if (data && (data.title || data.preview || data.description)) {
+      const hasRealTitle = Boolean(data?.title && data.title !== domain && data.title !== url);
+      const hasPreview = Boolean(data?.preview);
+
+      // Only accept if it actually resolved metadata (not a bare fallback)
+      if (hasRealTitle || hasPreview) {
         return {
           url,
           title: data.title || domain,
           description: data.description || '',
-          preview: data.preview || undefined,
+          preview: data.preview || platform.preview,
           favicon: data.favicon || defaultFavicon,
           domain: data.domain || domain,
           siteName: data.siteName || domain,
@@ -70,13 +117,13 @@ export async function fetchLinkPreview(rawUrl: string): Promise<CardLink> {
       }
     }
   } catch (err) {
-    console.warn('Local link-preview endpoint failed, trying fallback...', err);
+    console.warn('[LinkPreview] Local endpoint failed, trying client fallback...', err);
   }
 
-  // 2. Try Microlink public metadata API
+  // 2. Try Microlink public metadata API directly from client browser
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 5000);
     const mRes = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`, {
       signal: controller.signal,
     });
@@ -90,15 +137,15 @@ export async function fetchLinkPreview(rawUrl: string): Promise<CardLink> {
           url,
           title: d.title || domain,
           description: d.description || '',
-          preview: d.image?.url || undefined,
+          preview: d.image?.url || platform.preview,
           favicon: d.logo?.url || defaultFavicon,
-          domain: domain,
+          domain,
           siteName: d.publisher || domain,
         };
       }
     }
   } catch (mErr) {
-    console.warn('Microlink fallback error:', mErr);
+    console.warn('[LinkPreview] Microlink client fallback error:', mErr);
   }
 
   return fallback;

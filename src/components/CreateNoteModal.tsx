@@ -495,7 +495,16 @@ export default function CreateNoteModal({
           (tab === 'LINK'
             ? activeMeta?.description
             : (content.trim() ? content.trim() : undefined)),
-        imageUrl: (tab === 'LINK' ? activeMeta?.preview : undefined) || finalImageUrl,
+        imageUrl:
+          (tab === 'LINK'
+            ? activeMeta?.preview ||
+              (() => {
+                const gh = normalizedLink.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/?#]+)/i);
+                return gh && gh[2] && !['features', 'pricing', 'about', 'enterprise'].includes(gh[1])
+                  ? `https://opengraph.githubassets.com/1/${gh[1]}/${gh[2]}`
+                  : undefined;
+              })()
+            : undefined) || finalImageUrl,
         cachedImageUrl: localDataUrl,
         imageGcsKey,
         collectionId: selectedCollectionIds[0] || undefined,
