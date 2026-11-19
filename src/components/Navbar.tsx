@@ -13,6 +13,7 @@ import {
   X,
   Check,
   User as UserIcon,
+  Github,
 } from 'lucide-react';
 import {
   SUPPORTED_LANGUAGES,
@@ -281,8 +282,21 @@ export default function Navbar({
             </span>
           </button>
 
-          {/* Abstract Circular Account Avatar & Profile Popup */}
-          <div className="relative pl-1 border-l border-nothing-border" ref={accountRef}>
+          {/* GitHub Source Code & Profile Section */}
+          <div className="flex items-center gap-1.5 pl-1.5 border-l border-nothing-border">
+            {/* GitHub Repository Link */}
+            <a
+              href="https://github.com/R0STEFAN/Essential-Space-Web"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="View source code on GitHub"
+              className="w-8 h-8 rounded-full bg-nothing-card hover:bg-white/10 border border-nothing-border/80 hover:border-white/40 text-nothing-light hover:text-white flex items-center justify-center transition-all select-none shadow-sm active:scale-95 group"
+            >
+              <Github size={15} className="transition-transform group-hover:scale-110" />
+            </a>
+
+            {/* Abstract Circular Account Avatar & Profile Popup */}
+            <div className="relative" ref={accountRef}>
             <button
               type="button"
               onClick={() => {
@@ -344,6 +358,7 @@ export default function Navbar({
                 </button>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

@@ -15,6 +15,7 @@ import {
   Sparkles,
   ChevronLeft,
   UserCheck,
+  Github,
 } from 'lucide-react';
 import { parseNothingJwt } from '@/lib/crypto';
 import { saveDbAuth, getDbAuth, clearDbAuth } from '@/lib/db';
@@ -283,6 +284,17 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-nothing-grid pointer-events-none opacity-40" />
 
       <div className="w-full max-w-md bg-nothing-dark border border-nothing-border rounded-3xl p-8 relative z-10 shadow-2xl">
+        {/* GitHub Source Code Shortcut */}
+        <a
+          href="https://github.com/R0STEFAN/Essential-Space-Web"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="View source code on GitHub"
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-nothing-card hover:bg-white/10 border border-nothing-border/80 hover:border-white/40 text-nothing-gray hover:text-white flex items-center justify-center transition-all select-none shadow-sm active:scale-95 group"
+        >
+          <Github size={15} className="transition-transform group-hover:scale-110 text-nothing-light group-hover:text-white" />
+        </a>
+
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-14 h-14 mb-3 flex items-center justify-center">
@@ -615,11 +627,26 @@ export default function LoginPage() {
         )}
 
         {/* Footer Info */}
-        <div className="mt-6 pt-5 border-t border-nothing-border flex items-start gap-2.5 text-xs text-nothing-gray">
-          <ShieldCheck className="w-4 h-4 text-nothing-red shrink-0 mt-0.5" />
-          <p className="leading-relaxed text-[11px]">
-            Your session is securely signed and stored inside your self-hosted instance. It communicates directly with Nothing Cloud to fetch notes, voice audio, and tasks.
-          </p>
+        <div className="mt-6 pt-5 border-t border-nothing-border space-y-3">
+          <div className="flex items-start gap-2.5 text-xs text-nothing-gray">
+            <ShieldCheck className="w-4 h-4 text-nothing-red shrink-0 mt-0.5" />
+            <p className="leading-relaxed text-[11px]">
+              Your session is securely signed and stored inside your self-hosted instance. It communicates directly with Nothing Cloud to fetch notes, voice audio, and tasks.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-nothing-border/50 text-[11px] font-mono text-nothing-gray">
+            <span>Essential Space Web</span>
+            <a
+              href="https://github.com/R0STEFAN/Essential-Space-Web"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-nothing-light hover:text-white transition-colors group"
+            >
+              <Github className="w-3.5 h-3.5 text-nothing-gray group-hover:text-white transition-colors" />
+              <span>Source Code</span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
