@@ -108,20 +108,20 @@ export default function CollectionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-md rounded-2xl bg-nothing-card border border-nothing-border shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-md rounded-2xl bg-nothing-dark border border-nothing-border shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-nothing-border/60">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-nothing-red" />
-            <h3 className="font-dot text-sm text-white uppercase tracking-wider font-semibold">
+            <h3 className="font-dot text-sm text-nothing-ink uppercase tracking-wider font-semibold">
               {mode === 'CREATE' ? 'NEW COLLECTION' : 'EDIT COLLECTION'}
             </h3>
           </div>
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1 rounded-lg text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1 rounded-lg text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors"
           >
             <X size={16} />
           </button>
@@ -146,7 +146,7 @@ export default function CollectionModal({
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Work, Ideas, Travel, Shopping"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-nothing-border text-xs text-white placeholder:text-nothing-gray/50 focus:outline-none focus:border-white transition-colors font-mono"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-nothing-input border border-nothing-border text-xs text-nothing-ink placeholder:text-nothing-gray/50 focus:outline-none focus:border-nothing-ink transition-colors font-mono"
             />
           </div>
 
@@ -171,7 +171,7 @@ export default function CollectionModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-4 py-2 rounded-xl text-xs font-mono text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
+                className="px-4 py-2 rounded-xl text-xs font-mono text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors"
               >
                 Cancel
               </button>
@@ -179,7 +179,7 @@ export default function CollectionModal({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-5 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-dot tracking-wider font-semibold flex items-center gap-1.5 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                className="px-5 py-2 rounded-xl bg-nothing-ink hover:bg-nothing-ink/90 text-nothing-on-ink text-xs font-dot tracking-wider font-semibold flex items-center gap-1.5 transition-all shadow-md active:scale-95 disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>

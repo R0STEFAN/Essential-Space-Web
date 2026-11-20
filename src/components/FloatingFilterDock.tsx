@@ -26,7 +26,7 @@ export default function FloatingFilterDock({
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-[95vw] pointer-events-auto">
-      <div className="flex items-center gap-1 bg-black/85 backdrop-blur-xl border border-nothing-border/80 px-2 py-1.5 rounded-full shadow-2xl shadow-black/90 transition-all duration-300 hover:border-white/30">
+      <div className="flex items-center gap-1 bg-nothing-dark/90 backdrop-blur-xl border border-nothing-border/90 px-2 py-1.5 rounded-full shadow-2xl shadow-black/15 dark:shadow-black/90 transition-all duration-300 hover:border-nothing-ink/30">
         {filterItems.map(item => {
           const Icon = item.icon;
           const isActive = !isTrash && activeType === item.id;
@@ -39,11 +39,11 @@ export default function FloatingFilterDock({
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-dot tracking-wider transition-all duration-200 select-none ${
                 isActive
-                  ? 'bg-white text-black font-semibold shadow-md scale-[1.02]'
-                  : 'text-nothing-gray hover:text-white hover:bg-nothing-hover/40'
+                  ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-md scale-[1.02]'
+                  : 'text-nothing-gray hover:text-nothing-ink hover:bg-nothing-hover/50'
               }`}
             >
-              <Icon size={13} className={isActive ? 'text-black' : ''} />
+              <Icon size={13} className={isActive ? 'text-nothing-on-ink' : ''} />
               <span className="hidden sm:inline">{item.label}</span>
             </button>
           );

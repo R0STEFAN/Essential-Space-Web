@@ -15,6 +15,7 @@ import {
   User as UserIcon,
   Github,
 } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 import {
   SUPPORTED_LANGUAGES,
   getLanguageOption,
@@ -93,14 +94,14 @@ export default function Navbar({
   const userInitial = userEmail ? userEmail.trim()[0]?.toUpperCase() : 'U';
 
   return (
-    <header className="border-b border-nothing-border bg-black/80 backdrop-blur-md sticky top-0 z-50">
+    <header className="border-b border-nothing-border bg-nothing-dark/85 backdrop-blur-md sticky top-0 z-50 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icon.svg" alt="Essential Space Icon" className="w-7 h-7" />
           <div className="flex flex-col">
-            <span className="font-dot text-sm tracking-wider font-semibold text-white">
+            <span className="font-dot text-sm tracking-wider font-semibold text-nothing-ink">
               ESSENTIAL SPACE
             </span>
             <span className="text-[11px] text-nothing-gray hidden sm:inline">
@@ -110,13 +111,13 @@ export default function Navbar({
         </div>
 
         {/* Tab Switcher: For You / Library */}
-        <nav className="flex items-center gap-1 bg-nothing-card/90 p-1 rounded-full border border-nothing-border shadow-inner">
+        <nav className="flex items-center gap-1 bg-nothing-subtle/90 p-1 rounded-full border border-nothing-border shadow-inner">
           <button
             onClick={() => onSelectTab('foryou')}
             className={`flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-dot tracking-wider transition-all duration-200 select-none ${
               activeTab === 'foryou'
-                ? 'bg-white text-black font-semibold shadow-sm'
-                : 'text-nothing-gray hover:text-white hover:bg-nothing-hover/30'
+                ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-nothing-ink hover:bg-nothing-hover/40'
             }`}
           >
             <Sparkles size={13} className={activeTab === 'foryou' ? 'text-nothing-red' : ''} />
@@ -127,8 +128,8 @@ export default function Navbar({
             onClick={() => onSelectTab('library')}
             className={`flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-dot tracking-wider transition-all duration-200 select-none ${
               activeTab === 'library'
-                ? 'bg-white text-black font-semibold shadow-sm'
-                : 'text-nothing-gray hover:text-white hover:bg-nothing-hover/30'
+                ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-nothing-ink hover:bg-nothing-hover/40'
             }`}
           >
             <Layers size={13} />
@@ -136,7 +137,7 @@ export default function Navbar({
           </button>
         </nav>
 
-        {/* Right Section: Language Dropdown, Capture, Sync, Account Avatar */}
+        {/* Right Section: Language Dropdown, Capture, Sync, Theme, GitHub, Account Avatar */}
         <div className="flex items-center gap-2 sm:gap-2.5 text-xs">
           {/* Language Dropdown with Search (Replaces former session timer) */}
           <div className="relative" ref={langRef}>
@@ -149,11 +150,11 @@ export default function Navbar({
               title="Default AI Summary & Transcription Language"
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all select-none ${
                 isLangOpen
-                  ? 'bg-white text-black border-white font-semibold'
-                  : 'bg-nothing-card hover:bg-nothing-hover border-nothing-border text-nothing-light hover:text-white hover:border-white/30'
+                  ? 'bg-nothing-ink text-nothing-on-ink border-nothing-ink font-semibold'
+                  : 'bg-nothing-card hover:bg-nothing-hover border-nothing-border text-nothing-light hover:text-nothing-ink hover:border-nothing-ink/30'
               }`}
             >
-              <Globe size={13} className={isLangOpen ? 'text-nothing-red' : 'text-nothing-red'} />
+              <Globe size={13} className="text-nothing-red" />
               <span className="font-semibold uppercase tracking-wider text-xs">
                 {selectedLang.code === 'auto' ? 'AUTO' : selectedLang.code.toUpperCase()}
               </span>
@@ -167,7 +168,7 @@ export default function Navbar({
 
             {/* Language Popover Menu */}
             {isLangOpen && (
-              <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-[#141414]/95 border border-white/20 shadow-2xl p-2.5 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-nothing-dark/95 border border-nothing-border shadow-2xl p-2.5 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
                 <div className="px-2 pt-1 pb-2 border-b border-nothing-border/50">
                   <span className="font-dot text-[11px] text-nothing-gray uppercase tracking-wider block">
                     AI SUMMARY & TRANSCRIPT LANGUAGE
@@ -186,13 +187,13 @@ export default function Navbar({
                     value={langSearch}
                     onChange={e => setLangSearch(e.target.value)}
                     placeholder="Search language..."
-                    className="w-full bg-black/80 border border-nothing-border rounded-xl pl-8 pr-7 py-1.5 text-xs text-white placeholder:text-nothing-gray/70 focus:outline-none focus:border-white/40 transition-colors"
+                    className="w-full bg-nothing-input border border-nothing-border rounded-xl pl-8 pr-7 py-1.5 text-xs text-nothing-ink placeholder:text-nothing-gray/70 focus:outline-none focus:border-nothing-ink/40 transition-colors"
                   />
                   {langSearch && (
                     <button
                       type="button"
                       onClick={() => setLangSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-nothing-gray hover:text-white"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-nothing-gray hover:text-nothing-ink"
                     >
                       <X size={12} />
                     </button>
@@ -214,8 +215,8 @@ export default function Navbar({
                         }}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all text-left group ${
                           isSelected
-                            ? 'bg-white text-black font-semibold shadow-sm'
-                            : 'text-nothing-light hover:text-white hover:bg-white/10'
+                            ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                            : 'text-nothing-light hover:text-nothing-ink hover:bg-nothing-ink/10'
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
@@ -224,7 +225,7 @@ export default function Navbar({
                             {item.nativeName !== item.name && (
                               <span
                                 className={`text-[11px] ml-1.5 ${
-                                  isSelected ? 'text-black/60 font-normal' : 'text-nothing-gray'
+                                  isSelected ? 'text-nothing-on-ink/65 font-normal' : 'text-nothing-gray'
                                 }`}
                               >
                                 ({item.nativeName})
@@ -237,8 +238,8 @@ export default function Navbar({
                           <span
                             className={`px-1.5 py-0.5 rounded text-[11px] font-mono uppercase ${
                               isSelected
-                                ? 'bg-black/10 text-black font-bold'
-                                : 'bg-black/50 text-nothing-gray border border-nothing-border/60'
+                                ? 'bg-nothing-on-ink/15 text-nothing-on-ink font-bold'
+                                : 'bg-nothing-subtle text-nothing-gray border border-nothing-border/70'
                             }`}
                           >
                             {item.code}
@@ -263,7 +264,7 @@ export default function Navbar({
           {onOpenCreateNote && (
             <button
               onClick={onOpenCreateNote}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-nothing-red hover:bg-nothing-red/80 text-white font-dot text-xs tracking-wider transition-all shadow-md shadow-nothing-red/20 active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-nothing-red hover:bg-nothing-red/85 text-white font-dot text-xs tracking-wider transition-all shadow-md shadow-nothing-red/20 active:scale-95"
             >
               <Plus size={13} strokeWidth={3} />
               <span className="hidden sm:inline">CAPTURE</span>
@@ -282,15 +283,18 @@ export default function Navbar({
             </span>
           </button>
 
-          {/* GitHub Source Code & Profile Section */}
+          {/* Theme Switcher, GitHub Source Code & Profile Section */}
           <div className="flex items-center gap-1.5 pl-1.5 border-l border-nothing-border">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             {/* GitHub Repository Link */}
             <a
               href="https://github.com/R0STEFAN/Essential-Space-Web"
               target="_blank"
               rel="noopener noreferrer"
               title="View source code on GitHub"
-              className="w-8 h-8 rounded-full bg-nothing-card hover:bg-white/10 border border-nothing-border/80 hover:border-white/40 text-nothing-light hover:text-white flex items-center justify-center transition-all select-none shadow-sm active:scale-95 group"
+              className="w-8 h-8 rounded-full bg-nothing-card hover:bg-nothing-ink/10 border border-nothing-border/80 hover:border-nothing-ink/40 text-nothing-light hover:text-nothing-ink flex items-center justify-center transition-all select-none shadow-sm active:scale-95 group"
             >
               <Github size={15} className="transition-transform group-hover:scale-110" />
             </a>
@@ -306,8 +310,8 @@ export default function Navbar({
               title={userEmail ? `Account: ${userEmail}` : 'Account Settings'}
               className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all relative select-none shadow-sm ${
                 isAccountOpen
-                  ? 'bg-white text-black border-white shadow-md scale-105'
-                  : 'bg-nothing-card hover:bg-white/10 border-nothing-border/80 hover:border-white/40 text-white'
+                  ? 'bg-nothing-ink text-nothing-on-ink border-nothing-ink shadow-md scale-105'
+                  : 'bg-nothing-card hover:bg-nothing-ink/10 border-nothing-border/80 hover:border-nothing-ink/40 text-nothing-ink'
               }`}
             >
               {userEmail ? (
@@ -316,15 +320,15 @@ export default function Navbar({
                 <UserIcon size={14} />
               )}
               {/* Online indicator dot */}
-              <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-black" />
+              <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-nothing-dark" />
             </button>
 
             {/* Account Popup */}
             {isAccountOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-[#141414]/95 border border-white/20 shadow-2xl p-4 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-nothing-dark/95 border border-nothing-border shadow-2xl p-4 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
                 {/* Large Abstract Account Avatar */}
                 <div className="flex flex-col items-center text-center">
-                  <div className="w-14 h-14 rounded-full bg-[#1A1A1A] border border-white/25 text-white font-dot text-2xl flex items-center justify-center shadow-inner mb-2.5">
+                  <div className="w-14 h-14 rounded-full bg-nothing-subtle border border-nothing-border text-nothing-ink font-dot text-2xl flex items-center justify-center shadow-inner mb-2.5">
                     {userInitial}
                   </div>
 
@@ -332,7 +336,7 @@ export default function Navbar({
                     NOTHING ACCOUNT
                   </span>
 
-                  <p className="font-mono text-xs text-white break-all max-w-full px-2 mt-1 select-all font-medium">
+                  <p className="font-mono text-xs text-nothing-ink break-all max-w-full px-2 mt-1 select-all font-medium">
                     {userEmail || 'Active User'}
                   </p>
 

@@ -337,9 +337,9 @@ export default function ForYouTab({
       case 'AUDIO':
         return <Mic size={11} className="text-nothing-red" />;
       case 'LINK':
-        return <Bookmark size={11} className="text-blue-400" />;
+        return <Bookmark size={11} className="text-blue-600 dark:text-blue-400" />;
       case 'IMAGE':
-        return <ImageIcon size={11} className="text-amber-400" />;
+        return <ImageIcon size={11} className="text-amber-600 dark:text-amber-400" />;
       default:
         return <FileText size={11} className="text-nothing-gray" />;
     }
@@ -357,7 +357,7 @@ export default function ForYouTab({
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-nothing-red animate-pulse" />
-            <h2 className="font-dot text-lg font-semibold text-white tracking-wider">
+            <h2 className="font-dot text-lg font-semibold text-nothing-ink tracking-wider">
               FOR YOU
             </h2>
           </div>
@@ -370,7 +370,7 @@ export default function ForYouTab({
         <div className="flex items-center gap-2 text-xs">
           <div className="px-3 py-1.5 rounded-xl bg-nothing-card border border-nothing-border flex items-center gap-2">
             <span className="text-nothing-gray">TASKS:</span>
-            <span className="text-white font-semibold font-mono">{pendingCount}</span>
+            <span className="text-nothing-ink font-semibold font-mono">{pendingCount}</span>
             <span className="text-nothing-gray/70">pending</span>
           </div>
           {suggestedTasks.length > 0 && (
@@ -384,7 +384,7 @@ export default function ForYouTab({
             </button>
           )}
           {recommendations.length > 0 && (
-            <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/20 flex items-center gap-1.5 text-white">
+            <div className="px-3 py-1.5 rounded-xl bg-nothing-ink/5 border border-nothing-ink/20 flex items-center gap-1.5 text-nothing-ink">
               <FolderPlus size={12} />
               <span className="font-medium">{recommendations.length} COLLECTIONS</span>
             </div>
@@ -397,7 +397,7 @@ export default function ForYouTab({
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CheckSquare size={16} className="text-nothing-red" />
-            <h3 className="font-dot text-sm tracking-wider text-white uppercase font-medium">
+            <h3 className="font-dot text-sm tracking-wider text-nothing-ink uppercase font-medium">
               TASKS & REMINDERS FROM ALL NOTES
             </h3>
             <span className="px-2 py-0.5 rounded-full bg-nothing-card border border-nothing-border text-[11px] text-nothing-gray">
@@ -411,8 +411,8 @@ export default function ForYouTab({
               onClick={() => setTaskFilter('pending')}
               className={`px-3 py-1 rounded-full transition-all ${
                 taskFilter === 'pending'
-                  ? 'bg-white text-black font-semibold'
-                  : 'text-nothing-gray hover:text-white'
+                  ? 'bg-nothing-ink text-nothing-on-ink font-semibold'
+                  : 'text-nothing-gray hover:text-nothing-ink'
               }`}
             >
               PENDING ({pendingCount})
@@ -421,8 +421,8 @@ export default function ForYouTab({
               onClick={() => setTaskFilter('completed')}
               className={`px-3 py-1 rounded-full transition-all ${
                 taskFilter === 'completed'
-                  ? 'bg-white text-black font-semibold'
-                  : 'text-nothing-gray hover:text-white'
+                  ? 'bg-nothing-ink text-nothing-on-ink font-semibold'
+                  : 'text-nothing-gray hover:text-nothing-ink'
               }`}
             >
               COMPLETED ({completedCount})
@@ -431,8 +431,8 @@ export default function ForYouTab({
               onClick={() => setTaskFilter('all')}
               className={`px-3 py-1 rounded-full transition-all ${
                 taskFilter === 'all'
-                  ? 'bg-white text-black font-semibold'
-                  : 'text-nothing-gray hover:text-white'
+                  ? 'bg-nothing-ink text-nothing-on-ink font-semibold'
+                  : 'text-nothing-gray hover:text-nothing-ink'
               }`}
             >
               ALL ({tasks.length})
@@ -452,8 +452,8 @@ export default function ForYouTab({
               onClick={() => setSelectedListId('')}
               className={`px-3 py-1 rounded-full text-xs font-mono transition-all shrink-0 select-none ${
                 selectedListId === ''
-                  ? 'bg-white text-black font-semibold shadow-sm'
-                  : 'bg-nothing-card border border-nothing-border text-nothing-gray hover:text-white hover:border-white/40'
+                  ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                  : 'bg-nothing-card border border-nothing-border text-nothing-gray hover:text-nothing-ink hover:border-nothing-ink/40'
               }`}
             >
               All Lists ({pendingCount})
@@ -467,8 +467,8 @@ export default function ForYouTab({
                   onClick={() => setSelectedListId(isSelected ? '' : list.cardId)}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono transition-all shrink-0 select-none ${
                     isSelected
-                      ? 'bg-white text-black font-semibold shadow-sm'
-                      : 'bg-nothing-card border border-nothing-border text-nothing-gray hover:text-white hover:border-white/40'
+                      ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                      : 'bg-nothing-card border border-nothing-border text-nothing-gray hover:text-nothing-ink hover:border-nothing-ink/40'
                   }`}
                 >
                   {getCardTypeIcon(list.type)}
@@ -476,8 +476,8 @@ export default function ForYouTab({
                   <span
                     className={`text-[11px] px-1.5 py-0.2 rounded-full font-semibold ${
                       isSelected
-                        ? 'bg-black text-white'
-                        : 'bg-nothing-border/60 text-nothing-gray'
+                        ? 'bg-nothing-on-ink text-nothing-ink'
+                        : 'bg-nothing-border/70 text-nothing-gray'
                     }`}
                   >
                     {list.pendingCount}
@@ -490,11 +490,11 @@ export default function ForYouTab({
 
         {/* Tasks List - 1 Centered Column (Flat & compact list without bulky group headers) */}
         {filteredTasks.length === 0 ? (
-          <div className="max-w-4xl mx-auto p-8 rounded-2xl bg-nothing-card/30 border border-dashed border-nothing-border/60 text-center">
-            <div className="p-3 rounded-full bg-nothing-border/30 text-nothing-gray mx-auto w-fit mb-2">
+          <div className="max-w-4xl mx-auto p-8 rounded-2xl bg-nothing-card/50 border border-dashed border-nothing-border/70 text-center">
+            <div className="p-3 rounded-full bg-nothing-border/40 text-nothing-gray mx-auto w-fit mb-2">
               <Check size={20} />
             </div>
-            <p className="text-xs font-dot text-white">NO TASKS IN THIS VIEW</p>
+            <p className="text-xs font-dot text-nothing-ink">NO TASKS IN THIS VIEW</p>
             <p className="text-[11px] font-mono text-nothing-gray mt-0.5">
               {taskFilter === 'pending'
                 ? 'All tasks in this list completed! New items will appear here.'
@@ -513,8 +513,8 @@ export default function ForYouTab({
                   key={`${task.cardId}_${task.eventId}`}
                   className={`group px-4 py-2.5 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                     isChecked
-                      ? 'bg-nothing-card/40 border-nothing-border/40 opacity-70'
-                      : 'bg-nothing-card border-nothing-border hover:border-white/40'
+                      ? 'bg-nothing-card/50 border-nothing-border/50 opacity-70'
+                      : 'bg-nothing-card border-nothing-border hover:border-nothing-ink/40'
                   }`}
                 >
                   {/* Left part: Checkbox + Title & Content */}
@@ -524,7 +524,7 @@ export default function ForYouTab({
                       className={`shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
                         isChecked
                           ? 'bg-nothing-red border-nothing-red text-white'
-                          : 'border-nothing-border bg-black hover:border-white'
+                          : 'border-nothing-border bg-nothing-input hover:border-nothing-ink'
                       }`}
                     >
                       {isChecked && <Check size={12} strokeWidth={3} />}
@@ -533,7 +533,7 @@ export default function ForYouTab({
                     <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2.5">
                       <p
                         className={`text-xs font-mono font-medium truncate ${
-                          isChecked ? 'line-through text-nothing-gray' : 'text-white'
+                          isChecked ? 'line-through text-nothing-gray' : 'text-nothing-ink'
                         }`}
                       >
                         {task.title}
@@ -564,7 +564,7 @@ export default function ForYouTab({
                       <button
                         onClick={() => onOpenCardDetail(parentCard)}
                         title="Open parent note"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[11px] font-mono text-nothing-gray transition-colors whitespace-nowrap"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-nothing-subtle hover:bg-nothing-ink hover:text-nothing-on-ink border border-nothing-border text-[11px] font-mono text-nothing-gray transition-colors whitespace-nowrap"
                       >
                         {getCardTypeIcon(task.cardType)}
                         <span className="truncate max-w-[120px] sm:max-w-[160px]">
@@ -582,15 +582,15 @@ export default function ForYouTab({
 
         {/* AI Task Suggestions Box - Placed BELOW active tasks, collapsed by default */}
         {suggestedTasks.length > 0 && (
-          <div className="max-w-4xl mx-auto rounded-2xl bg-nothing-card/80 border border-nothing-red/30 transition-all overflow-hidden mt-6">
+          <div className="max-w-4xl mx-auto rounded-2xl bg-nothing-card/90 border border-nothing-red/30 transition-all overflow-hidden mt-6">
             {/* Header row with EXPAND / COLLAPSE toggle */}
             <div
               onClick={() => setIsAiTasksExpanded(prev => !prev)}
-              className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.03] transition-colors select-none"
+              className="flex items-center justify-between p-4 cursor-pointer hover:bg-nothing-ink/[0.03] transition-colors select-none"
             >
               <div className="flex items-center gap-2.5">
                 <Sparkles size={14} className="text-nothing-red animate-pulse shrink-0" />
-                <h4 className="font-dot text-xs text-white uppercase tracking-wider font-medium">
+                <h4 className="font-dot text-xs text-nothing-ink uppercase tracking-wider font-medium">
                   AI TASK SUGGESTIONS ({suggestedTasks.length})
                 </h4>
                 <span className="hidden sm:inline text-[11px] font-mono text-nothing-gray">
@@ -605,7 +605,7 @@ export default function ForYouTab({
                     e.stopPropagation();
                     setIsAiTasksExpanded(prev => !prev);
                   }}
-                  className="px-2.5 py-1 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black border border-nothing-border text-[11px] font-mono text-nothing-gray transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-2.5 py-1 rounded-full bg-nothing-subtle hover:bg-nothing-ink hover:text-nothing-on-ink border border-nothing-border text-[11px] font-mono text-nothing-gray transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>{isAiTasksExpanded ? 'COLLAPSE' : 'EXPAND'}</span>
                   {isAiTasksExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -621,13 +621,13 @@ export default function ForYouTab({
                   return (
                     <div
                       key={`sug_${task.cardId}_${task.eventId}`}
-                      className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 p-3 rounded-xl bg-black/60 border border-nothing-border hover:border-nothing-red/40 transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 p-3 rounded-xl bg-nothing-subtle/80 border border-nothing-border hover:border-nothing-red/40 transition-colors"
                     >
                       {/* Left: Sparkles + Title (full, not truncated) + Content */}
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <Sparkles size={13} className="text-nothing-red/80 shrink-0 mt-0.5" />
                         <div className="min-w-0 flex-1 flex flex-col gap-1">
-                          <p className="text-xs font-mono text-white font-medium break-words leading-relaxed">
+                          <p className="text-xs font-mono text-nothing-ink font-medium break-words leading-relaxed">
                             {task.title}
                           </p>
                           {task.content && task.content !== task.title && (
@@ -644,7 +644,7 @@ export default function ForYouTab({
                           <button
                             onClick={() => onOpenCardDetail(parentCard)}
                             title="Open note"
-                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-border/40 hover:bg-white hover:text-black text-[11px] font-mono text-nothing-gray transition-colors whitespace-nowrap max-w-[150px]"
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-card hover:bg-nothing-ink hover:text-nothing-on-ink border border-nothing-border text-[11px] font-mono text-nothing-gray transition-colors whitespace-nowrap max-w-[150px]"
                           >
                             {getCardTypeIcon(task.cardType)}
                             <span className="truncate">{task.cardTitle}</span>
@@ -652,7 +652,7 @@ export default function ForYouTab({
                         )}
                         <button
                           onClick={() => handleAcceptTaskSuggestion(task)}
-                          className="px-3 py-1 rounded-full bg-white hover:bg-neutral-200 text-black text-[11px] font-mono font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1 rounded-full bg-nothing-ink hover:bg-nothing-ink/85 text-nothing-on-ink text-[11px] font-mono font-semibold transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           <Check size={11} strokeWidth={3} />
                           <span>ADD</span>
@@ -660,7 +660,7 @@ export default function ForYouTab({
                         <button
                           onClick={() => handleDismissTaskSuggestion(task)}
                           title="Dismiss suggestion"
-                          className="p-1 rounded-full text-nothing-gray hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                          className="p-1 rounded-full text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors cursor-pointer"
                         >
                           <X size={12} />
                         </button>
@@ -679,7 +679,7 @@ export default function ForYouTab({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-nothing-red" />
-            <h3 className="font-dot text-sm tracking-wider text-white uppercase font-medium">
+            <h3 className="font-dot text-sm tracking-wider text-nothing-ink uppercase font-medium">
               COLLECTION RECOMMENDATIONS
             </h3>
           </div>
@@ -694,13 +694,13 @@ export default function ForYouTab({
             <div className="h-48 rounded-2xl bg-nothing-card/60 border border-nothing-border" />
           </div>
         ) : recommendations.length === 0 ? (
-          <div className="p-6 rounded-2xl bg-nothing-card/30 border border-dashed border-nothing-border/60 flex items-center justify-between">
+          <div className="p-6 rounded-2xl bg-nothing-card/50 border border-dashed border-nothing-border/70 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-full bg-nothing-border/30 text-nothing-gray">
+              <div className="p-2.5 rounded-full bg-nothing-border/40 text-nothing-gray">
                 <FolderCheck size={18} />
               </div>
               <div>
-                <p className="text-xs font-mono text-white">All collections are up to date</p>
+                <p className="text-xs font-mono text-nothing-ink">All collections are up to date</p>
                 <p className="text-[11px] font-mono text-nothing-gray">
                   Nothing Space will automatically suggest new collections as you capture more notes.
                 </p>
@@ -716,7 +716,7 @@ export default function ForYouTab({
               return (
                 <div
                   key={rec.id}
-                  className="group relative flex flex-col justify-between p-5 rounded-2xl bg-nothing-card border border-nothing-border/80 hover:border-white/40 transition-all duration-200 shadow-lg hover:shadow-black/50"
+                  className="group relative flex flex-col justify-between p-5 rounded-2xl bg-nothing-card border border-nothing-border/90 hover:border-nothing-ink/40 transition-all duration-200 shadow-sm dark:shadow-lg dark:hover:shadow-black/50"
                 >
                   {/* Top Bar: Badge & Dismiss */}
                   <div className="flex items-start justify-between gap-2">
@@ -729,7 +729,7 @@ export default function ForYouTab({
                       onClick={() => handleRecommendationAction(rec, 'DISMISS')}
                       disabled={isLoading}
                       title="Dismiss suggestion"
-                      className="p-1 rounded-lg text-nothing-gray/60 hover:text-white hover:bg-white/10 transition-colors"
+                      className="p-1 rounded-lg text-nothing-gray/60 hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors"
                     >
                       <X size={14} />
                     </button>
@@ -737,7 +737,7 @@ export default function ForYouTab({
 
                   {/* Title & Reason */}
                   <div className="my-3">
-                    <h4 className="font-dot text-sm text-white font-semibold tracking-wide">
+                    <h4 className="font-dot text-sm text-nothing-ink font-semibold tracking-wide">
                       {rec.title}
                     </h4>
                     {rec.reason && (
@@ -767,10 +767,10 @@ export default function ForYouTab({
                           onClick={() => {
                             if (fullCard) onOpenCardDetail(fullCard);
                           }}
-                          className={`group/stack absolute w-36 sm:w-40 h-20 rounded-xl bg-black border border-white/20 shadow-lg flex flex-col justify-between cursor-pointer hover:border-white hover:z-40 transition-all duration-200 transform ${rotation} overflow-hidden`}
+                          className={`group/stack absolute w-36 sm:w-40 h-20 rounded-xl bg-nothing-subtle border border-nothing-border hover:border-nothing-ink shadow-md dark:shadow-lg flex flex-col justify-between cursor-pointer hover:z-40 transition-all duration-200 transform ${rotation} overflow-hidden`}
                           style={{ zIndex, left: `${idx * 32}px` }}
                         >
-                          {/* Image preview or dark gradient */}
+                          {/* Image preview or subtle theme gradient */}
                           {previewImg ? (
                             <div className="absolute inset-0 w-full h-full overflow-hidden">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -785,18 +785,28 @@ export default function ForYouTab({
                               <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/25 pointer-events-none" />
                             </div>
                           ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 to-black pointer-events-none" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-nothing-subtle to-nothing-card pointer-events-none" />
                           )}
 
                           {/* Content Overlay */}
                           <div className="relative z-10 p-2 flex flex-col justify-between h-full">
                             <div className="flex items-center justify-between">
-                              <span className="inline-flex items-center gap-1 text-[11px] font-mono px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-sm text-nothing-gray border border-white/10 shadow-sm">
+                              <span
+                                className={`inline-flex items-center gap-1 text-[11px] font-mono px-1.5 py-0.5 rounded backdrop-blur-sm shadow-sm ${
+                                  previewImg
+                                    ? 'bg-black/80 text-neutral-300 border border-white/10'
+                                    : 'bg-nothing-card/90 text-nothing-gray border border-nothing-border'
+                                }`}
+                              >
                                 {getCardTypeIcon(prevCard.type)}
                                 <span className="tracking-wider">{prevCard.type}</span>
                               </span>
                             </div>
-                            <p className="text-[11px] font-mono text-white/95 font-medium truncate drop-shadow-md">
+                            <p
+                              className={`text-[11px] font-mono font-medium truncate ${
+                                previewImg ? 'text-white/95 drop-shadow-md' : 'text-nothing-ink'
+                              }`}
+                            >
                               {prevCard.title || 'Untitled Note'}
                             </p>
                           </div>
@@ -819,7 +829,7 @@ export default function ForYouTab({
                         )
                       }
                       disabled={isLoading}
-                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-neutral-200 active:bg-neutral-300 text-black text-xs font-dot tracking-wider font-semibold transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-sm"
+                      className="px-3.5 py-1.5 rounded-xl bg-nothing-ink hover:bg-nothing-ink/85 text-nothing-on-ink text-xs font-dot tracking-wider font-semibold transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50 shadow-sm"
                     >
                       {isCreate ? <FolderPlus size={13} /> : <Check size={13} />}
                       <span>{isCreate ? 'CREATE COLLECTION' : 'ADD ALL NOTES'}</span>
@@ -836,7 +846,7 @@ export default function ForYouTab({
       <section className="space-y-4 pt-4 border-t border-nothing-border/60">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-dot text-sm tracking-wider text-white uppercase font-medium">
+            <h3 className="font-dot text-sm tracking-wider text-nothing-ink uppercase font-medium">
               RECENT CAPTURES
             </h3>
             <p className="text-[11px] font-mono text-nothing-gray">

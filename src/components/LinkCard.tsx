@@ -58,7 +58,7 @@ export default function LinkCard({
       <div>
         {/* OpenGraph / Website Preview Image */}
         {previewImg && (
-          <div className="w-full h-44 bg-nothing-black overflow-hidden relative border-b border-nothing-border/60">
+          <div className="w-full h-44 bg-nothing-subtle overflow-hidden relative border-b border-nothing-border/60">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={previewImg}
@@ -68,7 +68,7 @@ export default function LinkCard({
                 (e.target as HTMLElement).style.display = 'none';
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent pointer-events-none" />
           </div>
         )}
 
@@ -86,7 +86,7 @@ export default function LinkCard({
                   className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                     isSelected
                       ? 'bg-nothing-red border-nothing-red text-white'
-                      : 'border-nothing-gray/60 hover:border-white bg-black/40'
+                      : 'border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80'
                   }`}
                 >
                   {isSelected && <Check size={11} strokeWidth={3} />}
@@ -104,12 +104,12 @@ export default function LinkCard({
                   <span className="p-0.5 rounded bg-nothing-red/20 text-nothing-red transition-opacity group-hover:opacity-0">
                     <Bookmark size={13} />
                   </span>
-                  <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-white bg-black/40 opacity-0 group-hover:opacity-100 transition-all" />
+                  <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80 opacity-0 group-hover:opacity-100 transition-all" />
                 </button>
               )}
               <span className="font-dot">LINK / BOOKMARK</span>
               {card.collectionName && (
-                <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
+                <span className="px-2 py-0.5 rounded-full bg-nothing-subtle border border-nothing-border text-[11px]">
                   {card.collectionName}
                 </span>
               )}
@@ -121,7 +121,7 @@ export default function LinkCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={e => e.stopPropagation()}
-                  className="text-nothing-gray hover:text-white p-1 rounded hover:bg-nothing-hover transition-colors"
+                  className="text-nothing-gray hover:text-nothing-ink p-1 rounded hover:bg-nothing-hover transition-colors"
                   title="Open Website"
                 >
                   <ExternalLink size={13} />
@@ -130,7 +130,7 @@ export default function LinkCard({
             </div>
           </div>
 
-          <h3 className="font-normal text-white text-base sm:text-lg mb-2 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors tracking-wide">
+          <h3 className="font-normal text-nothing-ink text-base sm:text-lg mb-2 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors tracking-wide">
             {title}
           </h3>
 
@@ -141,14 +141,14 @@ export default function LinkCard({
               target="_blank"
               rel="noopener noreferrer"
               onClick={e => e.stopPropagation()}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-nothing-hover/80 border border-nothing-border text-xs font-mono text-white hover:border-nothing-red/60 transition-colors mb-3 max-w-full"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-nothing-subtle/90 border border-nothing-border text-xs font-mono text-nothing-ink hover:border-nothing-red/60 transition-colors mb-3 max-w-full"
             >
               {card.link?.favicon && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={card.link.favicon}
                   alt=""
-                  className="w-4 h-4 rounded-full bg-white/10 shrink-0"
+                  className="w-4 h-4 rounded-full bg-nothing-ink/10 shrink-0"
                   onError={e => {
                     (e.target as HTMLElement).style.display = 'none';
                   }}
@@ -166,9 +166,9 @@ export default function LinkCard({
 
           {/* Top 1 Extracted Key-Value Preview */}
           {card.infoExtract && card.infoExtract.length > 0 && (
-            <div className="bg-nothing-hover/40 rounded-lg px-2.5 py-2 mb-2.5 border border-nothing-border/40 text-xs font-mono flex justify-between items-center">
+            <div className="bg-nothing-subtle/70 rounded-lg px-2.5 py-2 mb-2.5 border border-nothing-border/50 text-xs font-mono flex justify-between items-center">
               <span className="text-nothing-gray truncate mr-2">{card.infoExtract[0].title}:</span>
-              <span className="text-white font-semibold truncate">{card.infoExtract[0].value}</span>
+              <span className="text-nothing-ink font-semibold truncate">{card.infoExtract[0].value}</span>
             </div>
           )}
 
@@ -185,7 +185,7 @@ export default function LinkCard({
                     className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all ${
                       isSelected
                         ? 'bg-nothing-red text-white border-nothing-red'
-                        : 'bg-nothing-hover border-nothing-border/60 text-nothing-gray hover:text-white'
+                        : 'bg-nothing-subtle border-nothing-border/70 text-nothing-gray hover:text-nothing-ink'
                     }`}
                   >
                     <Tag size={11} />

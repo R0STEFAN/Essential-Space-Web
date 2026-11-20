@@ -180,17 +180,17 @@ export default function CardDetailModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/50 dark:bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#111111] border border-nothing-border shadow-2xl p-5 sm:p-7 space-y-4 text-white"
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-nothing-dark border border-nothing-border shadow-2xl p-5 sm:p-7 space-y-4 text-nothing-ink"
       >
         {/* Top Header Card */}
-        <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5">
+        <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-4 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="p-1.5 rounded-lg bg-nothing-red/20 text-nothing-red">
+              <span className="p-1.5 rounded-lg bg-nothing-red/15 text-nothing-red">
                 {card.type === 'AUDIO' ? (
                   <Mic size={15} />
                 ) : card.type === 'LINK' ? (
@@ -214,20 +214,20 @@ export default function CardDetailModal({
                 card.collectionNames.map((name, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px] font-mono text-white"
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-well border border-nothing-border text-[11px] font-mono text-nothing-ink"
                   >
                     <Folder size={11} className="text-nothing-red" />
                     {name}
                   </span>
                 ))
               ) : card.collectionName ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px] font-mono text-white">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-nothing-well border border-nothing-border text-[11px] font-mono text-nothing-ink">
                   <Folder size={11} className="text-nothing-red" />
                   {card.collectionName}
                 </span>
               ) : null}
               {card.captureFrom && (
-                <span className="px-2 py-0.5 rounded-full bg-black/50 border border-nothing-border/60 text-[11px] font-mono text-nothing-gray">
+                <span className="px-2 py-0.5 rounded-full bg-nothing-well border border-nothing-border/70 text-[11px] font-mono text-nothing-gray">
                   {getCaptureSourceLabel(card.captureFrom)}
                 </span>
               )}
@@ -236,14 +236,14 @@ export default function CardDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-full bg-black/60 text-nothing-gray hover:text-white border border-nothing-border hover:border-white/40 transition-colors shrink-0"
+              className="p-1.5 rounded-full bg-nothing-well text-nothing-gray hover:text-nothing-ink border border-nothing-border hover:border-nothing-ink/40 transition-colors shrink-0"
               title="Close (Esc)"
             >
               <X size={18} />
             </button>
           </div>
 
-          <h2 className="font-dot text-lg sm:text-xl text-white uppercase tracking-wide leading-snug mb-1.5">
+          <h2 className="font-dot text-lg sm:text-xl text-nothing-ink uppercase tracking-wide leading-snug mb-1.5">
             {card.title || 'Untitled Note'}
           </h2>
 
@@ -251,18 +251,18 @@ export default function CardDetailModal({
 
           {/* Speakers bar (matching Nothing OS S1 / S2 expandable speakers section) */}
           {card.speakers && card.speakers.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-nothing-border/50">
+            <div className="mt-4 pt-3 border-t border-nothing-border/60">
               <button
                 type="button"
                 onClick={() => setShowSpeakers(!showSpeakers)}
-                className="w-full flex items-center justify-between text-xs text-nothing-gray hover:text-white transition-colors"
+                className="w-full flex items-center justify-between text-xs text-nothing-gray hover:text-nothing-ink transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-1.5">
                     {card.speakers.map((sp, i) => (
                       <span
                         key={i}
-                        className="w-6 h-6 rounded-full bg-nothing-light text-black font-dot text-[11px] flex items-center justify-center border border-[#1A1A1A] font-bold"
+                        className="w-6 h-6 rounded-full bg-nothing-ink text-nothing-on-ink font-dot text-[11px] flex items-center justify-center border border-nothing-subtle font-bold"
                       >
                         S{i + 1}
                       </span>
@@ -281,7 +281,7 @@ export default function CardDetailModal({
                   {card.speakers.map((sp, idx) => (
                     <div
                       key={idx}
-                      className="p-2.5 rounded-xl bg-black/50 border border-nothing-border/40 text-xs"
+                      className="p-2.5 rounded-xl bg-nothing-well border border-nothing-border/60 text-xs"
                     >
                       <div className="flex items-center gap-1.5 font-mono text-nothing-red mb-0.5">
                         <Users size={12} />
@@ -300,7 +300,7 @@ export default function CardDetailModal({
 
         {/* Image / Link Preview Section */}
         {previewImg && !imgError && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 overflow-hidden">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 overflow-hidden">
             <div
               onClick={() => setIsImageZoomed(true)}
               className="relative w-full max-h-80 bg-black flex items-center justify-center cursor-zoom-in group"
@@ -312,14 +312,14 @@ export default function CardDetailModal({
                 onError={() => setImgError(true)}
                 className="max-h-80 w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
               />
-              <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/75 border border-nothing-border text-[11px] font-mono text-white flex items-center gap-1.5">
+              <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/75 border border-white/20 text-[11px] font-mono text-white flex items-center gap-1.5">
                 <Maximize2 size={12} /> Full Screen
               </span>
             </div>
           </div>
         )}
         {previewImg && imgError && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-dashed border-nothing-border/60 p-5 flex flex-col items-center justify-center gap-2 text-center text-nothing-gray">
+          <div className="rounded-2xl bg-nothing-subtle border border-dashed border-nothing-border/70 p-5 flex flex-col items-center justify-center gap-2 text-center text-nothing-gray">
             <ImageIcon size={28} className="text-nothing-gray/50" />
             <p className="text-xs font-mono text-nothing-light">
               {card.targetState === 1
@@ -336,22 +336,22 @@ export default function CardDetailModal({
 
         {/* Website Link Bar (for LINK cards) */}
         {candidateUrl && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 flex items-center justify-between gap-3">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               {card.link?.favicon ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={card.link.favicon}
                   alt=""
-                  className="w-7 h-7 rounded-lg bg-black p-1 border border-nothing-border shrink-0"
+                  className="w-7 h-7 rounded-lg bg-nothing-well p-1 border border-nothing-border shrink-0"
                 />
               ) : (
-                <div className="w-7 h-7 rounded-lg bg-nothing-red/20 text-nothing-red flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-nothing-red/15 text-nothing-red flex items-center justify-center shrink-0">
                   <Bookmark size={14} />
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-xs font-medium text-white truncate">
+                <p className="text-xs font-medium text-nothing-ink truncate">
                   {card.link?.siteName || card.link?.domain || candidateUrl}
                 </p>
                 <p className="text-[11px] font-mono text-nothing-gray truncate">{candidateUrl}</p>
@@ -361,7 +361,7 @@ export default function CardDetailModal({
               href={candidateUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3.5 py-2 rounded-xl bg-nothing-red text-white text-xs font-dot uppercase tracking-wider hover:bg-white hover:text-black transition-colors flex items-center gap-1.5 shrink-0"
+              className="px-3.5 py-2 rounded-xl bg-nothing-red text-white text-xs font-dot uppercase tracking-wider hover:bg-nothing-ink hover:text-nothing-on-ink transition-colors flex items-center gap-1.5 shrink-0"
             >
               <span>Open Site</span>
               <ExternalLink size={13} />
@@ -373,11 +373,11 @@ export default function CardDetailModal({
         {(card.audio?.audioUri ||
           card.audio?.transcript ||
           (card.content && card.summary && card.content !== card.summary)) && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-4">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-4">
             {/* Transcript / User Note Section */}
             {(card.audio?.transcript ||
               (card.content && card.summary && card.content !== card.summary)) && (
-              <div className="rounded-xl bg-[#242424] border border-nothing-border/50 p-3.5">
+              <div className="rounded-xl bg-nothing-well border border-nothing-border/70 p-3.5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-mono text-nothing-gray uppercase tracking-wider">
                     {card.audio?.audioUri
@@ -397,12 +397,12 @@ export default function CardDetailModal({
                       setCopiedTranscript(true);
                       setTimeout(() => setCopiedTranscript(false), 2000);
                     }}
-                    className="inline-flex items-center gap-1 text-[11px] font-mono text-nothing-gray hover:text-white px-2 py-0.5 rounded bg-black/40 border border-nothing-border/50 transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] font-mono text-nothing-gray hover:text-nothing-ink px-2 py-0.5 rounded bg-nothing-subtle border border-nothing-border/70 transition-colors"
                   >
                     {copiedTranscript ? (
                       <>
-                        <Check size={12} className="text-green-400" />
-                        <span className="text-green-400">Copied</span>
+                        <Check size={12} className="text-emerald-600 dark:text-green-400" />
+                        <span className="text-emerald-600 dark:text-green-400">Copied</span>
                       </>
                     ) : (
                       <>
@@ -412,7 +412,7 @@ export default function CardDetailModal({
                     )}
                   </button>
                 </div>
-                <p className="text-xs sm:text-sm text-white/95 leading-relaxed whitespace-pre-line">
+                <p className="text-xs sm:text-sm text-nothing-ink/95 leading-relaxed whitespace-pre-line">
                   {card.audio?.transcript || card.content}
                 </p>
               </div>
@@ -447,14 +447,14 @@ export default function CardDetailModal({
                 >
                   {/* Progress Fill */}
                   <div
-                    className="h-full rounded-full bg-white transition-all duration-100"
+                    className="h-full rounded-full bg-nothing-ink transition-all duration-100"
                     style={{
                       width: `${Math.min(100, (currentTime / (duration || 45)) * 100)}%`,
                     }}
                   />
                   {/* Playhead thumb */}
                   <div
-                    className="absolute w-3.5 h-3.5 rounded-full bg-white shadow-md -translate-x-1/2"
+                    className="absolute w-3.5 h-3.5 rounded-full bg-nothing-ink shadow-md -translate-x-1/2"
                     style={{
                       left: `${Math.min(100, (currentTime / (duration || 45)) * 100)}%`,
                     }}
@@ -471,7 +471,7 @@ export default function CardDetailModal({
                           seekAudio(markSec);
                         }}
                         title={`Jump to highlighted moment (${formatTime(markSec)})`}
-                        className="absolute w-2.5 h-2.5 rounded-full bg-yellow-400 border border-black shadow -translate-x-1/2 hover:scale-125 transition-transform"
+                        className="absolute w-2.5 h-2.5 rounded-full bg-amber-400 border border-nothing-dark shadow -translate-x-1/2 hover:scale-125 transition-transform"
                         style={{ left: `${pct}%` }}
                       />
                     );
@@ -481,7 +481,7 @@ export default function CardDetailModal({
                 <div className="flex justify-between text-[11px] font-mono text-nothing-gray mb-3">
                   <span>{formatTime(currentTime)}</span>
                   {highlightMarks.length > 0 && (
-                    <span className="text-yellow-400/90">
+                    <span className="text-amber-600 dark:text-yellow-400/90">
                       ★ {highlightMarks.map(m => formatTime(m)).join(', ')}
                     </span>
                   )}
@@ -493,7 +493,7 @@ export default function CardDetailModal({
                   <button
                     type="button"
                     onClick={() => skipSeconds(-10)}
-                    className="p-2 rounded-full text-nothing-gray hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1 text-xs font-mono"
+                    className="p-2 rounded-full text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors flex items-center gap-1 text-xs font-mono"
                     title="Rewind 10 seconds"
                   >
                     <RotateCcw size={18} />
@@ -503,7 +503,7 @@ export default function CardDetailModal({
                   <button
                     type="button"
                     onClick={togglePlay}
-                    className="w-12 h-12 rounded-full bg-white text-black hover:bg-nothing-red hover:text-white flex items-center justify-center transition-all shadow-lg"
+                    className="w-12 h-12 rounded-full bg-nothing-ink text-nothing-on-ink hover:bg-nothing-red hover:text-white flex items-center justify-center transition-all shadow-lg"
                   >
                     {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
                   </button>
@@ -511,7 +511,7 @@ export default function CardDetailModal({
                   <button
                     type="button"
                     onClick={() => skipSeconds(10)}
-                    className="p-2 rounded-full text-nothing-gray hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1 text-xs font-mono"
+                    className="p-2 rounded-full text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors flex items-center gap-1 text-xs font-mono"
                     title="Forward 10 seconds"
                   >
                     <span>10s</span>
@@ -525,15 +525,15 @@ export default function CardDetailModal({
 
         {/* Summary Section */}
         {(card.summary || card.content || card.emotionalSummary) && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-2">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-2">
             <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
               {card.summary ? 'SUMMARY' : 'DESCRIPTION'}
             </h3>
-            <p className="text-sm text-white/95 leading-relaxed">
+            <p className="text-sm text-nothing-ink/95 leading-relaxed">
               {card.summary || card.content}
             </p>
             {card.emotionalSummary && card.emotionalSummary !== card.summary && (
-              <p className="text-xs text-nothing-gray font-mono pt-1 border-t border-nothing-border/40">
+              <p className="text-xs text-nothing-gray font-mono pt-1 border-t border-nothing-border/50">
                 Context: {card.emotionalSummary}
               </p>
             )}
@@ -542,7 +542,7 @@ export default function CardDetailModal({
 
         {/* Tasks Checklist (card_events) */}
         {card.events && card.events.length > 0 && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-3">
             <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
               TASKS ({card.events.filter(e => e.check === 1 && !e.isPotentialReminder).length}/{card.events.filter(e => !e.isPotentialReminder).length})
             </h3>
@@ -557,10 +557,10 @@ export default function CardDetailModal({
                     onClick={() => onToggleTodo?.(card.cardId, ev.eventId)}
                     className={`w-full text-left flex items-start gap-3 p-3 rounded-xl border transition-all ${
                       isDone
-                        ? 'bg-black/30 border-nothing-border/30 opacity-60'
+                        ? 'bg-nothing-well/50 border-nothing-border/40 opacity-60'
                         : isSuggestion
-                        ? 'bg-black/50 border-nothing-red/30 hover:border-nothing-red/60'
-                        : 'bg-black/50 border-nothing-border/60 hover:border-nothing-red/50'
+                        ? 'bg-nothing-well border-nothing-red/30 hover:border-nothing-red/60'
+                        : 'bg-nothing-well border-nothing-border/70 hover:border-nothing-red/50'
                     }`}
                   >
                     <span
@@ -579,7 +579,7 @@ export default function CardDetailModal({
                       <div className="flex items-center gap-2">
                         <p
                           className={`text-xs sm:text-sm font-medium ${
-                            isDone ? 'line-through text-nothing-gray' : 'text-white'
+                            isDone ? 'line-through text-nothing-gray' : 'text-nothing-ink'
                           }`}
                         >
                           {ev.title}
@@ -603,7 +603,7 @@ export default function CardDetailModal({
 
         {/* Key Moments (MEETING_KEY_TOPIC_ANALYSIS) */}
         {card.keyTopics && card.keyTopics.length > 0 && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-3">
             <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
               KEY MOMENTS
             </h3>
@@ -611,9 +611,9 @@ export default function CardDetailModal({
               {card.keyTopics.map((kt, idx) => (
                 <div key={idx} className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <h4 className="text-sm font-semibold text-white">{kt.title}</h4>
+                    <h4 className="text-sm font-semibold text-nothing-ink">{kt.title}</h4>
                     {kt.timestampReference && (
-                      <span className="px-2 py-0.5 rounded bg-yellow-500/15 border border-yellow-500/40 text-yellow-300 text-[11px] font-mono">
+                      <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-yellow-300 text-[11px] font-mono">
                         ⏱ {kt.timestampReference}
                       </span>
                     )}
@@ -630,14 +630,14 @@ export default function CardDetailModal({
 
         {/* Main Topics (MEETING_MAIN_TOPIC) */}
         {card.mainTopics && card.mainTopics.length > 0 && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-4">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-4">
             <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
               MAIN TOPICS
             </h3>
             <div className="space-y-4">
               {card.mainTopics.map((topic, idx) => (
                 <div key={idx} className="space-y-1.5">
-                  <h4 className="text-sm font-semibold text-white">{topic.title}</h4>
+                  <h4 className="text-sm font-semibold text-nothing-ink">{topic.title}</h4>
                   <div className="flex items-start gap-2 text-xs sm:text-sm text-nothing-light/90 leading-relaxed">
                     <span className="text-nothing-red mt-1">•</span>
                     <p>{topic.content}</p>
@@ -650,7 +650,7 @@ export default function CardDetailModal({
 
         {/* Extracted Information / Key Values (INFO_EXTRACT) */}
         {card.infoExtract && card.infoExtract.length > 0 && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-2.5">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-2.5">
             <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
               EXTRACTED INFO
             </h3>
@@ -658,19 +658,19 @@ export default function CardDetailModal({
               {card.infoExtract.map((info, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-black/50 border border-nothing-border/50 text-xs font-mono"
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-nothing-well border border-nothing-border/60 text-xs font-mono"
                 >
                   <span className="text-nothing-gray">{info.title}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-semibold text-sm">{info.value}</span>
+                    <span className="text-nothing-ink font-semibold text-sm">{info.value}</span>
                     <button
                       type="button"
                       onClick={() => copyInfoValue(info.value, idx)}
-                      className="p-1 rounded hover:bg-nothing-hover text-nothing-gray hover:text-white transition-colors"
+                      className="p-1 rounded hover:bg-nothing-hover text-nothing-gray hover:text-nothing-ink transition-colors"
                       title="Copy value"
                     >
                       {copiedInfoIdx === idx ? (
-                        <Check size={13} className="text-green-400" />
+                        <Check size={13} className="text-emerald-600 dark:text-green-400" />
                       ) : (
                         <Copy size={13} />
                       )}
@@ -684,7 +684,7 @@ export default function CardDetailModal({
 
         {/* Bullet Points (BULLET_POINTS) */}
         {card.bulletPoints && card.bulletPoints.length > 0 && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-3">
             <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
               {card.bulletPointsTitle || 'KEY BULLET POINTS'}
             </h3>
@@ -704,7 +704,7 @@ export default function CardDetailModal({
 
         {/* Locations (LOCATION) */}
         {card.locations && card.locations.length > 0 && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-2.5">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-2.5">
             <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider">
               LOCATION
             </h3>
@@ -717,9 +717,9 @@ export default function CardDetailModal({
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-between gap-3 p-3 rounded-xl bg-black/50 border border-nothing-border/50 hover:border-nothing-red/50 transition-colors text-xs"
+                className="flex items-center justify-between gap-3 p-3 rounded-xl bg-nothing-well border border-nothing-border/60 hover:border-nothing-red/50 transition-colors text-xs"
               >
-                <div className="flex items-center gap-2.5 text-white">
+                <div className="flex items-center gap-2.5 text-nothing-ink">
                   <MapPin size={15} className="text-nothing-red shrink-0" />
                   <span>{loc.locationName}</span>
                 </div>
@@ -731,14 +731,14 @@ export default function CardDetailModal({
 
         {/* Freeform AI Insights (FREEFORM) */}
         {card.freeformInsights && card.freeformInsights.length > 0 && (
-          <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-3">
+          <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-3">
             <div className="flex items-center gap-1.5 font-dot text-xs text-nothing-red uppercase tracking-wider">
               <Sparkles size={13} />
               <span>ESSENTIAL AI INSIGHT</span>
             </div>
             {card.freeformInsights.map((ins, idx) => (
               <div key={idx} className="space-y-2">
-                {ins.title && <h4 className="text-sm font-medium text-white">{ins.title}</h4>}
+                {ins.title && <h4 className="text-sm font-medium text-nothing-ink">{ins.title}</h4>}
                 {ins.content && (
                   <p className="text-xs sm:text-sm text-nothing-light/85 leading-relaxed">
                     {ins.content}
@@ -750,7 +750,7 @@ export default function CardDetailModal({
                       <span
                         key={naIdx}
                         title={na.prompt}
-                        className="px-2.5 py-1 rounded-lg bg-black/50 border border-nothing-border/60 text-[11px] font-mono text-nothing-gray"
+                        className="px-2.5 py-1 rounded-lg bg-nothing-well border border-nothing-border/70 text-[11px] font-mono text-nothing-gray"
                       >
                         ✦ {na.title}
                       </span>
@@ -771,7 +771,7 @@ export default function CardDetailModal({
           const hasTags = Boolean(card.tags && card.tags.length > 0);
 
           return (
-            <div className="rounded-2xl bg-[#1A1A1A] border border-nothing-border/60 p-4 sm:p-5 space-y-4">
+            <div className="rounded-2xl bg-nothing-subtle border border-nothing-border/70 p-4 sm:p-5 space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="font-dot text-xs text-nothing-gray uppercase tracking-wider flex items-center gap-2">
                   <Folder size={13} className="text-nothing-red" />
@@ -781,7 +781,7 @@ export default function CardDetailModal({
                   <button
                     type="button"
                     onClick={() => setIsSelectCollectionOpen(true)}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 shadow-sm"
+                    className="px-3 py-1.5 rounded-xl bg-nothing-ink/10 hover:bg-nothing-ink text-nothing-ink hover:text-nothing-on-ink transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 shadow-sm"
                   >
                     <FolderPlus size={12} className="text-nothing-red" />
                     <span>{assignedColIds.length > 0 ? 'Manage Collections' : '+ Add to Collection'}</span>
@@ -795,14 +795,14 @@ export default function CardDetailModal({
                   assignedCols.map(col => (
                     <span
                       key={col.collectionId}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-nothing-border/80 text-xs font-mono text-white shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-nothing-well border border-nothing-border/80 text-xs font-mono text-nothing-ink shadow-sm"
                     >
                       <Folder size={12} className="text-nothing-red" />
                       <span>{col.name}</span>
                     </span>
                   ))
                 ) : card.collectionName ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-nothing-border/80 text-xs font-mono text-white shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-nothing-well border border-nothing-border/80 text-xs font-mono text-nothing-ink shadow-sm">
                     <Folder size={12} className="text-nothing-red" />
                     <span>{card.collectionName}</span>
                   </span>
@@ -815,7 +815,7 @@ export default function CardDetailModal({
 
               {/* Tags Section */}
               {hasTags && (
-                <div className="pt-3 border-t border-nothing-border/40 space-y-2">
+                <div className="pt-3 border-t border-nothing-border/50 space-y-2">
                   <h4 className="font-dot text-[11px] text-nothing-gray uppercase tracking-wider flex items-center gap-1.5">
                     <Tag size={11} className="text-nothing-red" />
                     <span>TAGS</span>
@@ -834,7 +834,7 @@ export default function CardDetailModal({
                           className={`inline-flex items-center gap-1 text-xs font-mono px-3 py-1 rounded-full border transition-all ${
                             isSelected
                               ? 'bg-nothing-red text-white border-nothing-red'
-                              : 'bg-black/60 border-nothing-border text-nothing-gray hover:text-white'
+                              : 'bg-nothing-well border-nothing-border text-nothing-gray hover:text-nothing-ink'
                           }`}
                         >
                           <Tag size={10} />
@@ -851,8 +851,8 @@ export default function CardDetailModal({
 
         {/* Trash Notice & Actions (at bottom of note) */}
         {card.targetState === 1 && (
-          <div className="sticky bottom-0 z-20 rounded-2xl bg-red-950/90 border border-red-800/60 p-3.5 sm:p-4 flex items-center justify-between gap-3 flex-wrap backdrop-blur-md shadow-lg">
-            <div className="flex items-center gap-2 text-xs font-mono text-red-200">
+          <div className="sticky bottom-0 z-20 rounded-2xl bg-red-50/95 dark:bg-red-950/90 border border-red-200 dark:border-red-800/60 p-3.5 sm:p-4 flex items-center justify-between gap-3 flex-wrap backdrop-blur-md shadow-lg">
+            <div className="flex items-center gap-2 text-xs font-mono text-red-700 dark:text-red-200">
               <Trash2 size={16} className="text-nothing-red shrink-0" />
               <span>This note is in the trash</span>
             </div>
@@ -864,7 +864,7 @@ export default function CardDetailModal({
                     onRestoreCard(card.cardId);
                     onClose();
                   }}
-                  className="px-3.5 py-1.5 rounded-xl bg-white text-black hover:bg-neutral-200 transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 font-medium shadow-sm"
+                  className="px-3.5 py-1.5 rounded-xl bg-nothing-ink text-nothing-on-ink hover:bg-nothing-ink/85 transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 font-medium shadow-sm"
                   title="Restore note from trash"
                 >
                   <RotateCcw size={13} />
@@ -878,7 +878,7 @@ export default function CardDetailModal({
                     onDeleteCard(card.cardId);
                     onClose();
                   }}
-                  className="px-3.5 py-1.5 rounded-xl bg-red-900/60 hover:bg-nothing-red text-white transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 border border-red-700/50"
+                  className="px-3.5 py-1.5 rounded-xl bg-red-600 dark:bg-red-900/60 hover:bg-nothing-red text-white transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 border border-red-700/50"
                   title="Permanently delete note"
                 >
                   <Trash2 size={13} />

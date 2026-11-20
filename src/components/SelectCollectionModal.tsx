@@ -138,32 +138,32 @@ export default function SelectCollectionModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 bg-black/50 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="w-full max-w-md bg-[#141414] border border-nothing-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-150"
+        className="w-full max-w-md bg-nothing-dark border border-nothing-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-150"
       >
         {/* Header */}
         <div className="p-5 border-b border-nothing-border/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-nothing-red/20 text-nothing-red">
+            <div className="p-2 rounded-xl bg-nothing-red/15 text-nothing-red">
               <FolderOpen size={18} />
             </div>
             <div>
-              <h3 className="font-dot text-base text-white uppercase tracking-wider">
+              <h3 className="font-dot text-base text-nothing-ink uppercase tracking-wider">
                 COLLECTIONS
               </h3>
               <p className="text-xs font-mono text-nothing-gray mt-0.5">
                 {selectedCardCount === 1 ? '1 note' : `${selectedCardCount} notes`} • Selected:{' '}
-                <span className="text-white font-medium">{selectedColIds.length}</span>
+                <span className="text-nothing-ink font-medium">{selectedColIds.length}</span>
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors"
           >
             <X size={18} />
           </button>
@@ -181,13 +181,13 @@ export default function SelectCollectionModal({
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search collections..."
-              className="w-full bg-[#1A1A1A] border border-nothing-border/60 rounded-xl pl-9 pr-8 py-2 text-xs font-mono text-white placeholder-nothing-gray focus:outline-none focus:border-nothing-red transition-colors"
+              className="w-full bg-nothing-input border border-nothing-border/80 rounded-xl pl-9 pr-8 py-2 text-xs font-mono text-nothing-ink placeholder-nothing-gray focus:outline-none focus:border-nothing-red transition-colors"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-nothing-gray hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-nothing-gray hover:text-nothing-ink"
               >
                 <X size={13} />
               </button>
@@ -205,12 +205,12 @@ export default function SelectCollectionModal({
                   value={newCollectionName}
                   onChange={e => setNewCollectionName(e.target.value)}
                   placeholder="Collection name..."
-                  className="flex-1 bg-black border border-nothing-border rounded-xl px-3 py-1.5 text-xs font-mono text-white placeholder-nothing-gray focus:outline-none focus:border-white transition-colors"
+                  className="flex-1 bg-nothing-input border border-nothing-border rounded-xl px-3 py-1.5 text-xs font-mono text-nothing-ink placeholder-nothing-gray focus:outline-none focus:border-nothing-ink transition-colors"
                 />
                 <button
                   type="submit"
                   disabled={isCreatingCol || !newCollectionName.trim()}
-                  className="px-3 py-1.5 rounded-xl bg-nothing-red text-white hover:bg-white hover:text-black transition-colors text-xs font-dot uppercase tracking-wider flex items-center gap-1 disabled:opacity-50 shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-nothing-red text-white hover:bg-nothing-ink hover:text-nothing-on-ink transition-colors text-xs font-dot uppercase tracking-wider flex items-center gap-1 disabled:opacity-50 shrink-0"
                 >
                   {isCreatingCol ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                   <span>Create</span>
@@ -222,7 +222,7 @@ export default function SelectCollectionModal({
                     setNewCollectionName('');
                     setCreateError(null);
                   }}
-                  className="p-1.5 rounded-lg text-nothing-gray hover:text-white"
+                  className="p-1.5 rounded-lg text-nothing-gray hover:text-nothing-ink"
                 >
                   <X size={14} />
                 </button>
@@ -235,7 +235,7 @@ export default function SelectCollectionModal({
             <button
               type="button"
               onClick={() => setIsCreatingInline(true)}
-              className="w-full py-1.5 px-3 rounded-xl border border-dashed border-nothing-border/60 hover:border-white/40 text-xs font-mono text-nothing-gray hover:text-white flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full py-1.5 px-3 rounded-xl border border-dashed border-nothing-border hover:border-nothing-ink/40 text-xs font-mono text-nothing-gray hover:text-nothing-ink flex items-center justify-center gap-1.5 transition-colors"
             >
               <FolderPlus size={13} className="text-nothing-red" />
               <span>Create new collection</span>
@@ -251,8 +251,8 @@ export default function SelectCollectionModal({
             onClick={handleClearAll}
             className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
               selectedColIds.length === 0
-                ? 'bg-nothing-red/15 border-nothing-red/60 text-white'
-                : 'bg-[#1A1A1A]/60 border-nothing-border/40 text-nothing-light hover:bg-[#1A1A1A] hover:border-nothing-gray/50'
+                ? 'bg-nothing-red/10 border-nothing-red/60 text-nothing-ink'
+                : 'bg-nothing-subtle/70 border-nothing-border/50 text-nothing-light hover:bg-nothing-subtle hover:border-nothing-gray/50'
             }`}
           >
             <div className="flex items-center gap-3">
@@ -260,7 +260,7 @@ export default function SelectCollectionModal({
                 className={`p-2 rounded-lg ${
                   selectedColIds.length === 0
                     ? 'bg-nothing-red text-white'
-                    : 'bg-white/5 text-nothing-gray'
+                    : 'bg-nothing-ink/5 text-nothing-gray'
                 }`}
               >
                 <FolderMinus size={15} />
@@ -285,8 +285,8 @@ export default function SelectCollectionModal({
                 onClick={() => toggleCollection(col.collectionId)}
                 className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
                   isSelected
-                    ? 'bg-white/[0.08] border-nothing-red/80 text-white shadow-sm'
-                    : 'bg-[#1A1A1A]/60 border-nothing-border/40 text-nothing-light hover:bg-[#1A1A1A] hover:border-nothing-gray/50'
+                    ? 'bg-nothing-ink/[0.06] border-nothing-red/80 text-nothing-ink shadow-sm'
+                    : 'bg-nothing-subtle/70 border-nothing-border/50 text-nothing-light hover:bg-nothing-subtle hover:border-nothing-gray/50'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -294,14 +294,14 @@ export default function SelectCollectionModal({
                     className={`w-5 h-5 rounded border flex items-center justify-center transition-all shrink-0 ${
                       isSelected
                         ? 'bg-nothing-red border-nothing-red text-white'
-                        : 'border-nothing-gray/60 bg-black/40 text-transparent'
+                        : 'border-nothing-gray/60 bg-nothing-input text-transparent'
                     }`}
                   >
                     <Check size={12} strokeWidth={3} />
                   </div>
                   <span
                     className={`p-2 rounded-lg shrink-0 ${
-                      isSelected ? 'bg-nothing-red/20 text-nothing-red' : 'bg-white/5 text-nothing-light'
+                      isSelected ? 'bg-nothing-red/15 text-nothing-red' : 'bg-nothing-ink/5 text-nothing-light'
                     }`}
                   >
                     <Folder size={15} />
@@ -325,13 +325,13 @@ export default function SelectCollectionModal({
         </div>
 
         {/* Footer actions */}
-        <div className="p-4 border-t border-nothing-border/60 bg-[#161616] flex items-center justify-between gap-3">
+        <div className="p-4 border-t border-nothing-border/60 bg-nothing-subtle/80 flex items-center justify-between gap-3">
           <div className="text-[11px] font-mono text-nothing-gray">
             {selectedColIds.length === 0 ? (
               <span>Will not belong to any collection</span>
             ) : (
               <span>
-                Selected: <strong className="text-white">{selectedColIds.length}</strong> {selectedColIds.length === 1 ? 'collection' : 'collections'}
+                Selected: <strong className="text-nothing-ink">{selectedColIds.length}</strong> {selectedColIds.length === 1 ? 'collection' : 'collections'}
               </span>
             )}
           </div>
@@ -341,7 +341,7 @@ export default function SelectCollectionModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-xs font-mono text-nothing-gray hover:text-white transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-mono text-nothing-gray hover:text-nothing-ink transition-colors"
             >
               Cancel
             </button>
@@ -349,7 +349,7 @@ export default function SelectCollectionModal({
               type="button"
               onClick={handleApply}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl bg-nothing-red text-white hover:bg-white hover:text-black transition-colors text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 shadow-md disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-nothing-red text-white hover:bg-nothing-ink hover:text-nothing-on-ink transition-colors text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 shadow-md disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>

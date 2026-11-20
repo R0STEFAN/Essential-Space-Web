@@ -91,7 +91,7 @@ export default function AudioCard({
                 className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                   isSelected
                     ? 'bg-nothing-red border-nothing-red text-white'
-                    : 'border-nothing-gray/60 hover:border-white bg-black/40'
+                    : 'border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80'
                 }`}
               >
                 {isSelected && <Check size={11} strokeWidth={3} />}
@@ -109,12 +109,12 @@ export default function AudioCard({
                 <span className="p-0.5 rounded bg-nothing-red/20 text-nothing-red transition-opacity group-hover:opacity-0">
                   <Mic size={13} />
                 </span>
-                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-white bg-black/40 opacity-0 group-hover:opacity-100 transition-all" />
+                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80 opacity-0 group-hover:opacity-100 transition-all" />
               </button>
             )}
             <span className="font-dot">{card.imageUrl ? 'VOICE + PHOTO' : 'VOICE MEMO'}</span>
             {card.collectionName && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-subtle border border-nothing-border text-[11px]">
                 {card.collectionName}
               </span>
             )}
@@ -123,7 +123,7 @@ export default function AudioCard({
 
         {/* Optional attached image capture */}
         {(card.cachedImageUrl || card.imageUrl) && !imageError && (
-          <div className="relative w-full h-36 mb-3 rounded-xl overflow-hidden bg-nothing-black/80 border border-nothing-border/60">
+          <div className="relative w-full h-36 mb-3 rounded-xl overflow-hidden bg-nothing-subtle border border-nothing-border/60">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={card.cachedImageUrl || card.imageUrl}
@@ -137,7 +137,7 @@ export default function AudioCard({
         )}
 
         {card.title && (
-          <h3 className="font-normal text-white text-base sm:text-lg mb-1.5 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors tracking-wide">
+          <h3 className="font-normal text-nothing-ink text-base sm:text-lg mb-1.5 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors tracking-wide">
             {card.title}
           </h3>
         )}
@@ -152,7 +152,7 @@ export default function AudioCard({
         {card.audio?.audioUri && (
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-nothing-black/60 rounded-xl p-2.5 border border-nothing-border/60 mb-3"
+            className="bg-nothing-subtle/80 rounded-xl p-2.5 border border-nothing-border/70 mb-3"
           >
             <audio
               ref={audioRef}
@@ -172,7 +172,7 @@ export default function AudioCard({
               <button
                 type="button"
                 onClick={togglePlay}
-                className="w-9 h-9 rounded-full bg-white text-black hover:bg-nothing-light flex items-center justify-center transition-transform active:scale-95 shadow-md flex-shrink-0"
+                className="w-9 h-9 rounded-full bg-nothing-ink text-nothing-on-ink hover:bg-nothing-ink/85 flex items-center justify-center transition-transform active:scale-95 shadow-md flex-shrink-0"
               >
                 {isPlaying ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
               </button>
@@ -205,8 +205,8 @@ export default function AudioCard({
 
         {/* Compact Transcript Preview */}
         {card.audio?.transcript && (
-          <div className="bg-nothing-card/90 rounded-lg p-2.5 text-xs text-nothing-gray leading-relaxed font-sans border border-nothing-border/40 mb-3 line-clamp-2">
-            <span className="text-white/80 font-mono text-[11px] uppercase mr-1.5">
+          <div className="bg-nothing-subtle/70 rounded-lg p-2.5 text-xs text-nothing-gray leading-relaxed font-sans border border-nothing-border/50 mb-3 line-clamp-2">
+            <span className="text-nothing-ink/85 font-mono text-[11px] uppercase mr-1.5">
               Transcript:
             </span>
             {card.audio.transcript}
@@ -234,7 +234,7 @@ export default function AudioCard({
                   className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all ${
                     isSelected
                       ? 'bg-nothing-red text-white border-nothing-red'
-                      : 'bg-nothing-hover border-nothing-border/60 text-nothing-gray hover:text-white'
+                      : 'bg-nothing-subtle border-nothing-border/70 text-nothing-gray hover:text-nothing-ink'
                   }`}
                 >
                   <Tag size={11} />

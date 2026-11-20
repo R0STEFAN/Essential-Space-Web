@@ -40,17 +40,17 @@ export default function BulkActionBar({
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-[95vw] sm:max-w-2xl w-full px-2 animate-in fade-in slide-in-from-bottom-5 duration-200">
-      <div className="bg-[#121212]/95 backdrop-blur-xl border border-nothing-border shadow-[0_16px_50px_rgba(0,0,0,0.9)] rounded-2xl p-2 sm:px-4 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="bg-nothing-dark/95 backdrop-blur-xl border border-nothing-border shadow-[0_16px_50px_rgba(0,0,0,0.18)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.9)] rounded-2xl p-2 sm:px-4 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4">
         {/* Left: Counter and Select All toggle */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="px-2.5 py-1 rounded-lg bg-nothing-red/20 border border-nothing-red/40 text-nothing-red font-dot text-xs uppercase tracking-wider shrink-0">
+          <div className="px-2.5 py-1 rounded-lg bg-nothing-red/15 border border-nothing-red/40 text-nothing-red font-dot text-xs uppercase tracking-wider shrink-0">
             {selectedCount} SELECTED
           </div>
 
           <button
             type="button"
             onClick={onSelectAll}
-            className="flex items-center gap-1.5 text-xs font-mono text-nothing-gray hover:text-white transition-colors py-1 px-2 rounded-lg hover:bg-white/5 truncate"
+            className="flex items-center gap-1.5 text-xs font-mono text-nothing-gray hover:text-nothing-ink transition-colors py-1 px-2 rounded-lg hover:bg-nothing-ink/5 truncate"
           >
             {isAllSelected ? (
               <>
@@ -76,7 +76,7 @@ export default function BulkActionBar({
                   type="button"
                   disabled={isProcessing}
                   onClick={onRestoreSelected}
-                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-200 text-black transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50 font-medium shadow-sm"
+                  className="px-3 py-1.5 rounded-xl bg-nothing-ink hover:bg-nothing-ink/90 text-nothing-on-ink transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50 font-medium shadow-sm"
                   title="Restore from trash"
                 >
                   {isProcessing ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
@@ -87,7 +87,7 @@ export default function BulkActionBar({
                 type="button"
                 disabled={isProcessing}
                 onClick={onDeleteSelected}
-                className="px-3 py-1.5 rounded-xl bg-red-950/40 hover:bg-nothing-red text-red-300 hover:text-white border border-red-800/40 hover:border-nothing-red transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-red-500/10 dark:bg-red-950/40 hover:bg-nothing-red text-red-600 dark:text-red-300 hover:text-white border border-red-500/30 dark:border-red-800/40 hover:border-nothing-red transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
                 title="Delete permanently"
               >
                 <Trash2 size={13} />
@@ -101,7 +101,7 @@ export default function BulkActionBar({
                 type="button"
                 disabled={isProcessing}
                 onClick={onOpenAssignCollection}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-nothing-ink/10 hover:bg-nothing-ink text-nothing-ink hover:text-nothing-on-ink transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
                 title="Add to collection"
               >
                 <FolderPlus size={13} />
@@ -113,7 +113,7 @@ export default function BulkActionBar({
                 type="button"
                 disabled={isProcessing}
                 onClick={onDeleteSelected}
-                className="px-3 py-1.5 rounded-xl bg-nothing-red/20 hover:bg-nothing-red text-nothing-red hover:text-white border border-nothing-red/40 hover:border-nothing-red transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-nothing-red/15 hover:bg-nothing-red text-nothing-red hover:text-white border border-nothing-red/40 hover:border-nothing-red transition-all text-xs font-dot uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
                 title="Move to trash"
               >
                 <Trash2 size={13} />
@@ -129,7 +129,7 @@ export default function BulkActionBar({
           <button
             type="button"
             onClick={onClearSelection}
-            className="p-1.5 rounded-xl text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-xl text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors"
             title="Cancel selection"
           >
             <X size={16} />

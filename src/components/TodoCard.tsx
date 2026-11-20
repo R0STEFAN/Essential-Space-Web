@@ -53,7 +53,7 @@ export default function TodoCard({
                 className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                   isSelected
                     ? 'bg-nothing-red border-nothing-red text-white'
-                    : 'border-nothing-gray/60 hover:border-white bg-black/40'
+                    : 'border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80'
                 }`}
               >
                 {isSelected && <Check size={11} strokeWidth={3} />}
@@ -68,37 +68,37 @@ export default function TodoCard({
                 title="Select note"
                 className="relative w-5 h-5 flex items-center justify-center flex-shrink-0"
               >
-                <span className={`p-0.5 rounded transition-opacity group-hover:opacity-0 ${allDone ? 'bg-green-500/20 text-green-400' : 'bg-nothing-red/20 text-nothing-red'}`}>
+                <span className={`p-0.5 rounded transition-opacity group-hover:opacity-0 ${allDone ? 'bg-emerald-500/20 text-emerald-600 dark:text-green-400' : 'bg-nothing-red/20 text-nothing-red'}`}>
                   {allDone ? <CheckCircle2 size={13} /> : <CheckSquare size={13} />}
                 </span>
-                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-white bg-black/40 opacity-0 group-hover:opacity-100 transition-all" />
+                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80 opacity-0 group-hover:opacity-100 transition-all" />
               </button>
             )}
             <span className="font-dot">CHECKLIST</span>
             {card.collectionName && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-subtle border border-nothing-border text-[11px]">
                 {card.collectionName}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] text-nothing-light font-medium">
+            <span className="font-mono text-[11px] text-nothing-ink font-medium">
               {completedCount}/{totalCount}
             </span>
           </div>
         </div>
 
         {card.title && (
-          <h3 className="font-normal text-white text-base sm:text-lg mb-3 leading-snug tracking-wide">
+          <h3 className="font-normal text-nothing-ink text-base sm:text-lg mb-3 leading-snug tracking-wide">
             {card.title}
           </h3>
         )}
 
         {/* Progress bar */}
         {totalCount > 0 && (
-          <div className="w-full bg-nothing-border/60 h-1 rounded-full mb-4 overflow-hidden">
+          <div className="w-full bg-nothing-border/70 h-1 rounded-full mb-4 overflow-hidden">
             <div
-              className={`h-full transition-all duration-300 ${allDone ? 'bg-green-500' : 'bg-nothing-red'}`}
+              className={`h-full transition-all duration-300 ${allDone ? 'bg-emerald-500' : 'bg-nothing-red'}`}
               style={{ width: `${(completedCount / totalCount) * 100}%` }}
             />
           </div>
@@ -117,7 +117,7 @@ export default function TodoCard({
                 <button
                   type="button"
                   className={`mt-0.5 flex-shrink-0 transition-colors ${
-                    isChecked ? 'text-nothing-red' : 'text-nothing-gray hover:text-white'
+                    isChecked ? 'text-nothing-red' : 'text-nothing-gray hover:text-nothing-ink'
                   }`}
                 >
                   {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}

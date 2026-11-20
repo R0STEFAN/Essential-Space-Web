@@ -61,7 +61,7 @@ export default function TextCard({
                 className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                   isSelected
                     ? 'bg-nothing-red border-nothing-red text-white'
-                    : 'border-nothing-gray/60 hover:border-white bg-black/40'
+                    : 'border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80'
                 }`}
               >
                 {isSelected && <Check size={11} strokeWidth={3} />}
@@ -79,12 +79,12 @@ export default function TextCard({
                 <span className="p-0.5 rounded bg-nothing-red/20 text-nothing-red transition-opacity group-hover:opacity-0">
                   {isClipped ? <Scissors size={13} /> : <FileText size={13} />}
                 </span>
-                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-white bg-black/40 opacity-0 group-hover:opacity-100 transition-all" />
+                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80 opacity-0 group-hover:opacity-100 transition-all" />
               </button>
             )}
             <span className="font-dot">{isClipped ? 'CLIPPED NOTE' : 'FREEFORM'}</span>
             {card.collectionName && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-subtle border border-nothing-border text-[11px]">
                 {card.collectionName}
               </span>
             )}
@@ -94,16 +94,16 @@ export default function TextCard({
               <button
                 onClick={copyContent}
                 title="Copy Note"
-                className="text-nothing-gray hover:text-white p-1.5 rounded hover:bg-nothing-hover transition-colors"
+                className="text-nothing-gray hover:text-nothing-ink p-1.5 rounded hover:bg-nothing-hover transition-colors"
               >
-                {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                {copied ? <Check size={14} className="text-emerald-600 dark:text-green-500" /> : <Copy size={14} />}
               </button>
             )}
           </div>
         </div>
 
         {card.title && (
-          <h3 className="font-normal text-white text-base sm:text-lg mb-2 leading-snug tracking-wide">
+          <h3 className="font-normal text-nothing-ink text-base sm:text-lg mb-2 leading-snug tracking-wide">
             {card.title}
           </h3>
         )}
@@ -126,7 +126,7 @@ export default function TextCard({
                   className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all ${
                     isSelected
                       ? 'bg-nothing-red text-white border-nothing-red'
-                      : 'bg-nothing-hover border-nothing-border/60 text-nothing-gray hover:text-white hover:border-nothing-gray/50'
+                      : 'bg-nothing-subtle border-nothing-border/70 text-nothing-gray hover:text-nothing-ink hover:border-nothing-gray/50'
                   }`}
                 >
                   <Tag size={10} />

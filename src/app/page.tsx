@@ -610,7 +610,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="min-h-screen bg-nothing-black flex flex-col transition-colors">
       <Navbar
         userEmail={userEmail}
         isSyncing={isSyncing}
@@ -635,7 +635,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => router.push('/login')}
-                className="px-3 py-1.5 rounded-lg bg-nothing-red text-white text-xs font-dot uppercase tracking-wider hover:bg-white hover:text-black transition-colors flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-lg bg-nothing-red text-white text-xs font-dot uppercase tracking-wider hover:bg-nothing-ink hover:text-nothing-on-ink transition-colors flex items-center gap-1.5"
               >
                 <KeyRound size={12} />
                 <span>Update Token / Sign In</span>
@@ -643,7 +643,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setSyncError(null)}
-                className="p-1 text-nothing-gray hover:text-white"
+                className="p-1 text-nothing-gray hover:text-nothing-ink"
               >
                 <X size={14} />
               </button>
@@ -652,7 +652,7 @@ export default function DashboardPage() {
         )}
 
         {syncSuccess && (
-          <div className="mb-5 p-3 rounded-2xl bg-green-950/30 border border-green-500/40 flex items-center justify-between text-xs font-mono text-green-400">
+          <div className="mb-5 p-3 rounded-2xl bg-emerald-500/10 dark:bg-green-950/30 border border-emerald-500/40 flex items-center justify-between text-xs font-mono text-emerald-700 dark:text-green-400">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={15} />
               <span>{syncSuccess}</span>
@@ -660,7 +660,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setSyncSuccess(null)}
-              className="p-1 text-green-400/70 hover:text-white"
+              className="p-1 text-emerald-700/70 dark:text-green-400/70 hover:text-nothing-ink"
             >
               <X size={14} />
             </button>
@@ -703,27 +703,27 @@ export default function DashboardPage() {
 
             {/* Nothing OS "CAPTURES" section (collapsible, collapsed by default) */}
             {!isTrash && captureSources.length > 0 && (
-              <div className="mb-5 bg-nothing-card/40 border border-nothing-border/60 rounded-2xl p-3 sm:p-3.5 transition-all">
+              <div className="mb-5 bg-nothing-card/80 border border-nothing-border/80 rounded-2xl p-3 sm:p-3.5 transition-all">
                 <div className="flex items-center justify-between">
                   <button
                     type="button"
                     onClick={() => setIsCapturesExpanded(prev => !prev)}
-                    className="flex items-center gap-2 group select-none hover:text-white transition-colors"
+                    className="flex items-center gap-2 group select-none hover:text-nothing-ink transition-colors"
                   >
-                    <span className="font-dot text-xs text-nothing-gray group-hover:text-white uppercase tracking-wider font-semibold transition-colors">
+                    <span className="font-dot text-xs text-nothing-gray group-hover:text-nothing-ink uppercase tracking-wider font-semibold transition-colors">
                       CAPTURES
                     </span>
-                    <span className="text-[11px] font-mono text-nothing-gray/60">
+                    <span className="text-[11px] font-mono text-nothing-gray/70">
                       ({captureSources.reduce((acc, curr) => acc + curr.count, 0)})
                     </span>
                     <ChevronDown
                       size={14}
-                      className={`text-nothing-gray group-hover:text-white transition-transform duration-200 ${
+                      className={`text-nothing-gray group-hover:text-nothing-ink transition-transform duration-200 ${
                         isCapturesExpanded ? 'rotate-180' : ''
                       }`}
                     />
                     {!isCapturesExpanded && activeCaptureFrom && (
-                      <span className="ml-2 px-2.5 py-0.5 rounded-full bg-white text-black font-mono text-[11px] font-semibold shadow-sm">
+                      <span className="ml-2 px-2.5 py-0.5 rounded-full bg-nothing-ink text-nothing-on-ink font-mono text-[11px] font-semibold shadow-sm">
                         {getCaptureSourceLabel(activeCaptureFrom)}
                       </span>
                     )}
@@ -748,8 +748,8 @@ export default function DashboardPage() {
                       onClick={() => setActiveCaptureFrom('')}
                       className={`px-3.5 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
                         activeCaptureFrom === ''
-                          ? 'bg-white text-black font-semibold shadow-sm'
-                          : 'bg-[#1c1c1e] text-[#a0a0a0] hover:text-white hover:bg-[#252528] border border-transparent hover:border-white/10'
+                          ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                          : 'bg-nothing-subtle text-nothing-gray hover:text-nothing-ink hover:bg-nothing-hover border border-nothing-border/50 hover:border-nothing-ink/20'
                       }`}
                     >
                       <span>All</span>
@@ -765,14 +765,14 @@ export default function DashboardPage() {
                           onClick={() => setActiveCaptureFrom(isSelected ? '' : src.key)}
                           className={`px-3.5 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
                             isSelected
-                              ? 'bg-white text-black font-semibold shadow-sm'
-                              : 'bg-[#1c1c1e] text-[#a0a0a0] hover:text-white hover:bg-[#252528] border border-transparent hover:border-white/10'
+                              ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                              : 'bg-nothing-subtle text-nothing-gray hover:text-nothing-ink hover:bg-nothing-hover border border-nothing-border/50 hover:border-nothing-ink/20'
                           }`}
                         >
                           <span>{src.label}</span>
                           <span
                             className={`text-[11px] ${
-                              isSelected ? 'text-black/75 font-semibold' : 'text-[#707070]'
+                              isSelected ? 'text-nothing-on-ink/75 font-semibold' : 'text-nothing-gray-dim'
                             }`}
                           >
                             {src.count}
@@ -799,12 +799,12 @@ export default function DashboardPage() {
                 {activeTag && (
                   <>
                     <span className="text-nothing-border">•</span>
-                    <span className="px-2 py-0.5 rounded-full bg-nothing-red/20 border border-nothing-red/40 text-nothing-red inline-flex items-center gap-1">
+                    <span className="px-2 py-0.5 rounded-full bg-nothing-red/15 border border-nothing-red/40 text-nothing-red inline-flex items-center gap-1">
                       #{activeTag}
                       <button
                         type="button"
                         onClick={() => setActiveTag('')}
-                        className="hover:text-white ml-0.5"
+                        className="hover:text-nothing-ink ml-0.5"
                       >
                         <X size={10} />
                       </button>
@@ -828,7 +828,7 @@ export default function DashboardPage() {
                   className={`px-3 py-1.5 rounded-xl border font-mono text-xs flex items-center gap-1.5 transition-all ${
                     isSelectMode
                       ? 'bg-nothing-red text-white border-nothing-red shadow-sm'
-                      : 'bg-[#181818] border-nothing-border text-nothing-light hover:text-white hover:border-nothing-gray/60'
+                      : 'bg-nothing-card border-nothing-border text-nothing-light hover:text-nothing-ink hover:border-nothing-gray/60'
                   }`}
                 >
                   <CheckSquare size={13} />
@@ -840,7 +840,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={handleToggleSort}
                     title={sortOrder === 'desc' ? 'Sort: Oldest first' : 'Sort: Latest first'}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-nothing-border bg-[#181818] hover:bg-nothing-hover hover:border-nothing-gray/60 text-xs font-mono text-nothing-light hover:text-white transition-all cursor-pointer select-none"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-nothing-border bg-nothing-card hover:bg-nothing-hover hover:border-nothing-gray/60 text-xs font-mono text-nothing-light hover:text-nothing-ink transition-all cursor-pointer select-none"
                   >
                     {sortOrder === 'desc' ? (
                       <ArrowDownWideNarrow size={13} className="text-nothing-red shrink-0" />
@@ -855,7 +855,7 @@ export default function DashboardPage() {
 
             {/* Trash Helper Banner */}
             {isTrash && filteredCards.length > 0 && !isSelectMode && (
-              <div className="mb-4 p-3.5 rounded-2xl bg-red-950/20 border border-red-900/30 flex items-center justify-between gap-3 text-xs font-mono text-red-200 flex-wrap">
+              <div className="mb-4 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 flex items-center justify-between gap-3 text-xs font-mono text-red-700 dark:text-red-200 flex-wrap">
                 <div className="flex items-center gap-2">
                   <Trash2 size={15} className="text-nothing-red shrink-0" />
                   <span>Notes in trash will stay here until restored or permanently deleted.</span>
@@ -866,7 +866,7 @@ export default function DashboardPage() {
                     setIsSelectMode(true);
                     handleSelectAll();
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all font-dot uppercase tracking-wider text-[11px] flex items-center gap-1.5 shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-nothing-ink/10 hover:bg-nothing-ink text-nothing-ink hover:text-nothing-on-ink border border-nothing-ink/20 transition-all font-dot uppercase tracking-wider text-[11px] flex items-center gap-1.5 shrink-0"
                 >
                   <RotateCcw size={12} />
                   <span>Select All to Restore</span>

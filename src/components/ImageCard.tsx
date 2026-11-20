@@ -82,7 +82,7 @@ export default function ImageCard({
                 className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                   isSelected
                     ? 'bg-nothing-red border-nothing-red text-white'
-                    : 'border-nothing-gray/60 hover:border-white bg-black/40'
+                    : 'border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80'
                 }`}
               >
                 {isSelected && <Check size={11} strokeWidth={3} />}
@@ -100,14 +100,14 @@ export default function ImageCard({
                 <span className="p-0.5 rounded bg-nothing-red/20 text-nothing-red transition-opacity group-hover:opacity-0">
                   <ImageIcon size={13} />
                 </span>
-                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-white bg-black/40 opacity-0 group-hover:opacity-100 transition-all" />
+                <span className="absolute inset-0 rounded-full border border-nothing-gray/60 hover:border-nothing-ink bg-nothing-subtle/80 opacity-0 group-hover:opacity-100 transition-all" />
               </button>
             )}
             <span className="font-dot">
               {card.audio?.audioUri ? 'CAPTURE + VOICE' : 'SCREENSHOT / CAPTURE'}
             </span>
             {card.collectionName && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-hover border border-nothing-border text-[11px]">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-subtle border border-nothing-border text-[11px]">
                 {card.collectionName}
               </span>
             )}
@@ -116,7 +116,7 @@ export default function ImageCard({
 
         {/* Image preview */}
         {(card.cachedImageUrl || card.imageUrl) && !imageError ? (
-          <div className="relative w-full h-44 mb-3 rounded-xl overflow-hidden bg-nothing-black/80 border border-nothing-border/60 group-hover:border-nothing-red/40 transition-colors">
+          <div className="relative w-full h-44 mb-3 rounded-xl overflow-hidden bg-nothing-subtle border border-nothing-border/60 group-hover:border-nothing-red/40 transition-colors">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={card.cachedImageUrl || card.imageUrl}
@@ -128,7 +128,7 @@ export default function ImageCard({
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
           </div>
         ) : (card.cachedImageUrl || card.imageUrl) && imageError ? (
-          <div className="w-full h-24 mb-3 rounded-xl bg-[#141414] border border-dashed border-nothing-border/60 flex flex-col items-center justify-center gap-1.5 p-3 text-nothing-gray">
+          <div className="w-full h-24 mb-3 rounded-xl bg-nothing-subtle border border-dashed border-nothing-border/70 flex flex-col items-center justify-center gap-1.5 p-3 text-nothing-gray">
             <ImageIcon size={20} className="text-nothing-gray/50" />
             <span className="text-[11px] font-mono text-nothing-gray text-center">
               {card.targetState === 1
@@ -140,14 +140,14 @@ export default function ImageCard({
 
         {/* Title */}
         {card.title && (
-          <h3 className="font-normal text-white text-base sm:text-lg mb-1.5 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors tracking-wide">
+          <h3 className="font-normal text-nothing-ink text-base sm:text-lg mb-1.5 leading-snug line-clamp-2 group-hover:text-nothing-red transition-colors tracking-wide">
             {card.title}
           </h3>
         )}
 
         {/* User Note Text if present and distinct from AI summary */}
         {card.content && card.summary && card.content !== card.summary && (
-          <p className="text-xs text-white/90 mb-2 line-clamp-2 bg-white/5 px-2.5 py-1.5 rounded-lg border border-nothing-border/50">
+          <p className="text-xs text-nothing-ink/90 mb-2 line-clamp-2 bg-nothing-ink/5 px-2.5 py-1.5 rounded-lg border border-nothing-border/50">
             {card.content}
           </p>
         )}
@@ -163,7 +163,7 @@ export default function ImageCard({
         {card.audio?.audioUri && (
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-nothing-black/60 rounded-xl p-2.5 border border-nothing-border/60 mb-3"
+            className="bg-nothing-subtle/80 rounded-xl p-2.5 border border-nothing-border/70 mb-3"
           >
             <audio
               ref={audioRef}
@@ -183,7 +183,7 @@ export default function ImageCard({
               <button
                 type="button"
                 onClick={togglePlay}
-                className="w-8 h-8 rounded-full bg-white text-black hover:bg-nothing-light flex items-center justify-center transition-transform active:scale-95 shadow-md flex-shrink-0"
+                className="w-8 h-8 rounded-full bg-nothing-ink text-nothing-on-ink hover:bg-nothing-ink/85 flex items-center justify-center transition-transform active:scale-95 shadow-md flex-shrink-0"
               >
                 {isPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
               </button>
@@ -216,9 +216,9 @@ export default function ImageCard({
 
         {/* Top 1 Extracted Key-Value Preview */}
         {card.infoExtract && card.infoExtract.length > 0 && (
-          <div className="bg-nothing-hover/40 rounded-lg px-2.5 py-2 mb-2.5 border border-nothing-border/40 text-xs font-mono flex justify-between items-center">
+          <div className="bg-nothing-subtle/70 rounded-lg px-2.5 py-2 mb-2.5 border border-nothing-border/50 text-xs font-mono flex justify-between items-center">
             <span className="text-nothing-gray truncate mr-2">{card.infoExtract[0].title}:</span>
-            <span className="text-white font-semibold truncate">{card.infoExtract[0].value}</span>
+            <span className="text-nothing-ink font-semibold truncate">{card.infoExtract[0].value}</span>
           </div>
         )}
 
@@ -243,7 +243,7 @@ export default function ImageCard({
                   className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all ${
                     isSelected
                       ? 'bg-nothing-red text-white border-nothing-red'
-                      : 'bg-nothing-hover border-nothing-border/60 text-nothing-gray hover:text-white'
+                      : 'bg-nothing-subtle border-nothing-border/70 text-nothing-gray hover:text-nothing-ink'
                   }`}
                 >
                   <Tag size={11} />

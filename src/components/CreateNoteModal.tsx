@@ -552,17 +552,17 @@ export default function CreateNoteModal({
   const isVoiceAndPhoto = Boolean(imageFile && audioBlob);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-xl rounded-2xl bg-nothing-card border border-nothing-border shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-xl rounded-2xl bg-nothing-dark border border-nothing-border shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-nothing-border/60">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-nothing-red animate-pulse" />
-            <h3 className="font-dot text-sm text-white uppercase tracking-wider font-semibold">
+            <h3 className="font-dot text-sm text-nothing-ink uppercase tracking-wider font-semibold">
               NEW CAPTURE
             </h3>
             {isVoiceAndPhoto && (
-              <span className="px-2 py-0.5 rounded-full bg-nothing-red/20 border border-nothing-red/40 text-[11px] font-medium text-nothing-red">
+              <span className="px-2 py-0.5 rounded-full bg-nothing-red/15 border border-nothing-red/40 text-[11px] font-medium text-nothing-red">
                 VOICE + PHOTO
               </span>
             )}
@@ -570,21 +570,21 @@ export default function CreateNoteModal({
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1.5 rounded-lg text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-4 p-2 bg-black/40 border-b border-nothing-border/40 gap-1 text-xs font-medium">
+        <div className="grid grid-cols-4 p-2 bg-nothing-subtle/80 border-b border-nothing-border/50 gap-1 text-xs font-medium">
           <button
             type="button"
             onClick={() => setTab('NOTE')}
             className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
               tab === 'NOTE'
-                ? 'bg-white text-black font-semibold shadow-sm'
-                : 'text-nothing-gray hover:text-white'
+                ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-nothing-ink'
             }`}
           >
             <FileText size={13} />
@@ -595,8 +595,8 @@ export default function CreateNoteModal({
             onClick={() => setTab('LINK')}
             className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
               tab === 'LINK'
-                ? 'bg-white text-black font-semibold shadow-sm'
-                : 'text-nothing-gray hover:text-white'
+                ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-nothing-ink'
             }`}
           >
             <Bookmark size={13} />
@@ -607,8 +607,8 @@ export default function CreateNoteModal({
             onClick={() => setTab('IMAGE')}
             className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
               tab === 'IMAGE'
-                ? 'bg-white text-black font-semibold shadow-sm'
-                : 'text-nothing-gray hover:text-white'
+                ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-nothing-ink'
             }`}
           >
             <ImageIcon size={13} />
@@ -619,8 +619,8 @@ export default function CreateNoteModal({
             onClick={() => setTab('VOICE')}
             className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
               tab === 'VOICE'
-                ? 'bg-white text-black font-semibold shadow-sm'
-                : 'text-nothing-gray hover:text-white'
+                ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm'
+                : 'text-nothing-gray hover:text-nothing-ink'
             }`}
           >
             <Mic size={13} />
@@ -643,7 +643,7 @@ export default function CreateNoteModal({
                 <label className="block text-[11px] font-mono text-nothing-gray uppercase mb-1.5 flex items-center justify-between">
                   <span>Target Web URL</span>
                   {linkPreview && (
-                    <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
+                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono flex items-center gap-1">
                       <Check size={11} strokeWidth={3} />
                       {linkPreview.domain}
                     </span>
@@ -656,7 +656,7 @@ export default function CreateNoteModal({
                     value={linkUrl}
                     onChange={e => setLinkUrl(e.target.value)}
                     placeholder="https://example.com/article"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-nothing-border text-xs text-white placeholder:text-nothing-gray/50 focus:outline-none focus:border-white transition-colors font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-nothing-input border border-nothing-border text-xs text-nothing-ink placeholder:text-nothing-gray/50 focus:outline-none focus:border-nothing-ink transition-colors font-mono"
                   />
                   {isLoadingPreview && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -668,14 +668,14 @@ export default function CreateNoteModal({
 
               {/* Live Preview Card */}
               {isLoadingPreview && !linkPreview && (
-                <div className="p-3.5 rounded-xl bg-black/40 border border-dashed border-nothing-border/60 flex items-center gap-2.5 text-xs font-mono text-nothing-gray animate-pulse">
+                <div className="p-3.5 rounded-xl bg-nothing-subtle border border-dashed border-nothing-border/70 flex items-center gap-2.5 text-xs font-mono text-nothing-gray animate-pulse">
                   <Loader2 size={14} className="animate-spin text-nothing-red shrink-0" />
                   <span>Loading website preview & OpenGraph data...</span>
                 </div>
               )}
 
               {linkPreview && (
-                <div className="rounded-xl bg-[#151515] border border-nothing-border overflow-hidden p-3.5 space-y-2.5 transition-all animate-fadeIn">
+                <div className="rounded-xl bg-nothing-subtle border border-nothing-border overflow-hidden p-3.5 space-y-2.5 transition-all animate-fadeIn">
                   <div className="flex items-center justify-between text-[11px] font-mono text-nothing-gray">
                     <div className="flex items-center gap-2 min-w-0">
                       {linkPreview.favicon ? (
@@ -691,7 +691,7 @@ export default function CreateNoteModal({
                       ) : (
                         <Bookmark size={13} className="text-nothing-red shrink-0" />
                       )}
-                      <span className="truncate text-white font-medium">
+                      <span className="truncate text-nothing-ink font-medium">
                         {linkPreview.siteName || linkPreview.domain}
                       </span>
                     </div>
@@ -699,7 +699,7 @@ export default function CreateNoteModal({
                       href={linkPreview.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-nothing-gray hover:text-white flex items-center gap-1 text-[11px]"
+                      className="text-nothing-gray hover:text-nothing-ink flex items-center gap-1 text-[11px]"
                       title="Open Link"
                     >
                       <span>Visit</span>
@@ -708,7 +708,7 @@ export default function CreateNoteModal({
                   </div>
 
                   {linkPreview.preview && (
-                    <div className="w-full h-36 rounded-lg overflow-hidden bg-black relative border border-nothing-border/40">
+                    <div className="w-full h-36 rounded-lg overflow-hidden bg-nothing-well relative border border-nothing-border/50">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={linkPreview.preview}
@@ -722,7 +722,7 @@ export default function CreateNoteModal({
                   )}
 
                   <div>
-                    <h4 className="text-xs font-medium text-white line-clamp-1">
+                    <h4 className="text-xs font-medium text-nothing-ink line-clamp-1">
                       {linkPreview.title}
                     </h4>
                     {linkPreview.description && (
@@ -741,10 +741,10 @@ export default function CreateNoteModal({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs text-nothing-gray uppercase flex items-center gap-1.5">
-                  <ImageIcon size={12} className="text-amber-400" />
+                  <ImageIcon size={12} className="text-amber-600 dark:text-amber-400" />
                   <span>Photo / Screenshot Attachment</span>
                   {isPastedFromClipboard && (
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[11px] font-medium border border-emerald-500/30">
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[11px] font-medium border border-emerald-500/30">
                       FROM CLIPBOARD
                     </span>
                   )}
@@ -784,7 +784,7 @@ export default function CreateNoteModal({
                 className={`relative flex flex-col items-center justify-center w-full h-36 rounded-xl border border-dashed cursor-pointer overflow-hidden group transition-all ${
                   isDraggingOver
                     ? 'border-nothing-red bg-nothing-red/10 scale-[1.01]'
-                    : 'border-nothing-border hover:border-white/50 bg-black/40'
+                    : 'border-nothing-border hover:border-nothing-ink/50 bg-nothing-input'
                 }`}
               >
                 {imagePreview ? (
@@ -793,13 +793,13 @@ export default function CreateNoteModal({
                     <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 text-xs text-white transition-opacity">
                       <span>Click to replace photo</span>
-                      <span className="text-[11px] text-nothing-gray">or paste new image (Ctrl+V)</span>
+                      <span className="text-[11px] text-neutral-300">or paste new image (Ctrl+V)</span>
                     </div>
                   </>
                 ) : (
                   <div className="flex flex-col items-center gap-1.5 text-nothing-gray text-center px-4">
-                    <Upload size={20} className={`transition-all duration-300 ${isDraggingOver ? 'text-white scale-125' : 'text-nothing-red'}`} />
-                    <span className="text-xs text-white/90">Click, drag, or paste image (Ctrl+V)</span>
+                    <Upload size={20} className={`transition-all duration-300 ${isDraggingOver ? 'text-nothing-ink scale-125' : 'text-nothing-red'}`} />
+                    <span className="text-xs text-nothing-ink/90">Click, drag, or paste image (Ctrl+V)</span>
                     <span className="text-[11px] text-nothing-gray">
                       Screenshots & files auto-compressed to WebP
                     </span>
@@ -817,7 +817,7 @@ export default function CreateNoteModal({
 
           {/* Voice Memo Recorder Section */}
           {(tab === 'VOICE' || showVoiceAttachment) && (
-            <div className="p-3.5 rounded-xl bg-black border border-nothing-border space-y-2.5">
+            <div className="p-3.5 rounded-xl bg-nothing-subtle border border-nothing-border space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs text-nothing-gray uppercase">
                   <Mic size={12} className="text-nothing-red" />
@@ -837,7 +837,7 @@ export default function CreateNoteModal({
 
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-dot text-xl font-bold tracking-wider text-white">
+                  <span className="font-dot text-xl font-bold tracking-wider text-nothing-ink">
                     {formatDuration(recordingDuration)}
                   </span>
                   {isRecording && (
@@ -850,7 +850,7 @@ export default function CreateNoteModal({
                     <button
                       type="button"
                       onClick={startRecording}
-                      className="px-3.5 py-1.5 rounded-xl bg-nothing-red hover:bg-nothing-red/80 text-white text-xs font-dot tracking-wider flex items-center gap-1.5 transition-all shadow-md shadow-nothing-red/20"
+                      className="px-3.5 py-1.5 rounded-xl bg-nothing-red hover:bg-nothing-red/85 text-white text-xs font-dot tracking-wider flex items-center gap-1.5 transition-all shadow-md shadow-nothing-red/20"
                     >
                       <Mic size={13} />
                       <span>{audioBlob ? 'RE-RECORD' : 'RECORD VOICE'}</span>
@@ -859,7 +859,7 @@ export default function CreateNoteModal({
                     <button
                       type="button"
                       onClick={stopRecording}
-                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-dot tracking-wider font-semibold flex items-center gap-1.5 transition-all"
+                      className="px-3.5 py-1.5 rounded-xl bg-nothing-ink hover:bg-nothing-ink/90 text-nothing-on-ink text-xs font-dot tracking-wider font-semibold flex items-center gap-1.5 transition-all"
                     >
                       <Square size={13} />
                       <span>STOP</span>
@@ -869,7 +869,7 @@ export default function CreateNoteModal({
               </div>
 
               {audioBlob && !isRecording && (
-                <p className="text-[11px] font-mono text-emerald-400">
+                <p className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
                   ✓ Voice recording ready ({formatDuration(recordingDuration)})
                 </p>
               )}
@@ -883,10 +883,10 @@ export default function CreateNoteModal({
               <button
                 type="button"
                 onClick={() => setShowImageAttachment(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-hover border border-nothing-border text-xs text-nothing-gray hover:text-white hover:border-white/30 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-subtle border border-nothing-border text-xs text-nothing-gray hover:text-nothing-ink hover:border-nothing-ink/30 transition-colors"
               >
                 <Plus size={11} />
-                <ImageIcon size={11} className="text-amber-400" />
+                <ImageIcon size={11} className="text-amber-600 dark:text-amber-400" />
                 <span>Add Photo</span>
               </button>
             )}
@@ -895,7 +895,7 @@ export default function CreateNoteModal({
               <button
                 type="button"
                 onClick={() => setShowVoiceAttachment(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-hover border border-nothing-border text-xs text-nothing-gray hover:text-white hover:border-white/30 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-nothing-subtle border border-nothing-border text-xs text-nothing-gray hover:text-nothing-ink hover:border-nothing-ink/30 transition-colors"
               >
                 <Plus size={11} />
                 <Mic size={11} className="text-nothing-red" />
@@ -933,18 +933,18 @@ export default function CreateNoteModal({
                   ? 'Type thoughts, or paste screenshot (Ctrl+V)...'
                   : 'Add any extra context or instructions for Nothing AI...'
               }
-              className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-nothing-border text-xs text-white placeholder:text-nothing-gray/70 focus:outline-none focus:border-white transition-colors resize-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-nothing-input border border-nothing-border text-xs text-nothing-ink placeholder:text-nothing-gray/70 focus:outline-none focus:border-nothing-ink transition-colors resize-none"
             />
           </div>
 
           {/* Collections Multi-Select Section */}
-          <div className="pt-3 border-t border-nothing-border/40 space-y-2.5">
+          <div className="pt-3 border-t border-nothing-border/50 space-y-2.5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-xs text-nothing-gray uppercase flex items-center gap-1.5">
                 <Folder size={12} className="text-nothing-red" />
                 <span>Collections</span>
                 {selectedCollectionIds.length > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-nothing-red/20 text-nothing-red text-[11px] font-semibold">
+                  <span className="px-1.5 py-0.5 rounded-full bg-nothing-red/15 text-nothing-red text-[11px] font-semibold">
                     {selectedCollectionIds.length}
                   </span>
                 )}
@@ -955,7 +955,7 @@ export default function CreateNoteModal({
                   <button
                     type="button"
                     onClick={() => setSelectedCollectionIds([])}
-                    className="text-xs text-nothing-gray hover:text-white underline p-0.5"
+                    className="text-xs text-nothing-gray hover:text-nothing-ink underline p-0.5"
                   >
                     Clear
                   </button>
@@ -975,14 +975,14 @@ export default function CreateNoteModal({
 
             {/* Inline collection creator */}
             {showColInput && (
-              <div className="flex items-center gap-2 p-2 rounded-xl bg-black border border-nothing-border animate-fadeIn">
+              <div className="flex items-center gap-2 p-2 rounded-xl bg-nothing-input border border-nothing-border animate-fadeIn">
                 <input
                   type="text"
                   autoFocus
                   value={newColName}
                   onChange={e => setNewColName(e.target.value)}
                   placeholder="Collection name..."
-                  className="flex-1 bg-transparent text-xs font-mono text-white placeholder-nothing-gray focus:outline-none px-1"
+                  className="flex-1 bg-transparent text-xs font-mono text-nothing-ink placeholder-nothing-gray focus:outline-none px-1"
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -1004,7 +1004,7 @@ export default function CreateNoteModal({
                 <button
                   type="button"
                   onClick={() => setShowColInput(false)}
-                  className="p-1 text-nothing-gray hover:text-white"
+                  className="p-1 text-nothing-gray hover:text-nothing-ink"
                 >
                   <X size={12} />
                 </button>
@@ -1026,7 +1026,7 @@ export default function CreateNoteModal({
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono transition-all border ${
                       isSelected
                         ? 'bg-nothing-red text-white border-nothing-red shadow-sm'
-                        : 'bg-black/40 border-nothing-border text-nothing-gray hover:text-white hover:border-white/40'
+                        : 'bg-nothing-input border-nothing-border text-nothing-gray hover:text-nothing-ink hover:border-nothing-ink/40'
                     }`}
                   >
                     {isSelected ? (
@@ -1047,15 +1047,15 @@ export default function CreateNoteModal({
           </div>
 
           {/* AI pipeline toggle */}
-          <div className="pt-2.5 border-t border-nothing-border/40 flex items-center justify-between">
+          <div className="pt-2.5 border-t border-nothing-border/50 flex items-center justify-between">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={useAi}
                 onChange={e => setUseAi(e.target.checked)}
-                className="rounded bg-black border-nothing-border text-nothing-red focus:ring-0"
+                className="rounded bg-nothing-input border-nothing-border text-nothing-red focus:ring-0"
               />
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-white">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-nothing-ink">
                 <Sparkles size={11} className="text-nothing-red" />
                 <span>Nothing Cloud AI Analysis</span>
               </span>
@@ -1076,14 +1076,14 @@ export default function CreateNoteModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-xs font-mono text-nothing-gray hover:text-white hover:bg-white/10 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-mono text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/10 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || isRecording}
-              className="px-5 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-dot tracking-wider font-semibold flex items-center gap-1.5 transition-all shadow-md active:scale-95 disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-nothing-ink hover:bg-nothing-ink/90 text-nothing-on-ink text-xs font-dot tracking-wider font-semibold flex items-center gap-1.5 transition-all shadow-md active:scale-95 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>

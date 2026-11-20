@@ -72,12 +72,12 @@ export default function FilterBar({
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             placeholder="Search notes, audio transcripts, tags, tasks..."
-            className="w-full bg-nothing-card border border-nothing-border rounded-xl pl-10 pr-9 py-2 text-xs text-white placeholder:text-nothing-gray/60 focus:outline-none focus:border-nothing-red/80 transition-colors"
+            className="w-full bg-nothing-card border border-nothing-border rounded-xl pl-10 pr-9 py-2 text-xs text-nothing-ink placeholder:text-nothing-gray/60 focus:outline-none focus:border-nothing-red/80 transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-nothing-gray hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-nothing-gray hover:text-nothing-ink"
             >
               <X size={14} />
             </button>
@@ -95,8 +95,8 @@ export default function FilterBar({
             }}
             className={`px-3.5 py-2 rounded-xl text-xs font-mono transition-all flex items-center gap-1.5 flex-shrink-0 select-none ${
               activeCollection === ''
-                ? 'bg-white text-black font-semibold shadow-sm border border-white'
-                : 'bg-nothing-card/90 text-nothing-gray hover:text-white border border-nothing-border hover:border-white/30'
+                ? 'bg-nothing-ink text-nothing-on-ink font-semibold shadow-sm border border-nothing-ink'
+                : 'bg-nothing-card/90 text-nothing-gray hover:text-nothing-ink border border-nothing-border hover:border-nothing-ink/30'
             }`}
           >
             <span>All Collections</span>
@@ -109,8 +109,8 @@ export default function FilterBar({
               onClick={() => setIsDropdownOpen(prev => !prev)}
               className={`w-52 sm:w-64 px-3.5 py-2 rounded-xl text-xs font-mono transition-all flex items-center justify-between gap-2 border select-none ${
                 activeCollection !== ''
-                  ? 'bg-nothing-card border-white/60 text-white font-medium shadow-sm'
-                  : 'bg-nothing-card/90 border-nothing-border text-nothing-gray hover:text-white hover:border-white/30'
+                  ? 'bg-nothing-card border-nothing-ink/60 text-nothing-ink font-medium shadow-sm'
+                  : 'bg-nothing-card/90 border-nothing-border text-nothing-gray hover:text-nothing-ink hover:border-nothing-ink/30'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -120,7 +120,7 @@ export default function FilterBar({
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: selectedCol.color || '#D71921' }}
                     />
-                    <span className="truncate text-white font-medium">{selectedCol.name}</span>
+                    <span className="truncate text-nothing-ink font-medium">{selectedCol.name}</span>
                     {selectedCol.cardCount !== undefined && selectedCol.cardCount > 0 && (
                       <span className="text-[11px] text-nothing-gray font-mono flex-shrink-0">
                         ({selectedCol.cardCount})
@@ -134,14 +134,14 @@ export default function FilterBar({
               <ChevronDown
                 size={14}
                 className={`text-nothing-gray transition-transform duration-200 flex-shrink-0 ${
-                  isDropdownOpen ? 'rotate-180 text-white' : ''
+                  isDropdownOpen ? 'rotate-180 text-nothing-ink' : ''
                 }`}
               />
             </button>
 
             {/* Dropdown Menu */}
             {isDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-64 sm:w-72 max-h-72 overflow-y-auto rounded-xl bg-nothing-card/95 border border-white/20 shadow-2xl p-1.5 z-50 backdrop-blur-xl scrollbar-thin">
+              <div className="absolute right-0 top-full mt-1.5 w-64 sm:w-72 max-h-72 overflow-y-auto rounded-xl bg-nothing-dark/95 border border-nothing-border shadow-2xl p-1.5 z-50 backdrop-blur-xl scrollbar-thin">
                 {/* Create New Collection button at top */}
                 {onOpenCreateCollection && (
                   <button
@@ -174,8 +174,8 @@ export default function FilterBar({
                           }}
                           className={`w-full px-3 py-2 rounded-lg text-xs font-mono transition-all flex items-center justify-between gap-2 text-left cursor-pointer group ${
                             isSelected
-                              ? 'bg-white/15 text-white font-medium'
-                              : 'text-nothing-gray hover:text-white hover:bg-white/5'
+                              ? 'bg-nothing-ink/15 text-nothing-ink font-medium'
+                              : 'text-nothing-gray hover:text-nothing-ink hover:bg-nothing-ink/5'
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -203,7 +203,7 @@ export default function FilterBar({
                                   setIsDropdownOpen(false);
                                   onOpenEditCollection(col);
                                 }}
-                                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/20 text-nothing-gray hover:text-white transition-opacity ml-1"
+                                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-nothing-ink/20 text-nothing-gray hover:text-nothing-ink transition-opacity ml-1"
                               >
                                 <Settings2 size={12} />
                               </button>
@@ -228,8 +228,8 @@ export default function FilterBar({
             onClick={() => onSelectTag('')}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono transition-all flex-shrink-0 border ${
               activeTag === ''
-                ? 'bg-white text-black border-white font-medium'
-                : 'bg-nothing-card/80 text-nothing-gray hover:text-white border-nothing-border/70'
+                ? 'bg-nothing-ink text-nothing-on-ink border-nothing-ink font-medium'
+                : 'bg-nothing-card/80 text-nothing-gray hover:text-nothing-ink border-nothing-border/70'
             }`}
           >
             <Tag size={11} />
@@ -246,7 +246,7 @@ export default function FilterBar({
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono transition-all flex-shrink-0 border ${
                   isSelected
                     ? 'bg-nothing-red text-white border-nothing-red shadow-sm shadow-nothing-red/30'
-                    : 'bg-nothing-hover/70 text-nothing-gray hover:text-white hover:border-nothing-gray/50 border-nothing-border/60'
+                    : 'bg-nothing-card/80 text-nothing-gray hover:text-nothing-ink hover:border-nothing-gray/50 border-nothing-border/70'
                 }`}
               >
                 <Tag size={11} />

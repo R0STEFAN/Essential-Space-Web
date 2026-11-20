@@ -65,7 +65,7 @@ export default function CardGrid({
         <div className="p-3 rounded-full bg-nothing-border/40 text-nothing-gray mb-3">
           <Inbox size={28} />
         </div>
-        <h4 className="font-dot text-sm text-white mb-1">NO CARDS FOUND</h4>
+        <h4 className="font-dot text-sm text-nothing-ink mb-1">NO CARDS FOUND</h4>
         <p className="text-xs text-nothing-gray max-w-sm font-mono">
           No notes match your current filters. Click &quot;SYNC&quot; to fetch latest updates from your Nothing OS device.
         </p>

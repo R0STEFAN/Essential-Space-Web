@@ -45,9 +45,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('essential_space_theme')==='light'){document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';}else{document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}}catch(e){}`,
+          }}
+        />
+      </head>
       <body
         suppressHydrationWarning
-        className={`${ndot55.variable} ${ndot57.variable} ${ndotOriginal.variable} bg-black text-nothing-light min-h-screen selection:bg-nothing-red selection:text-white`}
+        className={`${ndot55.variable} ${ndot57.variable} ${ndotOriginal.variable} bg-nothing-black text-nothing-light min-h-screen selection:bg-nothing-red selection:text-white`}
       >
         {children}
       </body>

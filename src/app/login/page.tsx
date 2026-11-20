@@ -17,6 +17,7 @@ import {
   UserCheck,
   Github,
 } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
 import { parseNothingJwt } from '@/lib/crypto';
 import { saveDbAuth, getDbAuth, clearDbAuth } from '@/lib/db';
 import { syncNothingCloud } from '@/lib/sync-engine';
@@ -279,21 +280,24 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-black text-white">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-nothing-black text-nothing-ink transition-colors">
       {/* Subtle Nothing OS Dot Grid Background */}
-      <div className="absolute inset-0 bg-nothing-grid pointer-events-none opacity-40" />
+      <div className="absolute inset-0 bg-nothing-grid pointer-events-none opacity-60 dark:opacity-40" />
 
-      <div className="w-full max-w-md bg-nothing-dark border border-nothing-border rounded-3xl p-8 relative z-10 shadow-2xl">
-        {/* GitHub Source Code Shortcut */}
-        <a
-          href="https://github.com/R0STEFAN/Essential-Space-Web"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="View source code on GitHub"
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-nothing-card hover:bg-white/10 border border-nothing-border/80 hover:border-white/40 text-nothing-gray hover:text-white flex items-center justify-center transition-all select-none shadow-sm active:scale-95 group"
-        >
-          <Github size={15} className="transition-transform group-hover:scale-110 text-nothing-light group-hover:text-white" />
-        </a>
+      <div className="w-full max-w-md bg-nothing-dark border border-nothing-border rounded-3xl p-8 relative z-10 shadow-2xl shadow-black/10 dark:shadow-black/80">
+        {/* Top-Right Shortcuts: Theme Switcher + GitHub Source Code */}
+        <div className="absolute top-5 right-5 flex items-center gap-1.5">
+          <ThemeToggle />
+          <a
+            href="https://github.com/R0STEFAN/Essential-Space-Web"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View source code on GitHub"
+            className="w-8 h-8 rounded-full bg-nothing-card hover:bg-nothing-ink/10 border border-nothing-border/80 hover:border-nothing-ink/40 text-nothing-light hover:text-nothing-ink flex items-center justify-center transition-all select-none shadow-sm active:scale-95 group"
+          >
+            <Github size={15} className="transition-transform group-hover:scale-110" />
+          </a>
+        </div>
 
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6">
@@ -301,7 +305,7 @@ export default function LoginPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icon.svg" alt="Essential Space Logo" className="w-14 h-14" />
           </div>
-          <h1 className="font-dot text-2xl tracking-wider uppercase text-white mb-1">
+          <h1 className="font-dot text-2xl tracking-wider uppercase text-nothing-ink mb-1">
             ESSENTIAL SPACE
           </h1>
           <p className="text-xs text-nothing-gray tracking-wider uppercase">
@@ -311,9 +315,9 @@ export default function LoginPage() {
 
         {/* Existing Active Session Banner */}
         {savedAccount && (
-          <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-2xl space-y-3">
+          <div className="mb-6 p-4 bg-nothing-subtle border border-nothing-border rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-green-400 uppercase tracking-wider font-semibold">
+              <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-green-400 uppercase tracking-wider font-semibold">
                 <UserCheck className="w-4 h-4" />
                 <span>SAVED SESSION</span>
               </div>
@@ -323,18 +327,18 @@ export default function LoginPage() {
                   await clearDbAuth();
                   setSavedAccount(null);
                 }}
-                className="text-xs text-nothing-gray hover:text-white transition-colors py-1 px-2 -mr-2"
+                className="text-xs text-nothing-gray hover:text-nothing-ink transition-colors py-1 px-2 -mr-2"
               >
                 Sign out
               </button>
             </div>
-            <div className="text-sm font-medium text-white truncate">
+            <div className="text-sm font-medium text-nothing-ink truncate">
               {savedAccount.email}
             </div>
             <button
               type="button"
               onClick={() => router.push('/')}
-              className="w-full bg-white text-black font-dot uppercase tracking-wider py-2.5 rounded-xl text-xs hover:bg-nothing-red hover:text-white transition-all flex items-center justify-center gap-2 font-medium"
+              className="w-full bg-nothing-ink text-nothing-on-ink font-dot uppercase tracking-wider py-2.5 rounded-xl text-xs hover:bg-nothing-red hover:text-white transition-all flex items-center justify-center gap-2 font-medium"
             >
               <span>CONTINUE TO DASHBOARD</span>
               <ArrowRight className="w-4 h-4" />
@@ -343,7 +347,7 @@ export default function LoginPage() {
         )}
 
         {/* Mode Switcher Tabs (EMAIL and TOKEN only) */}
-        <div className="grid grid-cols-2 gap-1 p-1 bg-black/60 border border-nothing-border rounded-xl mb-6">
+        <div className="grid grid-cols-2 gap-1 p-1 bg-nothing-subtle border border-nothing-border rounded-xl mb-6">
           <button
             type="button"
             onClick={() => {
@@ -353,7 +357,7 @@ export default function LoginPage() {
             className={`py-2.5 px-3 rounded-lg text-xs uppercase tracking-wider font-medium transition-all flex items-center justify-center gap-2 ${
               activeTab === 'email'
                 ? 'bg-nothing-red text-white shadow'
-                : 'text-nothing-gray hover:text-white'
+                : 'text-nothing-gray hover:text-nothing-ink'
             }`}
           >
             <Mail className="w-4 h-4 shrink-0" />
@@ -368,7 +372,7 @@ export default function LoginPage() {
             className={`py-2.5 px-3 rounded-lg text-xs uppercase tracking-wider font-medium transition-all flex items-center justify-center gap-2 ${
               activeTab === 'token'
                 ? 'bg-nothing-red text-white shadow'
-                : 'text-nothing-gray hover:text-white'
+                : 'text-nothing-gray hover:text-nothing-ink'
             }`}
           >
             <Key className="w-4 h-4 shrink-0" />
@@ -400,7 +404,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder="name@example.com"
-                      className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono"
+                      className="w-full bg-nothing-input border border-nothing-border rounded-xl py-2.5 pl-10 pr-4 text-xs text-nothing-ink placeholder:text-nothing-gray/50 focus:outline-none focus:border-nothing-ink transition-colors font-mono"
                     />
                   </div>
                 </div>
@@ -417,12 +421,12 @@ export default function LoginPage() {
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-10 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono"
+                      className="w-full bg-nothing-input border border-nothing-border rounded-xl py-2.5 pl-10 pr-10 text-xs text-nothing-ink placeholder:text-nothing-gray/50 focus:outline-none focus:border-nothing-ink transition-colors font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-3 text-nothing-gray hover:text-white transition-colors"
+                      className="absolute right-3.5 top-3 text-nothing-gray hover:text-nothing-ink transition-colors"
                     >
                       {showPassword ? (
                         <EyeOff className="w-4 h-4" />
@@ -433,20 +437,20 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="p-3 bg-white/5 border border-white/10 rounded-xl space-y-1 text-xs text-nothing-gray">
-                  <div className="text-white font-medium flex items-center gap-1.5 text-xs">
+                <div className="p-3 bg-nothing-subtle border border-nothing-border rounded-xl space-y-1 text-xs text-nothing-gray">
+                  <div className="text-nothing-ink font-medium flex items-center gap-1.5 text-xs">
                     <ShieldCheck className="w-3.5 h-3.5 text-nothing-red" />
                     <span>Zero-Knowledge Sign In</span>
                   </div>
                   <p className="text-[11px] text-nothing-gray leading-relaxed">
-                    If Nothing restricts cloud IP logins, switch to the <span className="text-white font-medium">TOKEN</span> tab to authenticate directly.
+                    If Nothing restricts cloud IP logins, switch to the <span className="text-nothing-ink font-medium">TOKEN</span> tab to authenticate directly.
                   </p>
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-white text-black font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-nothing-red hover:text-white transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 mt-2 shadow-lg"
+                  className="w-full bg-nothing-ink text-nothing-on-ink font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-nothing-red hover:text-white transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 mt-2 shadow-lg"
                 >
                   {loading ? (
                     <>
@@ -464,14 +468,14 @@ export default function LoginPage() {
             ) : (
               /* Step 2: 2FA Verification Code */
               <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-center space-y-1">
+                <div className="p-3.5 rounded-2xl bg-nothing-subtle border border-nothing-border text-center space-y-1">
                   <div className="text-xs font-mono uppercase text-nothing-red font-medium">
                     2FA VERIFICATION CODE
                   </div>
                   <p className="text-xs text-nothing-gray leading-relaxed">
                     Nothing Account sent a 6-digit confirmation code to:
                   </p>
-                  <p className="text-xs font-mono text-white font-medium">{maskedEmail}</p>
+                  <p className="text-xs font-mono text-nothing-ink font-medium">{maskedEmail}</p>
                 </div>
 
                 <div>
@@ -482,14 +486,14 @@ export default function LoginPage() {
                     value={otpCode}
                     onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
                     placeholder="123456"
-                    className="w-full bg-black border border-nothing-border rounded-xl py-3 text-center text-lg font-mono tracking-[0.4em] text-white placeholder:text-nothing-gray/30 focus:outline-none focus:border-white transition-colors"
+                    className="w-full bg-nothing-input border border-nothing-border rounded-xl py-3 text-center text-lg font-mono tracking-[0.4em] text-nothing-ink placeholder:text-nothing-gray/40 focus:outline-none focus:border-nothing-ink transition-colors"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading || otpCode.length !== 6}
-                  className="w-full bg-nothing-red text-white font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-white hover:text-black transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 shadow-lg shadow-nothing-red/20"
+                  className="w-full bg-nothing-red text-white font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-nothing-ink hover:text-nothing-on-ink transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 shadow-lg shadow-nothing-red/20"
                 >
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -508,7 +512,7 @@ export default function LoginPage() {
                       setIsOtpStep(false);
                       setOtpCode('');
                     }}
-                    className="text-xs font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
+                    className="text-xs font-mono text-nothing-gray hover:text-nothing-ink transition-colors flex items-center gap-1"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                     <span>Back</span>
@@ -518,7 +522,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={handleResendOtp}
                     disabled={cooldown > 0 || resending}
-                    className="text-xs font-mono text-nothing-gray hover:text-white transition-colors disabled:opacity-40"
+                    className="text-xs font-mono text-nothing-gray hover:text-nothing-ink transition-colors disabled:opacity-40"
                   >
                     {cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
                   </button>
@@ -539,7 +543,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => pasteFromClipboard(setToken)}
-                  className="text-[11px] font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
+                  className="text-[11px] font-mono text-nothing-gray hover:text-nothing-ink transition-colors flex items-center gap-1"
                 >
                   <Copy className="w-3 h-3" />
                   <span>PASTE CLIPBOARD</span>
@@ -553,7 +557,7 @@ export default function LoginPage() {
                   onChange={e => setToken(e.target.value)}
                   placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
                   required
-                  className="w-full bg-black border border-nothing-border rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono break-all"
+                  className="w-full bg-nothing-input border border-nothing-border rounded-xl py-2.5 pl-10 pr-4 text-xs text-nothing-ink placeholder:text-nothing-gray/50 focus:outline-none focus:border-nothing-ink transition-colors font-mono break-all"
                 />
               </div>
             </div>
@@ -563,7 +567,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowAdvancedToken(!showAdvancedToken)}
-                className="text-[11px] font-mono text-nothing-gray hover:text-white flex items-center gap-1.5 transition-colors"
+                className="text-[11px] font-mono text-nothing-gray hover:text-nothing-ink flex items-center gap-1.5 transition-colors"
               >
                 <span>{showAdvancedToken ? '▾ Hide Refresh Token' : '▸ + Add Refresh Token (optional)'}</span>
               </button>
@@ -577,7 +581,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => pasteFromClipboard(setRefreshToken)}
-                      className="text-[11px] font-mono text-nothing-gray hover:text-white transition-colors flex items-center gap-1"
+                      className="text-[11px] font-mono text-nothing-gray hover:text-nothing-ink transition-colors flex items-center gap-1"
                     >
                       <Copy className="w-3 h-3" />
                       <span>PASTE CLIPBOARD</span>
@@ -588,28 +592,28 @@ export default function LoginPage() {
                     value={refreshToken}
                     onChange={e => setRefreshToken(e.target.value)}
                     placeholder="OOz1rwIWlHuIkM6oL_..."
-                    className="w-full bg-black border border-nothing-border rounded-xl py-2 px-3 text-xs text-white placeholder:text-nothing-gray/40 focus:outline-none focus:border-white transition-colors font-mono"
+                    className="w-full bg-nothing-input border border-nothing-border rounded-xl py-2 px-3 text-xs text-nothing-ink placeholder:text-nothing-gray/50 focus:outline-none focus:border-nothing-ink transition-colors font-mono"
                   />
                 </div>
               )}
             </div>
 
-            <div className="p-3 bg-black/50 border border-nothing-border rounded-xl space-y-1.5 text-[11px] font-mono text-nothing-gray">
-              <div className="text-white font-medium flex items-center gap-1.5">
+            <div className="p-3 bg-nothing-subtle border border-nothing-border rounded-xl space-y-1.5 text-[11px] font-mono text-nothing-gray">
+              <div className="text-nothing-ink font-medium flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-nothing-red" />
                 <span>How to get your token:</span>
               </div>
-              <ol className="list-decimal list-inside space-y-1 text-[11px] text-nothing-gray/80 pl-1 leading-relaxed">
-                <li>Sign in at <span className="text-white">account.nothing.tech</span>.</li>
-                <li>Press <span className="text-white">F12</span> → <span className="text-white">Application</span> → <span className="text-white">Local Storage</span>.</li>
-                <li>Copy <code className="text-white">nothingAuth_account-app-web_accessToken</code>.</li>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] text-nothing-gray pl-1 leading-relaxed">
+                <li>Sign in at <span className="text-nothing-ink font-medium">account.nothing.tech</span>.</li>
+                <li>Press <span className="text-nothing-ink font-medium">F12</span> → <span className="text-nothing-ink font-medium">Application</span> → <span className="text-nothing-ink font-medium">Local Storage</span>.</li>
+                <li>Copy <code className="text-nothing-ink font-medium">nothingAuth_account-app-web_accessToken</code>.</li>
               </ol>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-nothing-red hover:text-white transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 mt-2 shadow-lg"
+              className="w-full bg-nothing-ink text-nothing-on-ink font-dot uppercase tracking-wider py-3.5 rounded-xl hover:bg-nothing-red hover:text-white transition-all duration-200 flex items-center justify-center gap-2 font-medium disabled:opacity-50 mt-2 shadow-lg"
             >
               {loading ? (
                 <>
@@ -635,15 +639,15 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-nothing-border/50 text-[11px] font-mono text-nothing-gray">
+          <div className="flex items-center justify-between pt-2 border-t border-nothing-border/60 text-[11px] font-mono text-nothing-gray">
             <span>Essential Space Web</span>
             <a
               href="https://github.com/R0STEFAN/Essential-Space-Web"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-nothing-light hover:text-white transition-colors group"
+              className="flex items-center gap-1.5 text-nothing-light hover:text-nothing-ink transition-colors group"
             >
-              <Github className="w-3.5 h-3.5 text-nothing-gray group-hover:text-white transition-colors" />
+              <Github className="w-3.5 h-3.5 text-nothing-gray group-hover:text-nothing-ink transition-colors" />
               <span>Source Code</span>
             </a>
           </div>
